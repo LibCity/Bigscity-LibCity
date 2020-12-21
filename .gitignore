@@ -1,0 +1,6 @@
+/.vscode
+/raw_data/*
+/trafficdl/tmp/*
+/trafficdl/cache/*
+/trafficdl/*/__pycache__
+/trafficdl/data/dataset/__pycache__
