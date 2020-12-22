@@ -4,7 +4,7 @@ import pandas as pd
 import math
 
 from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils.dataset import parseTime, calculateBaseTime, calculateTimeOff
+from trafficdl.utils import parseTime, calculateBaseTime, calculateTimeOff
 from trafficdl.data.utils import generate_dataloader
 
 class TrajectoryDataset(AbstractDataset):
@@ -13,17 +13,18 @@ class TrajectoryDataset(AbstractDataset):
         self.config = config
         parameters_str = ''
         for key in self.config:
-            if key in ['min_session_len', 'min_sessions', 'time_length']:
+            if key in ['dataset', 'min_session_len', 'min_sessions', 'time_length']:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))# 缓存切好的轨迹
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
-        self.data_path = os.path.join('./raw_data/', self.config['dataset'])
+        self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.data = None
         self.pad_item = None
         self.pad_max_len = {
             'history_loc': self.config['history_len'],
             'history_tim': self.config['history_len']
         }
+        self.feature_name = ['history_loc', 'history_tim', 'current_loc', 'current_tim', 'target', 'uid', 'session_id']
 
     def get_data(self):
         '''
@@ -66,7 +67,8 @@ class TrajectoryDataset(AbstractDataset):
         # 划分训练集、测试集、验证集：有两种方式按 user 来划，以及按轨迹数来划。
         # TODO: 这里可以设一个参数，现在先按照轨迹数来划吧
         train_data, eval_data, test_data = self.gen_input()
-        return generate_dataloader(train_data, eval_data, test_data, self.config['batch_size'], self.config['num_workers'], self.pad_item, self.pad_max_len)
+        
+        return generate_dataloader(train_data, eval_data, test_data, self.feature_name, self.config['batch_size'], self.config['num_workers'], self.pad_item, self.pad_max_len)
     
     def get_data_feature(self):
         res = {
@@ -97,14 +99,13 @@ class TrajectoryDataset(AbstractDataset):
             }
         '''
         # load data according to config
-        traj = pd.read_csv(os.path.join(self.data_path, '.dyna'.format(self.config['dataset'])))
+        traj = pd.read_csv(os.path.join(self.data_path, '{}.dyna'.format(self.config['dataset'])))
         user_set = pd.unique(traj['entity_id'])
         res = {}
         min_session_len = self.config['min_session_len']
         min_sessions = self.config['min_sessions']
         time_length = self.config['time_length']
         base_zero = time_length > 12
-        loc_set = []
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
             sessions = [] # 存放该用户所有的 session
@@ -114,11 +115,13 @@ class TrajectoryDataset(AbstractDataset):
             base_time = calculateBaseTime(start_time, base_zero)
             for index, row in usr_traj.iterrows():
                 if index == 0:
+                    assert start_time.hour - base_time.hour < time_length
                     session.append([row['location'], start_time.hour - base_time.hour]) # time encode from 0 ~ time_length
                 else:
                     now_time = parseTime(row['time'], int(row['timezone_offset_in_minutes']))
                     time_off = calculateTimeOff(now_time, base_time)
                     if time_off < time_length and time_off >=0:
+                        assert int(time_off) < time_length
                         session.append([row['location'], int(time_off)])
                     else:
                         if len(session) >= min_session_len:
@@ -126,14 +129,14 @@ class TrajectoryDataset(AbstractDataset):
                         session = []
                         start_time = now_time
                         base_time = calculateBaseTime(start_time, base_zero)
+                        assert start_time.hour - base_time.hour < time_length
                         session.append([row['location'], start_time.hour - base_time.hour])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
                 res[str(uid)] = sessions
-                for s in sessions:
-                    loc_set += [x[0] for x in s]
-        loc_size = pd.unique(loc_set).shape[0]
+        poi = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.config['dataset'])))
+        loc_size = poi.shape[0]
         uid_size = len(res)
         print('loc_size: {}, uid_size: {}'.format(loc_size, uid_size))
         return {
@@ -165,7 +168,10 @@ class TrajectoryDataset(AbstractDataset):
             eval_num = math.ceil(sessions_len*(self.config['train_rate'] + self.config['eval_rate']))
             history_session = []
             for i in range(sessions_len):
-                trace = {}
+                trace = []
+                if i == 0:
+                    history_session += sessions[i]
+                    continue
                 current_session = sessions[i]
                 if len(current_session) <= 1:
                     continue
@@ -173,16 +179,17 @@ class TrajectoryDataset(AbstractDataset):
                 target = current_session[-1][0]
                 history_loc = [s[0] for s in history_session]  # 把多个 history 路径合并成一个？
                 history_tim = [s[1] for s in history_session]
-                trace['history_loc'] = history_loc
-                trace['history_tim'] = history_tim
+                trace.append(history_loc)
+                trace.append(history_tim)
                 loc_tim = []
                 loc_tim.extend([(s[0], s[1]) for s in current_session[:-1]])
                 loc_np = [s[0] for s in loc_tim]
                 tim_np = [s[1] for s in loc_tim]
-                trace['current_loc'] = loc_np # loc 会与 history loc 有重合， loc 的前半部分为 history loc
-                trace['current_tim'] = tim_np
-                trace['target'] = target  # target 会与 loc 有一段的重合，只有 target 的最后一位 loc 没有
-                trace['uid'] = int(u)
+                trace.append(loc_np) # loc 会与 history loc 有重合， loc 的前半部分为 history loc
+                trace.append(tim_np)
+                trace.append(target)  # target 会与 loc 有一段的重合，只有 target 的最后一位 loc 没有
+                trace.append(int(u))
+                trace.append(i)
                 if i <= train_num:
                     train_data.append(trace)
                 elif i <= eval_num:

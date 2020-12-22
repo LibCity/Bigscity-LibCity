@@ -1,1 +1,1 @@
-from trafficdl.executor.utils import get_executor
+from trafficdl.executor.traj_loc_pred_executor import TrajLocPredExecutor

@@ -1,0 +1,6 @@
+{
+    "traj_loc_pred": {
+        "dataset_class": "Trajectory",
+        "evaluator": "traj_loc_pred"
+    }
+}

@@ -17,13 +17,13 @@ class AbstractExecutor(object):
         '''
         raise NotImplementedError("Executor evaluate not implemented")
 
-    def load_cache(self, cache_name):
+    def load_model(self, cache_name):
         '''
         加载对应模型的 cache 
         '''
         raise NotImplementedError("Executor load cache not implemented")
 
-    def save_cache(self, cache_name):
+    def save_model(self, cache_name):
         '''
         将当前的模型保存到文件内
         '''

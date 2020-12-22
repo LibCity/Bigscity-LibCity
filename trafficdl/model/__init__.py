@@ -1,1 +1,1 @@
-from trafficdl.model.utils import get_model
+from trafficdl.model.DeepMove import DeepMove
