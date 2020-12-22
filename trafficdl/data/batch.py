@@ -50,7 +50,7 @@ class Batch(object):
                 max_len = min(self.pad_max_len[key], max_len)
             for i in range(len(self.data[key])):
                 if len(self.data[key][i]) < max_len:
-                    self.data[key][i] += [self.pad_item[key]] * (self.pad_len[key] - len(self.data[key][i]))
+                    self.data[key][i] += [self.pad_item[key]] * (max_len - len(self.data[key][i]))
                 else:
                     # 截取的原则是，抛弃前面的点
                     # 因为是时间序列嘛
