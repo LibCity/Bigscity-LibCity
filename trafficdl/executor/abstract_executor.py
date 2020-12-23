@@ -1,7 +1,7 @@
 
 class AbstractExecutor(object):
 
-    def __init__(self, config):
+    def __init__(self, config, model):
         raise NotImplementedError("Executor not implemented")
 
     def train(self, train_dataloader, eval_dataloader):

@@ -2,7 +2,7 @@ import torch.nn as nn
 
 class AbstractModel(nn.Module):
 
-    def __init__(self, config):
+    def __init__(self, config, data_feature):
         raise NotImplementedError('Model not implement')
 
     def forward(self, batch):

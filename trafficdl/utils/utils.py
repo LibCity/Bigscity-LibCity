@@ -6,9 +6,9 @@ def get_executor(config):
     except AttributeError:
         raise AttributeError('executor is not found')
 
-def get_model(config):
+def get_model(config, data_feature):
     try:
-        return getattr(importlib.import_module('trafficdl.model'), config['model'])(config)
+        return getattr(importlib.import_module('trafficdl.model'), config['model'])(config, data_feature)
     except AttributeError:
         raise AttributeError('model is not found')
 
