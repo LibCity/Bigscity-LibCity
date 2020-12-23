@@ -13,6 +13,7 @@ class TrajLocPredExecutor(AbstractExecutor):
     def __init__(self, config):
         self.model = get_model(config)
         self.evaluator = get_evaluator(config)
+        self.metrics = config['metrics']
         self.config = config
         if self.config['use_cuda']:
             self.model = self.model.cuda()
@@ -80,25 +81,21 @@ class TrajLocPredExecutor(AbstractExecutor):
 
     def evaluate(self, test_dataloader):
         self.model.train(False)
+        self.evaluator.clear()
         test_total_batch = len(test_dataloader.dataset) / test_dataloader.batch_size
         cnt = 0
         for batch in test_dataloader:
             batch.to_tensor(gpu=self.config['use_cuda'])
             scores = self.model(batch)
-            evaluate_input = {}
-            for i in range(len(batch['uid'])):
-                u = batch['uid'][i]
-                s = batch['session_id'][i]
-                trace_input = {}
-                trace_input['loc_true'] = [batch['target'][i].item()]
-                trace_input['loc_pred'] = [scores[i].tolist()]
-                if u not in evaluate_input:
-                    evaluate_input[u] = {}
-                evaluate_input[u][s] = trace_input
+            evaluate_input = {
+                'uid': batch['uid'].tolist(),
+                'loc_true': batch['target'].tolist(),
+                'loc_pred': scores.tolist()
+            }
             cnt += 1
             if cnt % self.config['verbose'] == 0:
                 print('finish batch {}/{}'.format(cnt, test_total_batch))
-            self.evaluator.evaluate(evaluate_input)
+            self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
     def run(self, data_loader, model, use_cuda, optimizer, criterion, lr, clip, total_batch, verbose):
@@ -131,22 +128,25 @@ class TrajLocPredExecutor(AbstractExecutor):
 
     def _valid_epoch(self, data_loader, model, use_cuda, total_batch, verbose, criterion):
         model.train(False)
+        self.evaluator.clear()
         total_loss = []
-        total_acc = []
         cnt = 0
-        loc_size = model.loc_size
         for batch in data_loader:
             batch.to_tensor(gpu=use_cuda)
             scores = model(batch) # batch_size * target_len * loc_size
             loss = criterion(scores, batch['target'])
             total_loss.append(loss.data.cpu().numpy().tolist())
-            acc = self.get_acc(batch['target'], scores)
-            total_acc.append(acc)
+            evaluate_input = {
+                'uid': batch['uid'].tolist(),
+                'loc_true': batch['target'].tolist(),
+                'loc_pred': scores.tolist()
+            }
             cnt += 1
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
+            self.evaluator.collect(evaluate_input)
         avg_loss = np.mean(total_loss, dtype=np.float64)
-        avg_acc = np.mean(total_acc, dtype=np.float64)
+        avg_acc = self.evaluator.evaluate()[self.metrics[0]] # 随便选一个就行
         return avg_loss, avg_acc
     
     def get_acc(self, target, scores, topk = 1):

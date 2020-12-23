@@ -24,7 +24,7 @@ class TrajectoryDataset(AbstractDataset):
             'history_loc': self.config['history_len'],
             'history_tim': self.config['history_len']
         }
-        self.feature_name = ['history_loc', 'history_tim', 'current_loc', 'current_tim', 'target', 'uid', 'session_id']
+        self.feature_name = ['history_loc', 'history_tim', 'current_loc', 'current_tim', 'target', 'uid']
 
     def get_data(self):
         '''
@@ -189,7 +189,6 @@ class TrajectoryDataset(AbstractDataset):
                 trace.append(tim_np)
                 trace.append(target)  # target 会与 loc 有一段的重合，只有 target 的最后一位 loc 没有
                 trace.append(int(u))
-                trace.append(i)
                 if i <= train_num:
                     train_data.append(trace)
                 elif i <= eval_num:
