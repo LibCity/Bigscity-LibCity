@@ -1,8 +1,8 @@
 import importlib
 
-def get_executor(config):
+def get_executor(config, model):
     try:
-        return getattr(importlib.import_module('trafficdl.executor'), config['executor'])(config)
+        return getattr(importlib.import_module('trafficdl.executor'), config['executor'])(config, model)
     except AttributeError:
         raise AttributeError('executor is not found')
 
