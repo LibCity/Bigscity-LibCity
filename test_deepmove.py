@@ -1,11 +1,13 @@
 import os
 
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor
+from trafficdl.utils import get_executor, get_evaluator
 config = {
     "dataset_class": "TrajectoryDataset",
     "executor": "TrajLocPredExecutor",
     "evaluator": "TrajLocPredEvaluator",
+    "metrics": ["topk"],
+    "topk": 1,
     "min_session_len": 5,
     "min_sessions": 2,
     "time_length": 72,
