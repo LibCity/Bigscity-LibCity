@@ -52,8 +52,15 @@ class TrajLocPredEvaluator(AbstractEvaluator):
             if metric == 'topk':
                 res = top_k(batch['loc_pred'], batch['loc_true'], self.topk)
                 unique, counts = np.unique(res, return_counts=True)
-                self.intermediate_result[metric][0] += counts[1]
-                self.intermediate_result[metric][1] += (counts[0] + counts[1])
+                if counts.shape[0] == 2:
+                    self.intermediate_result[metric][0] += counts[1]
+                    self.intermediate_result[metric][1] += (counts[0] + counts[1])
+                else:
+                    if unique[0] == 0:
+                        self.intermediate_result[metric][1] += counts[0]
+                    else:
+                        self.intermediate_result[metric][0] += counts[0]
+                        self.intermediate_result[metric][1] += counts[0]
                 # # 把评估的结果写到不同的 user 里面
                 # for i, uid in enumerate(batch[uid]):
                 #     self.intermediate_result[metric].append(res[i])
