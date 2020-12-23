@@ -1,16 +1,18 @@
 import os
 
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor
+from trafficdl.utils import get_executor, get_evaluator
 config = {
     "dataset_class": "TrajectoryDataset",
     "executor": "TrajLocPredExecutor",
     "evaluator": "TrajLocPredEvaluator",
+    "metrics": ["topk"],
+    "topk": 1,
     "min_session_len": 5,
     "min_sessions": 2,
     "time_length": 72,
     "history_len": 50,
-    "batch_size": 1,
+    "batch_size": 20,
     "num_workers": 0,
     "cache_dataset": True,
     "train_rate": 0.6,
@@ -47,9 +49,9 @@ model_cache_file = './trafficdl/cache/model_cache/DeepMove_foursquare_tky.m'
 executor = get_executor(config)
 # self = executor.model
 # 训练
-executor.train(train_data, valid_data)
-executor.save_model(model_cache_file)
-# executor.load_model(model_cache_file)
+# executor.train(train_data, valid_data)
+# executor.save_model(model_cache_file)
+executor.load_model(model_cache_file)
 # 评估，评估结果将会放在 cache/evaluate_cache 下
 executor.evaluate(test_data)
 

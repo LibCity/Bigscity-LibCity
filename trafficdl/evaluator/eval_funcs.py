@@ -1,5 +1,5 @@
 import numpy as np
-
+import torch
 
 # 均方误差（Mean Square Error）
 def MSE(loc_pred, loc_true):
@@ -50,15 +50,24 @@ def ACC(loc_pred, loc_true):
 
 # 对比真实位置与模型预测的前k个位置获得预测准确率
 def top_k(loc_pred, loc_true, topK):
+    '''
+    Args:
+        loc_pred (batch_size * output_dim)
+        loc_true (batch_size * 1)
+    Return:
+        For a single data in batch, if loc_true is in topk(loc_pred) return 1, else return 0
+        res: (batch_size * 1)
+    '''
     assert topK > 0, "top-k ACC评估方法：k值应不小于1"
-    assert len(loc_pred) >= topK, "top-k ACC评估方法：没有提供足够的预测数据做评估"
-    assert len(loc_pred[0]) == len(loc_true), "top-k ACC评估方法：预测数据与真实数据大小不一致"
-    if topK == 1:
-        t, avg_acc = ACC(loc_pred[0], loc_true)
-        return t, avg_acc
-    else:
-        tot_list = np.zeros(len(loc_true), dtype=int)
-        for i in range(topK):
-            t, avg_acc = ACC(loc_pred[i], loc_true)
-            tot_list = tot_list + t
-        return tot_list, np.mean(tot_list < topK)
+    loc_pred = torch.LongTensor(loc_pred)
+    val, index = torch.topk(loc_pred, topK, 1) # 使用 torch 的 topk 来实现
+    index = index.numpy()
+    res = []
+    for i, p in enumerate(index):
+        target = loc_true[i]
+        if target in p:
+            res.append(1)
+        else:
+            res.append(0)
+    return res
+
