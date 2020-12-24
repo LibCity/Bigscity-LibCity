@@ -4,8 +4,9 @@ import datetime
 from trafficdl.utils import ensure_dir
 from trafficdl.model import loss
 from logging import getLogger
+from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
 
-class TrafficSpeedPredEvaluator(object):
+class TrafficSpeedPredEvaluator(AbstractEvaluator):
 
     def __init__(self, config):
         self.metrics = config['metrics']  # 评估指标, 是一个 list
