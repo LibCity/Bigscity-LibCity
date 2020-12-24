@@ -19,7 +19,7 @@ class Batch(object):
             return self.data[key]
         else:
             raise KeyError('{} is not in the batch'.format(key))
-    
+
     def append(self, item):
         '''
         append a new item into the batch
@@ -60,9 +60,9 @@ class Batch(object):
     def get_origin_len(self, key):
         return self.origin_len[key]
 
-    def to_tensor(self, gpu = True):
+    def to_tensor(self, gpu=True):
         for key in self.data:
             if gpu:
-                self.data[key] = torch.LongTensor(self.data[key]).cuda()
+                self.data[key] = torch.FloatTensor(self.data[key]).cuda()
             else:
-                self.data[key] = torch.LongTensor(self.data[key])
+                self.data[key] = torch.FloatTensor(self.data[key])
