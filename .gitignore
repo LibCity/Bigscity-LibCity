@@ -5,4 +5,6 @@
 /trafficdl/*/__pycache__
 /trafficdl/data/dataset/__pycache__
 /.idea
+/trafficdl/log/*
+/trafficdl/model/*/__pycache__
 
