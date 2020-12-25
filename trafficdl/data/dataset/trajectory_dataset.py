@@ -24,7 +24,7 @@ class TrajectoryDataset(AbstractDataset):
             'history_loc': self.config['history_len'],
             'history_tim': self.config['history_len']
         }
-        self.feature_name = ['history_loc', 'history_tim', 'current_loc', 'current_tim', 'target', 'uid']
+        self.feature_name = {'history_loc': 'int', 'history_tim': 'int', 'current_loc': 'int', 'current_tim': 'int', 'target': 'int', 'uid': 'int'}
 
     def get_data(self):
         '''

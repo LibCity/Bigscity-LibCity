@@ -2,6 +2,12 @@ import torch
 class Batch(object):
 
     def __init__(self, feature_name, pad_item=None, pad_max_len=None):
+        '''
+        Args:
+            feature_name (dict): key is the corresponding feature's name, and the value is the feature's data type
+            pad_item (dict): key is the feature name, and value is the padding value. We will just padding the feature in pad_item
+            pad_max_len (dict): key is the feature name, and value is the max length of padded feature. use this parameter to truncate the feature.
+        '''
         self.data = {}
         self.pad_len = {} # 默认是根据 batch 中每个特征最长的长度来补齐，如果某个特征的长度超过了 pad_max_len 则进行剪切
         self.origin_len = {} # 用于还原补齐
@@ -28,8 +34,8 @@ class Batch(object):
         '''
         if len(item) != len(self.feature_name):
             raise KeyError('when append a batch, item is not equal length with feature_name')
-        for i in range(len(item)):
-            key = self.feature_name[i]
+        for i,key in enumerate(self.feature_name):
+            # dict.keys() 返回的键的顺序与插入顺序一致，所以只要保证 item 每个特征的顺序与 feature_name 中每个特征的顺序一致即可。
             self.data[key].append(item[i])
             if key in self.pad_item:
                 self.origin_len[key].append(len(item[i]))
@@ -63,6 +69,16 @@ class Batch(object):
     def to_tensor(self, gpu=True):
         for key in self.data:
             if gpu:
-                self.data[key] = torch.FloatTensor(self.data[key]).cuda()
+                if self.feature_name[key] == 'int':
+                    self.data[key] = torch.LongTensor(self.data[key]).cuda()
+                elif self.feature_name[key] == 'float':
+                    self.data[key] = torch.FloatTensor(self.data[key]).cuda()
+                else:
+                    raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
             else:
-                self.data[key] = torch.FloatTensor(self.data[key])
+                if self.feature_name[key] == 'int':
+                    self.data[key] = torch.LongTensor(self.data[key])
+                elif self.feature_name[key] == 'float':
+                    self.data[key] = torch.FloatTensor(self.data[key])
+                else:
+                    raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))

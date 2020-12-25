@@ -19,7 +19,7 @@ class TrafficSpeedDataset(AbstractDataset):
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         self.data_path = os.path.join('./raw_data/', self.config['dataset'])
         self.data = None
-        self.feature_name = ['X', 'y']
+        self.feature_name = {'X': 'float', 'y': 'float'}
         self.adj_mx = None
         self._load_geo()
         self._load_rel()

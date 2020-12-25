@@ -27,6 +27,7 @@ def generate_dataloader(train_data, eval_data, test_data, feature_name, batch_si
         pad_item (dict): 用于将不定长的特征补齐到一样的长度，每个特征名作为 key，若某特征名不在该 dict 内则不进行补齐。
         pad_max_len (dict): 用于截取不定长的特征，对于过长的特征进行剪切
         shuffle (bool)
+        pad_with_last_sample (bool): 对于若最后一个 batch 不满足 batch_size 的情况，是否进行补齐（使用最后一个元素反复填充补齐）。
     '''
     if pad_with_last_sample:
         num_padding = (batch_size - (len(train_data) % batch_size)) % batch_size
