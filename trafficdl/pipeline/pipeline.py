@@ -1,7 +1,7 @@
 import os
 
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor
+from trafficdl.utils import get_executor, get_model
 config = {
     "dataset_class": "TrajectoryDataset",
     "executor": "TrajLocPredExecutor",
@@ -54,10 +54,11 @@ def run_model(task=None, model=None, dataset=None, config_file=None, saved=True,
     dataset = get_dataset(config)
     # 转换数据，并划分数据集
     train_data, valid_data, test_data = dataset.get_data()
-    config['data_feature'] = dataset.get_data_feature()
+    data_feature = dataset.get_data_feature()
     # 加载执行器
     model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(model, dataset)
-    executor = get_executor(config)
+    model = get_model(config, data_feature)
+    executor = get_executor(config, model)
     # 训练
     if train or not os.path.exists(model_cache_file):
         executor.train(train_data, valid_data)

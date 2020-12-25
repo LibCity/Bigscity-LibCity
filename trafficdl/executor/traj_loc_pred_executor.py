@@ -10,8 +10,8 @@ from trafficdl.utils import get_model, get_evaluator
 
 class TrajLocPredExecutor(AbstractExecutor):
 
-    def __init__(self, config):
-        self.model = get_model(config)
+    def __init__(self, config, model):
+        self.model = model
         self.evaluator = get_evaluator(config)
         self.metrics = config['metrics']
         self.config = config

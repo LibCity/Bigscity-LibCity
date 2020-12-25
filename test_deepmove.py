@@ -1,7 +1,7 @@
 import os
 
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_evaluator
+from trafficdl.utils import get_executor, get_evaluator, get_model
 config = {
     "dataset_class": "TrajectoryDataset",
     "executor": "TrajLocPredExecutor",
@@ -43,10 +43,11 @@ dataset = get_dataset(config)
 train_data, valid_data, test_data = dataset.get_data()
 # batch = train_data.__iter__().__next__()
 # batch.to_tensor(gpu=True)
-config['data_feature'] = dataset.get_data_feature()
+data_feature = dataset.get_data_feature()
 # 加载执行器
 model_cache_file = './trafficdl/cache/model_cache/DeepMove_foursquare_tky.m'
-executor = get_executor(config)
+model = get_model(config, data_feature)
+executor = get_executor(config, model)
 # self = executor.model
 # 训练
 # executor.train(train_data, valid_data)

@@ -10,7 +10,7 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 
-# ############# rnn model with attention ####################### #
+from trafficdl.model.abstract_model import AbstractModel
 class Attn(nn.Module):
     """Attention Module. Heavily borrowed from Practical Pytorch
     https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation"""
@@ -55,120 +55,14 @@ class Attn(nn.Module):
             energy = self.other.dot(energy)
             return energy
 
-
-# ##############long###########################
-class TrajPreAttnAvgLongUser(nn.Module):
+class DeepMove(AbstractModel):
     """rnn model with long-term history attention"""
 
-    def __init__(self, parameters):
-        super(TrajPreAttnAvgLongUser, self).__init__()
-        self.loc_size = parameters.loc_size
-        self.loc_emb_size = parameters.loc_emb_size
-        self.tim_size = parameters.tim_size
-        self.tim_emb_size = parameters.tim_emb_size
-        self.uid_size = parameters.uid_size
-        self.uid_emb_size = parameters.uid_emb_size
-        self.hidden_size = parameters.hidden_size
-        self.attn_type = parameters.attn_type
-        self.rnn_type = parameters.rnn_type
-        self.use_cuda = parameters.use_cuda
-
-        self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size)
-        self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size)
-        self.emb_uid = nn.Embedding(self.uid_size, self.uid_emb_size)
-
-        input_size = self.loc_emb_size + self.tim_emb_size
-        self.attn = Attn(self.attn_type, self.hidden_size, self.use_cuda)
-        self.fc_attn = nn.Linear(input_size, self.hidden_size)
-
-        if self.rnn_type == 'GRU':
-            self.rnn = nn.GRU(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(input_size, self.hidden_size, 1)
-        elif self.rnn_type == 'RNN':
-            self.rnn = nn.RNN(input_size, self.hidden_size, 1)
-
-        self.fc_final = nn.Linear(2 * self.hidden_size + self.uid_emb_size, self.loc_size)
-        self.dropout = nn.Dropout(p=parameters.dropout_p)
-        self.init_weights()
-
-    def init_weights(self):
-        """
-        Here we reproduce Keras default initialization weights for consistency with Keras version
-        """
-        ih = (param.data for name, param in self.named_parameters() if 'weight_ih' in name)
-        hh = (param.data for name, param in self.named_parameters() if 'weight_hh' in name)
-        b = (param.data for name, param in self.named_parameters() if 'bias' in name)
-
-        for t in ih:
-            nn.init.xavier_uniform(t)
-        for t in hh:
-            nn.init.orthogonal(t)
-        for t in b:
-            nn.init.constant(t, 0)
-
-    def forward(self, loc, tim, history_loc, history_tim, history_count, uid, target_len):
-        h1 = Variable(torch.zeros(1, 1, self.hidden_size))
-        c1 = Variable(torch.zeros(1, 1, self.hidden_size))
-        if self.use_cuda:
-            h1 = h1.cuda()
-            c1 = c1.cuda()
-
-        loc_emb = self.emb_loc(loc)
-        tim_emb = self.emb_tim(tim)
-        x = torch.cat((loc_emb, tim_emb), 2)
-        x = self.dropout(x)
-
-        loc_emb_history = self.emb_loc(history_loc).squeeze(1) # 去掉维数为 1 的维度
-        tim_emb_history = self.emb_tim(history_tim).squeeze(1)
-        count = 0
-        if self.use_cuda:
-            loc_emb_history2 = Variable(torch.zeros(len(history_count), loc_emb_history.size()[-1])).cuda()
-            tim_emb_history2 = Variable(torch.zeros(len(history_count), tim_emb_history.size()[-1])).cuda()
-        else:
-            loc_emb_history2 = Variable(torch.zeros(len(history_count), loc_emb_history.size()[-1]))
-            tim_emb_history2 = Variable(torch.zeros(len(history_count), tim_emb_history.size()[-1]))
-        for i, c in enumerate(history_count):
-            if c == 1:
-                tmp = loc_emb_history[count].unsqueeze(0) # shape: 1 * 500 
-            else:
-                tmp = torch.mean(loc_emb_history[count:count + c, :], dim=0, keepdim=True) # 为什么要 mean 一下呢 因为要把相邻且处于时间段的数据合到一起
-            loc_emb_history2[i, :] = tmp
-            tim_emb_history2[i, :] = tim_emb_history[count, :].unsqueeze(0) # 1 * 
-            count += c
-
-        history = torch.cat((loc_emb_history2, tim_emb_history2), 1)
-        history = F.tanh(self.fc_attn(history))
-
-        if self.rnn_type == 'GRU' or self.rnn_type == 'RNN':
-            out_state, h1 = self.rnn(x, h1)
-        elif self.rnn_type == 'LSTM':
-            out_state, (h1, c1) = self.rnn(x, (h1, c1))
-        out_state = out_state.squeeze(1) # seq_len * hiden_size
-        # out_state = F.selu(out_state)
-
-        attn_weights = self.attn(out_state[-target_len:], history).unsqueeze(0) # 为什么这里要用 target len 截取一下 因为 x[0] 投入 RNN 出来的是 x_expect[1]
-        context = attn_weights.bmm(history.unsqueeze(0)).squeeze(0) # 把 history 与对应的 weight 相乘 shape: target_len * hiden_size
-        out = torch.cat((out_state[-target_len:], context), 1)  # no need for fc_attn
-
-        uid_emb = self.emb_uid(uid).repeat(target_len, 1) # 补充好维数
-        out = torch.cat((out, uid_emb), 1)
-        out = self.dropout(out)
-
-        y = self.fc_final(out) # shape target_len * loc_size
-        score = F.log_softmax(y, 1) # 这个 score 这里最好指明 dim 不然会报警，我觉得应该是 1
-
-        return score
-
-
-class DeepMove(nn.Module):
-    """rnn model with long-term history attention"""
-
-    def __init__(self, config):
-        super(DeepMove, self).__init__()
-        self.loc_size = config['data_feature']['loc_size']
+    def __init__(self, config, data_feature):
+        super(DeepMove, self).__init__(config, data_feature)
+        self.loc_size = data_feature['loc_size']
         self.loc_emb_size = config['loc_emb_size']
-        self.tim_size = config['data_feature']['tim_size']
+        self.tim_size = data_feature['tim_size']
         self.tim_emb_size = config['tim_emb_size']
         self.hidden_size = config['hidden_size']
         self.attn_type = config['attn_type']
