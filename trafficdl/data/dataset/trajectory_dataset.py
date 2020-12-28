@@ -12,8 +12,8 @@ class TrajectoryDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         parameters_str = ''
-        for key in self.config:
-            if key in ['dataset', 'min_session_len', 'min_sessions', 'time_length']:
+        for key in ['dataset', 'min_session_len', 'min_sessions', 'time_window_size']:
+            if key in self.config: 
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))# 缓存切好的轨迹
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
@@ -104,8 +104,8 @@ class TrajectoryDataset(AbstractDataset):
         res = {}
         min_session_len = self.config['min_session_len']
         min_sessions = self.config['min_sessions']
-        time_length = self.config['time_length']
-        base_zero = time_length > 12
+        time_window_size = self.config['time_window_size']
+        base_zero = time_window_size > 12
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
             sessions = [] # 存放该用户所有的 session
@@ -115,13 +115,13 @@ class TrajectoryDataset(AbstractDataset):
             base_time = calculateBaseTime(start_time, base_zero)
             for index, row in usr_traj.iterrows():
                 if index == 0:
-                    assert start_time.hour - base_time.hour < time_length
-                    session.append([row['location'], start_time.hour - base_time.hour]) # time encode from 0 ~ time_length
+                    assert start_time.hour - base_time.hour < time_window_size
+                    session.append([row['location'], start_time.hour - base_time.hour]) # time encode from 0 ~ time_window_size
                 else:
                     now_time = parseTime(row['time'], int(row['timezone_offset_in_minutes']))
                     time_off = calculateTimeOff(now_time, base_time)
-                    if time_off < time_length and time_off >=0:
-                        assert int(time_off) < time_length
+                    if time_off < time_window_size and time_off >=0:
+                        assert int(time_off) < time_window_size
                         session.append([row['location'], int(time_off)])
                     else:
                         if len(session) >= min_session_len:
@@ -129,7 +129,7 @@ class TrajectoryDataset(AbstractDataset):
                         session = []
                         start_time = now_time
                         base_time = calculateBaseTime(start_time, base_zero)
-                        assert start_time.hour - base_time.hour < time_length
+                        assert start_time.hour - base_time.hour < time_window_size
                         session.append([row['location'], start_time.hour - base_time.hour])
             if len(session) >= min_session_len:
                 sessions.append(session)
@@ -141,7 +141,7 @@ class TrajectoryDataset(AbstractDataset):
         print('loc_size: {}, uid_size: {}'.format(loc_size, uid_size))
         return {
             'loc_size': loc_size,
-            'tim_size': time_length,
+            'tim_size': time_window_size,
             'uid_size': uid_size,
             'data': res
         }

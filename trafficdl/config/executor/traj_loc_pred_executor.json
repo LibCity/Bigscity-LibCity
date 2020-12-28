@@ -1,6 +1,6 @@
 {
-    "use_cuda": true,
-    "lr": 5e-4,
+    "gpu": true,
+    "learning_rate": 5e-4,
     "L2": 1e-5, 
     "max_epoch": 1,
     "lr_step": 2,

@@ -92,3 +92,24 @@ def ensure_dir(dir_path):
     """
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
+
+def trans_naming_rule(origin, origin_rule, target_rule):
+    '''
+    Args:
+        origin (str): 源命名格式下的变量名
+        origin_rule (str): 源命名格式，枚举类
+        target_rule (str): 目标命名格式，枚举类
+    Return:
+        target (str): 转换之后的结果
+    '''
+    # TODO: 请确保输入是符合 origin_rule，这里目前不做检查
+    target = ''
+    if origin_rule == 'upper_camel_case' and target_rule == 'under_score_rule':
+        for i, c in enumerate(origin):
+            if i == 0:
+                target = c.lower()
+            else:
+                target += '_' + c.lower() if c.isupper() else c
+        return target
+    else:
+        raise NotImplementedError('trans naming rule only support from upper_camel_case to under_score_rule')

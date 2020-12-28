@@ -1,5 +1,4 @@
 {
-    "use_cuda": true,
     "loc_emb_size": 500,
     "uid_emb_size": 40,
     "tim_emb_size": 10,

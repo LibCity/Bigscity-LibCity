@@ -15,12 +15,12 @@ class Attn(nn.Module):
     """Attention Module. Heavily borrowed from Practical Pytorch
     https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation"""
 
-    def __init__(self, method, hidden_size, use_cuda):
+    def __init__(self, method, hidden_size, gpu):
         super(Attn, self).__init__()
 
         self.method = method
         self.hidden_size = hidden_size
-        self.use_cuda = use_cuda
+        self.gpu = gpu
         if self.method == 'general':
             self.attn = nn.Linear(self.hidden_size, self.hidden_size)
         elif self.method == 'concat':
@@ -32,7 +32,7 @@ class Attn(nn.Module):
         state_len = out_state.size()[1]
         batch_size = history.size()[0]
         
-        if self.use_cuda:
+        if self.gpu:
             attn_energies = torch.zeros(batch_size, state_len, seq_len).cuda()
         else:
             attn_energies = torch.zeros(batch_size, state_len, seq_len)
@@ -66,14 +66,14 @@ class DeepMove(AbstractModel):
         self.tim_emb_size = config['tim_emb_size']
         self.hidden_size = config['hidden_size']
         self.attn_type = config['attn_type']
-        self.use_cuda = config['use_cuda']
+        self.gpu = config['gpu']
         self.rnn_type = config['rnn_type']
 
         self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size)
         self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size)
 
         input_size = self.loc_emb_size + self.tim_emb_size
-        self.attn = Attn(self.attn_type, self.hidden_size, self.use_cuda)
+        self.attn = Attn(self.attn_type, self.hidden_size, self.gpu)
         self.fc_attn = nn.Linear(input_size, self.hidden_size)
 
         if self.rnn_type == 'GRU':
@@ -117,7 +117,7 @@ class DeepMove(AbstractModel):
         h2 = torch.zeros(1, batch_size, self.hidden_size)
         c1 = torch.zeros(1, batch_size, self.hidden_size)
         c2 = torch.zeros(1, batch_size, self.hidden_size)
-        if self.use_cuda:
+        if self.gpu:
             h1 = h1.cuda()
             h2 = h2.cuda()
             c1 = c1.cuda()
