@@ -20,7 +20,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.evaluator = get_evaluator(config)
         self.metrics = config['metrics']
         self.config = config
-        if self.config['use_cuda']:
+        if self.config['gpu']:
             self.model = self.model.cuda()
 
         self.tmp_path = './trafficdl/tmp/checkpoint'
@@ -78,7 +78,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         with torch.no_grad():
             self.model = self.model.eval()
             for batch in self.data_loader:
-                batch.to_tensor(gpu=self.config['use_cuda'])
+                batch.to_tensor(gpu=self.config['gpu'])
                 output = self.model(batch)
                 break
 
@@ -90,7 +90,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             y_truths = []
             y_preds = []
             for batch in test_dataloader:
-                batch.to_tensor(gpu=self.config['use_cuda'])
+                batch.to_tensor(gpu=self.config['gpu'])
                 output = self.model(batch)
                 y_true = self.scaler.inverse_transform(batch['y'].cpu().numpy()[..., 0])
                 y_pred = self.scaler.inverse_transform(output.cpu().numpy()[..., 0])
@@ -169,7 +169,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.config['use_cuda'])
+            batch.to_tensor(gpu=self.config['gpu'])
             output = self.model(batch, batches_seen)
             if batches_seen == 0:
                 # this is a workaround to accommodate dynamically registered parameters in DCGRUCell
@@ -191,7 +191,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.config['use_cuda'])
+                batch.to_tensor(gpu=self.config['gpu'])
                 output = self.model(batch)
                 loss = loss_func(batch['y'], output)
                 losses.append(loss.item())

@@ -15,7 +15,7 @@ config = {
 
     'num_workers': 1,
     'cache_dataset': True,
-    'use_cuda': True,
+    'gpu': True,
     'batch_size': 64,
     'test_batch_size': 64,
     'val_batch_size': 64,
