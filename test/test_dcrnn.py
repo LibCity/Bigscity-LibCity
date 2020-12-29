@@ -11,7 +11,7 @@ config = {
     'evaluator': 'TrafficSpeedPredEvaluator',
     'executor': 'TrafficSpeedPredExecutor',
     'dataset_class': 'TrafficSpeedDataset',
-    'metrics': ['MAE', 'MSE', 'RESE', 'MAPE'],
+    'metrics': ['MAE', 'MSE', 'RMSE', 'MAPE'],
 
     'num_workers': 1,
     'cache_dataset': True,
