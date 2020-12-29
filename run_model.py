@@ -30,4 +30,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     dict_args = vars(args)
     other_args = {key:val for key, val in dict_args.items() if key not in ['task', 'model', 'dataset', 'config_file', 'saved_model', 'train'] and val != None}
-    run_model(task=args.task, model=args.model, dataset=args.dataset, config_file=args.config_file, save_model=args.saved_model, train=args.train, other_args=other_args)
+    run_model(task=args.task, model_name=args.model, dataset_name=args.dataset, config_file=args.config_file, save_model=args.saved_model, train=args.train, other_args=other_args)
