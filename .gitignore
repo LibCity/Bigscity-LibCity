@@ -2,6 +2,7 @@
 /raw_data/*
 /trafficdl/tmp/*
 /trafficdl/cache/*
+/trafficdl/__pycache__
 /trafficdl/*/__pycache__
 /trafficdl/data/dataset/__pycache__
 /.idea
