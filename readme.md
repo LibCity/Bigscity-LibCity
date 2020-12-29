@@ -20,7 +20,7 @@
 
 #### 流水线实例：运行单个模型流水线
 
-![](D:\ubantu_shared\human mobility toolkit\Tookit_v3.0\pipeline.png)
+![](./pipeline.png)
 
 1. 初始化流水线配置。用户可通过命令行传参与指定 config 文件的方式灵活地调整流水线参数配置。（依托 Config 模块）
 2. 数据集加载与数据预处理，数据转换并划分训练集、验证集、测试集。（依托 Data 模块）
