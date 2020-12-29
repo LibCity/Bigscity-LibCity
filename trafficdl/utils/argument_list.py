@@ -5,7 +5,6 @@ import argparse
 
 general_arguments = {
     "gpu": "bool",
-    "time_window_size": "int",
     "batch_size": "int",
     "train_rate": "float",
     "eval_rate": "float",
