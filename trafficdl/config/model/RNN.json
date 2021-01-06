@@ -1,0 +1,6 @@
+{
+    "loc_emb_size": 500,
+    "tim_emb_size": 10,
+    "hidden_size": 500,
+    "dropout_p": 0.3
+}
