@@ -66,6 +66,10 @@ class ConfigParser(object):
             # check model and dataset
             if self.config['model'] not in task_config['allowed_model']:
                 raise ValueError('task {} do not support model {}'.format(self.config['task'], self.config['model']))
+            # 对于 LSTM RNN GRU 使用的都是同一个类，只是 RNN 模块不一样而已，这里做一下修改
+            if self.config['model'] == 'LSTM' or self.config['model'] == 'GRU' or self.config['model'] == 'RNN':
+                self.config['model'] = 'RNN'
+                self.config['rnn_type'] = self.config['model']
             if self.config['dataset'] not in task_config['allowed_dataset']:
                 raise ValueError('task {} do not support dataset {}'.format(self.config['task'], self.config['dataset']))
         # 接着加载每个阶段的 default config

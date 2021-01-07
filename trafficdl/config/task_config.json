@@ -3,7 +3,7 @@
         "dataset_class": "TrajectoryDataset",
         "executor": "TrajLocPredExecutor",
         "evaluator": "TrajLocPredEvaluator",
-        "allowed_model": ["DeepMove"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla"]
     }
 }
