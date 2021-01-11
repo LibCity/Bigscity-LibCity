@@ -53,7 +53,7 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         # recall is used to valid in the trainning, so must exit
         self.result['Recall@{}'.format(self.topk)] = self.intermediate_result['hit'] / self.intermediate_result['total']
         if 'F1' in self.metrics:
-            self.result['F1@{}'.format(self.topk)] = (2 * self.result['Precision'] * self.result['Recall']) / (self.result['Precision'] + self.result['Recall'])
+            self.result['F1@{}'.format(self.topk)] = (2 * self.result['Precision@{}'.format(self.topk)] * self.result['Recall@{}'.format(self.topk)]) / (self.result['Precision@{}'.format(self.topk)] + self.result['Recall@{}'.format(self.topk)])
         if 'MRR' in self.metrics:
             self.result['MRR@{}'.format(self.topk)] = self.intermediate_result['rank'] / self.intermediate_result['total']
         if 'MAP' in self.metrics:
