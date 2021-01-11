@@ -47,27 +47,32 @@ def ACC(loc_pred, loc_true):
     loc_diff[loc_diff != 0] = 1
     return loc_diff, np.mean(loc_diff == 0)
 
-
-# 对比真实位置与模型预测的前k个位置获得预测准确率
 def top_k(loc_pred, loc_true, topK):
     '''
+    count the hit numbers of loc_true in topK of loc_pred, used to calculate Precision, Recall and F1-score
+    calculate the reciprocal rank, used to calcualte MRR
+    calculate the sum of DCG@K of the batch, used to calculate NDCG
     Args:
         loc_pred (batch_size * output_dim)
         loc_true (batch_size * 1)
     Return:
-        For a single data in batch, if loc_true is in topk(loc_pred) return 1, else return 0
-        res: (batch_size * 1)
+        hit (int): the hit numbers
+        rank (float): the sum of the reciprocal rank of input batch
+        dcg (float)
     '''
     assert topK > 0, "top-k ACC评估方法：k值应不小于1"
     loc_pred = torch.LongTensor(loc_pred)
     val, index = torch.topk(loc_pred, topK, 1) # 使用 torch 的 topk 来实现
     index = index.numpy()
-    res = []
+    hit = 0
+    rank = 0.0
+    dcg = 0.0
     for i, p in enumerate(index):
         target = loc_true[i]
         if target in p:
-            res.append(1)
-        else:
-            res.append(0)
-    return res
-
+            hit += 1
+            rank_list = list(p)
+            rank_index = rank_list.index(target)
+            rank += 1.0 / (rank_index + 1) # rank_index is start from 0, so need plus 1
+            dcg += 1.0 / np.log2(rank_index + 2)
+    return hit, rank, dcg

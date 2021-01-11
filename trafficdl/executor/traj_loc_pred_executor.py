@@ -13,7 +13,7 @@ class TrajLocPredExecutor(AbstractExecutor):
     def __init__(self, config, model):
         self.model = model
         self.evaluator = get_evaluator(config)
-        self.metrics = config['metrics']
+        self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         if self.config['gpu']:
             self.model = self.model.cuda()
@@ -146,18 +146,5 @@ class TrajLocPredExecutor(AbstractExecutor):
                 print('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
         avg_loss = np.mean(total_loss, dtype=np.float64)
-        avg_acc = self.evaluator.evaluate()[self.metrics[0]] # 随便选一个就行
+        avg_acc = self.evaluator.evaluate()[self.metrics] # 随便选一个就行
         return avg_loss, avg_acc
-    
-    def get_acc(self, target, scores, topk = 1):
-        """target and scores are torch cuda Variable"""
-        target = target.data.cpu().numpy()
-        val, idxx = scores.data.topk(topk, 1)
-        predx = idxx.cpu().numpy()
-        correct_cnt = 0
-        for i, p in enumerate(predx):
-            t = target[i]
-            if t in p:
-                correct_cnt += 1
-        acc = correct_cnt / target.shape[0]
-        return acc
