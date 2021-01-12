@@ -1,4 +1,4 @@
 {
-  "metrics": ["topk"],
+  "metrics": ["Recall"],
   "topk": 1
 }
