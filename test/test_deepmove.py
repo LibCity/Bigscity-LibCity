@@ -32,7 +32,8 @@ config = {
     "hidden_size": 500,
     "attn_type": "dot",
     "rnn_type": "LSTM",
-    "dropout_p": 0.3
+    "dropout_p": 0.3,
+    'history_type': 'cut_off'
 }
 
 config['dataset'] = 'foursquare_tky' # foursquare_tky
