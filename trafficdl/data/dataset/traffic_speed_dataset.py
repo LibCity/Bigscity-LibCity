@@ -23,6 +23,8 @@ class TrafficSpeedDataset(AbstractDataset):
         self.feature_name = {'X': 'float', 'y': 'float'}
         self.adj_mx = None
         self.scaler = None
+        self.feature_dim = 0
+        self.num_nodes = 0
         self._logger = getLogger()
         self._load_geo()
         self._load_rel()
@@ -31,6 +33,7 @@ class TrafficSpeedDataset(AbstractDataset):
     def _load_geo(self):
         geofile = pd.read_csv(self.data_path + '.geo')
         self.geo_ids = list(geofile['geo_id'])
+        self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
         for index, id in enumerate(self.geo_ids):
             self.geo_to_ind[id] = index
@@ -143,9 +146,9 @@ class TrafficSpeedDataset(AbstractDataset):
 
         if self.config['cache_dataset']:
             ensure_dir(self.cache_file_folder)
-            self._logger.info("train\t", "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
-            self._logger.info("eval\t", "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
-            self._logger.info("test\t", "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
+            self._logger.info("train\t" + "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
+            self._logger.info("eval\t" + "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
+            self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
             np.savez_compressed(
                 self.cache_file_name,
                 x_train=x_train,
@@ -189,6 +192,7 @@ class TrafficSpeedDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets = self._load_cache_train_val_test()
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets = self._generate_train_val_test()
+        self.feature_dim = x_train.shape[-1]
         # 特征归一化
         self.scaler = StandardScaler(mean=x_train[..., 0].mean(), std=x_train[..., 0].std())
         x_train[..., 0] = self.scaler.transform(x_train[..., 0])
@@ -214,5 +218,5 @@ class TrafficSpeedDataset(AbstractDataset):
             data_feature (dict)
         '''
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "data_loader": self.eval_dataloader,
-                "num_nodes": len(self.geo_ids)}
+                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim}
 
