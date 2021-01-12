@@ -2,10 +2,11 @@ import os
 import pandas as pd
 import numpy as np
 import datetime
+from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler
+from trafficdl.utils import StandardScaler, ensure_dir
 
 class TrafficSpeedDataset(AbstractDataset):
 
@@ -13,7 +14,7 @@ class TrafficSpeedDataset(AbstractDataset):
         self.config = config
         parameters_str = ''
         for key in self.config:
-            if key in ['dataset', 'horizon', 'seq_len']:
+            if key in ['dataset', 'input_window', 'output_window', 'add_time_in_day', 'add_day_in_week']:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/', 'speed{}.npz'.format(parameters_str))
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
@@ -21,6 +22,8 @@ class TrafficSpeedDataset(AbstractDataset):
         self.data = None
         self.feature_name = {'X': 'float', 'y': 'float'}
         self.adj_mx = None
+        self.scaler = None
+        self._logger = getLogger()
         self._load_geo()
         self._load_rel()
         # TODO: 加载数据集的config.json文件
@@ -34,49 +37,26 @@ class TrafficSpeedDataset(AbstractDataset):
 
     def _load_rel(self):
         relfile = pd.read_csv(self.data_path + '.rel')
-        self.distance_df = relfile[~relfile['cost'].isna()][['origin_id', 'destination_id', 'cost']]
-        self._calcule_adj_mx()
-
-    def _calcule_adj_mx(self):
-        self.adj_mx = self._get_adjacency_matrix(self.distance_df, self.geo_ids)
-        # 验证计算的结果跟数据集的link_weight列是否一致
-        # for i in range(relfile.shape[0]):
-        #     link_weight = relfile['link_weight'][i]
-        #     fromid = relfile['origin_id'][i]
-        #     toid = relfile['destination_id'][i]
-        #     cal_weight = self.adj_mx[self.geo_to_ind[fromid]][self.geo_to_ind[toid]]
-        #     if abs(link_weight - cal_weight) > 0.001:
-        #         print(i)
-        #         print(relfile.iloc[i])
-        #         print(cal_weight)
-        #         print('---------------------')
-
-    def _get_adjacency_matrix(self, distance_df, sensor_ids, normalized_k=0.1):
-        """
-        :param distance_df: data frame with three columns: [from, to, distance].
-        :param sensor_ids: list of sensor ids.
-        :param normalized_k: entries that become lower than normalized_k after normalization are set to zero for sparsity.
-        :return:
-        """
-        num_sensors = len(sensor_ids)
-        dist_mx = np.zeros((num_sensors, num_sensors), dtype=np.float32)
-        dist_mx[:] = np.inf
-
-        # Fills cells in the matrix with distances.
-        for row in distance_df.values:
+        self.distance_df = relfile[~relfile[self.config['weight_col']].isna()] \
+                                [['origin_id', 'destination_id', self.config['weight_col']]]
+        # 把数据转换成矩阵的形式
+        self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
+        self.adj_mx[:] = np.inf
+        for row in self.distance_df.values:
             if row[0] not in self.geo_to_ind or row[1] not in self.geo_to_ind:
                 continue
-            dist_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+            self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+        # 计算权重
+        if self.config['calculate_weight']:
+            self._calculate_adjacency_matrix()
 
+    def _calculate_adjacency_matrix(self):
         # Calculates the standard deviation as theta.
-        distances = dist_mx[~np.isinf(dist_mx)].flatten()
+        adj_epsilon = self.config.get('adj_epsilon', 0.1)
+        distances = self.adj_mx[~np.isinf(self.adj_mx)].flatten()
         std = distances.std()
-        adj_mx = np.exp(-np.square(dist_mx / std))
-        # Make the adjacent matrix symmetric by taking the max.
-        # adj_mx = np.maximum.reduce([adj_mx, adj_mx.T])
-        # Sets entries that lower than a threshold, i.e., k, to zero for sparsity.
-        adj_mx[adj_mx < normalized_k] = 0
-        return adj_mx
+        self.adj_mx = np.exp(-np.square(self.adj_mx / std))
+        self.adj_mx[self.adj_mx < adj_epsilon] = 0
 
     def _load_dyna(self):
         dynafile = pd.read_csv(self.data_path + '.dyna')
@@ -88,23 +68,23 @@ class TrafficSpeedDataset(AbstractDataset):
             df[self.geo_ids[i]] = dynafile[dynafile['entity_id'] == self.geo_ids[0]]['traffic_speed'].values
         return df
 
-    def _generate_graph_seq2seq_io_data(
-            self, df, x_offsets, y_offsets, add_time_in_day=True, add_day_in_week=False, scaler=None):
+    def _generate_graph_seq2seq_io_data(self, df, x_offsets, y_offsets):
         """
-        Generate samples from
+        根据input_window和output_window产生模型的输入输出数据的四维张量
+        默认第四维的0维度([..., 0])是原始速度数据，其他维度可以是额外的特征数据，如时间
         :param df:
         :param x_offsets:
         :param y_offsets:
-        :param add_time_in_day:
-        :param add_day_in_week:
-        :param scaler:
         :return:
-        # x: (epoch_size, input_length, num_nodes, input_dim)
-        # y: (epoch_size, output_length, num_nodes, output_dim)
+        # x: (epoch_size, input_length, num_nodes, feature_dim)
+        # y: (epoch_size, output_length, num_nodes, feature_dim)
         """
         num_samples, num_nodes = df.shape
         data = np.expand_dims(df.values, axis=-1)
         data_list = [data]
+
+        add_time_in_day = self.config.get('add_time_in_day', False)
+        add_day_in_week = self.config.get('add_day_in_week', False)
         if add_time_in_day:
             time_ind = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
             time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
@@ -117,8 +97,7 @@ class TrafficSpeedDataset(AbstractDataset):
             day_in_week[np.arange(num_samples), :, dayofweek] = 1
             data_list.append(day_in_week)
 
-        data = np.concatenate(data_list, axis=-1)  # (34272, 207, 9)
-        # epoch_len = num_samples + min(x_offsets) - max(y_offsets)
+        data = np.concatenate(data_list, axis=-1)
         x, y = [], []
         # t is the index of the last observation.
         min_t = abs(min(x_offsets))
@@ -130,24 +109,23 @@ class TrafficSpeedDataset(AbstractDataset):
             y.append(y_t)
         x = np.stack(x, axis=0)
         y = np.stack(y, axis=0)
-        return x, y  # 四维数组  (*, 12, 207, num_feature)
+        return x, y
 
     def _generate_train_val_test(self):
+        """
+        分解train/test/eval的函数
+        :return:
+        """
         df = self._load_dyna()
-        # 预测用的过去时间窗口长度 取决于self.config['seq_len']
-        x_offsets = np.sort(np.concatenate((np.arange(-self.config['seq_len']+1, 1, 1),)))
-        # 未来时间窗口长度 取决于self.config['horizon']
-        y_offsets = np.sort(np.arange(1, self.config['horizon']+1, 1))
+        # 预测用的过去时间窗口长度 取决于self.config['input_window']
+        x_offsets = np.sort(np.concatenate((np.arange(-self.config['input_window']+1, 1, 1),)))
+        # 未来时间窗口长度 取决于self.config['output_window']
+        y_offsets = np.sort(np.arange(1, self.config['output_window']+1, 1))
         # x: (num_samples, input_length, num_nodes, input_dim)
         # y: (num_samples, output_length, num_nodes, output_dim)
-        x, y = self._generate_graph_seq2seq_io_data(
-            df,
-            x_offsets=x_offsets,
-            y_offsets=y_offsets,
-            add_time_in_day=True,
-            add_day_in_week=False,
-        )
-        print("x shape: ", x.shape, ", y shape: ", y.shape)
+        x, y = self._generate_graph_seq2seq_io_data(df, x_offsets, y_offsets)
+        self._logger.info("Dataset created")
+        self._logger.info("x shape: " + str(x.shape) + ", y shape: " + str(y.shape))
 
         train_rate, eval_rate, test_rate = self.config['split_ratio']
         num_samples = x.shape[0]
@@ -163,11 +141,10 @@ class TrafficSpeedDataset(AbstractDataset):
         x_test, y_test = x[-num_test:], y[-num_test:]
 
         if self.config['cache_dataset']:
-            if not os.path.exists(self.cache_file_folder):
-                os.makedirs(self.cache_file_folder)
-            print("train", "x: ", x_train.shape, "y: ", y_train.shape)
-            print("eval", "x: ", x_val.shape, "y: ", y_val.shape)
-            print("test", "x: ", x_test.shape, "y: ", y_test.shape)
+            ensure_dir(self.cache_file_folder)
+            self._logger.info("train\t", "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
+            self._logger.info("eval\t", "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
+            self._logger.info("test\t", "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
             np.savez_compressed(
                 self.cache_file_name,
                 x_train=x_train,
@@ -179,9 +156,11 @@ class TrafficSpeedDataset(AbstractDataset):
                 x_offsets=x_offsets.reshape(list(x_offsets.shape) + [1]),
                 y_offsets=y_offsets.reshape(list(y_offsets.shape) + [1]),
             )
+            self._logger.info('Saved at ' + self.cache_file_name)
         return x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets
 
     def _load_cache_train_val_test(self):
+        self._logger.info('Loading ' + self.cache_file_name)
         cat_data = np.load(self.cache_file_name)
         x_train = cat_data['x_train']
         y_train = cat_data['y_train']
@@ -195,6 +174,7 @@ class TrafficSpeedDataset(AbstractDataset):
 
     def get_data(self):
         '''
+        获取数据 返回DataLoader
         return:
             train_dataloader (pytorch.DataLoader)
             eval_dataloader (pytorch.DataLoader)
@@ -208,7 +188,7 @@ class TrafficSpeedDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets = self._load_cache_train_val_test()
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets = self._generate_train_val_test()
-
+        # 特征归一化
         self.scaler = StandardScaler(mean=x_train[..., 0].mean(), std=x_train[..., 0].std())
         x_train[..., 0] = self.scaler.transform(x_train[..., 0])
         y_train[..., 0] = self.scaler.transform(y_train[..., 0])
@@ -216,10 +196,11 @@ class TrafficSpeedDataset(AbstractDataset):
         y_val[..., 0] = self.scaler.transform(y_val[..., 0])
         x_test[..., 0] = self.scaler.transform(x_test[..., 0])
         y_test[..., 0] = self.scaler.transform(y_test[..., 0])
-
+        # 转List
         train_data = list(zip(x_train, y_train))
         eval_data = list(zip(x_val, y_val))
         test_data = list(zip(x_test, y_test))
+        # 转Dataloader
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name,
                                 self.config['batch_size'], self.config['num_workers'], pad_with_last_sample=True)
@@ -227,10 +208,10 @@ class TrafficSpeedDataset(AbstractDataset):
 
     def get_data_feature(self):
         '''
-        如果模型使用了 embedding 层，一般是需要根据数据集的 loc_size、tim_size、uid_size 等特征来确定 embedding 层的大小的
-        故该方法返回一个 dict，包含表示层能够提供的数据集特征
+        返回数据集特征
         return:
             data_feature (dict)
         '''
-        return {"scaler": self.scaler, "adj_mx": self.adj_mx, "data_loader": self.eval_dataloader}
+        return {"scaler": self.scaler, "adj_mx": self.adj_mx, "data_loader": self.eval_dataloader,
+                "num_nodes": len(self.geo_ids)}
 
