@@ -127,7 +127,8 @@ class TrafficSpeedDataset(AbstractDataset):
         self._logger.info("Dataset created")
         self._logger.info("x shape: " + str(x.shape) + ", y shape: " + str(y.shape))
 
-        train_rate, eval_rate, test_rate = self.config['split_ratio']
+        train_rate, eval_rate = self.config['train_rate'], self.config['eval_rate']
+        test_rate = 1 - train_rate - eval_rate
         num_samples = x.shape[0]
         num_test = round(num_samples * test_rate)
         num_train = round(num_samples * train_rate)

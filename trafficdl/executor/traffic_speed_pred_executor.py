@@ -11,8 +11,6 @@ from trafficdl.utils import get_evaluator, ensure_dir
 
 from trafficdl.model import loss
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class TrafficSpeedPredExecutor(AbstractExecutor):
     def __init__(self, config, model):
@@ -34,28 +32,22 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
 
         self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
-        self._logger.info("Model created")
         self.scaler = self.model.get_data_feature().get('scaler')
         self.data_loader = self.model.get_data_feature().get('data_loader')
 
         self.max_grad_norm = self.config.get('max_grad_norm', 1.)
-        self.num_nodes = int(self.config.get('num_nodes', 1))
-        self.input_dim = int(self.config.get('input_dim', 1))
-        self.output_dim = int(self.config.get('output_dim', 1))
-        self.seq_len = int(self.config.get('seq_len'))
-        self.horizon = int(self.config.get('horizon', 1))
-        self.use_curriculum_learning = bool(self.config.get('use_curriculum_learning', False))
-
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
 
     def save_model(self, cache_name):
         ensure_dir(self.cache_dir)
+        self._logger.info("Saved model at " + cache_name)
         torch.save(self.model.state_dict(), cache_name)
 
     def load_model(self, cache_name):
         self._setup_graph()
+        self._logger.info("Loaded model at " + cache_name)
         self.model.load_state_dict(torch.load(cache_name))
 
     def save_model_with_epoch(self, epoch):
