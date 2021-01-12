@@ -73,6 +73,10 @@ class Batch(object):
                     self.data[key] = torch.LongTensor(self.data[key]).cuda()
                 elif self.feature_name[key] == 'float':
                     self.data[key] = torch.FloatTensor(self.data[key]).cuda()
+                elif self.feature_name[key] == 'array of int':
+                    for i in range(len(self.data[key])):
+                        for j in range(len(self.data[key][i])):
+                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).cuda()
                 else:
                     raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
             else:
@@ -80,5 +84,9 @@ class Batch(object):
                     self.data[key] = torch.LongTensor(self.data[key])
                 elif self.feature_name[key] == 'float':
                     self.data[key] = torch.FloatTensor(self.data[key])
+                elif self.feature_name[key] == 'array of int':
+                    for i in range(len(self.data[key])):
+                        for j in range(len(self.data[key][i])):
+                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j])
                 else:
                     raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))

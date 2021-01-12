@@ -25,6 +25,13 @@ class TrajectoryDataset(AbstractDataset):
             'history_tim': self.config['history_len']
         }
         self.feature_name = {'history_loc': 'int', 'history_tim': 'int', 'current_loc': 'int', 'current_tim': 'int', 'target': 'int', 'uid': 'int'}
+        self.history_type = config['history_type']
+        # 对于这种 history 模式没办法做到 batch
+        if self.history_type == 'cut_off':
+            self.config['batch_size'] = 1
+            self.feature_name['history_loc'] = 'array of int'
+            self.feature_name['history_tim'] = 'array of int'
+
 
     def get_data(self):
         '''
@@ -67,7 +74,8 @@ class TrajectoryDataset(AbstractDataset):
         # 划分训练集、测试集、验证集：有两种方式按 user 来划，以及按轨迹数来划。
         # TODO: 这里可以设一个参数，现在先按照轨迹数来划吧
         train_data, eval_data, test_data = self.gen_input()
-        
+        if self.history_type == 'cut_off':
+            self.pad_item = None # 这种情况下不做 pad
         return generate_dataloader(train_data, eval_data, test_data, self.feature_name, self.config['batch_size'], self.config['num_workers'], self.pad_item, self.pad_max_len)
     
     def get_data_feature(self):
@@ -170,15 +178,27 @@ class TrajectoryDataset(AbstractDataset):
             for i in range(sessions_len):
                 trace = []
                 if i == 0:
-                    history_session += sessions[i]
+                    if self.history_type == 'splice':
+                        history_session += sessions[i]
+                    else:
+                        history_session.append(sessions[i])
                     continue
                 current_session = sessions[i]
                 if len(current_session) <= 1:
                     continue
                 # 为当前轨迹的最后一个点 target
                 target = current_session[-1][0]
-                history_loc = [s[0] for s in history_session]  # 把多个 history 路径合并成一个？
-                history_tim = [s[1] for s in history_session]
+                if self.history_type == 'splice':
+                    history_loc = [s[0] for s in history_session]  # 把多个 history 路径合并成一个？
+                    history_tim = [s[1] for s in history_session]
+                else:
+                    history_loc = []
+                    history_tim = []
+                    for s in history_session:
+                        temp_loc = [ss[0] for ss in s]
+                        temp_tim = [ss[1] for ss in s]
+                        history_loc.append(temp_loc)
+                        history_tim.append(temp_tim)
                 trace.append(history_loc)
                 trace.append(history_tim)
                 loc_tim = []
@@ -196,5 +216,8 @@ class TrajectoryDataset(AbstractDataset):
                 else:
                     test_data.append(trace)
                 # 将当前轨迹加入历史轨迹中
-                history_session += current_session
+                if self.history_type == 'splice':
+                    history_session += current_session 
+                else:
+                    history_session.append(current_session)
         return train_data, eval_data, test_data
