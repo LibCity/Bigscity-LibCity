@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from logging import getLogger
 from trafficdl.model.abstract_model import AbstractModel
+from trafficdl.model import loss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -306,6 +307,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.input_window = config.get('input_window')
         self.output_window = config.get('output_window', 1)
         self._logger = getLogger()
+        self._scaler = self.data_feature.get('scaler')
 
     def _compute_sampling_threshold(self, batches_seen):
         return self.cl_decay_steps / (
@@ -381,5 +383,9 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
     def get_data_feature(self):
         return self.data_feature
 
-    def calculate_loss(self, batch):
-        pass
+    def calculate_loss(self, batch, batches_seen=None):
+        y_true = batch['y']
+        y_predicted = self.forward(batch, batches_seen)
+        y_true = self._scaler.inverse_transform(y_true[..., 0])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., 0])
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
