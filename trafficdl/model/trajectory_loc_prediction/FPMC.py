@@ -14,20 +14,20 @@ class FPMC(AbstractModel):
     def __init__(self, config, data_feature):
         super(FPMC, self).__init__(config, data_feature)
         self.embedding_size = config['embedding_size']
-        self.n_users = data_feature['uid_size']
-        self.n_items = data_feature['loc_size']
+        self.uid_size = data_feature['uid_size']
+        self.loc_size = data_feature['loc_size']
 
         # 可以把 FPMC 的那四个矩阵看成 Embedding
-        self.UI_emb = nn.Embedding(self.n_users, self.embedding_size)
-        self.IU_emb = nn.Embedding(self.n_items, self.embedding_size, padding_idx=data_feature['loc_pad'])
-        self.LI_emb = nn.Embedding(self.n_items, self.embedding_size, padding_idx=data_feature['loc_pad'])
-        self.IL_emb = nn.Embedding(self.n_items, self.embedding_size, padding_idx=data_feature['loc_pad'])
+        self.UI_emb = nn.Embedding(self.uid_size, self.embedding_size)
+        self.IU_emb = nn.Embedding(self.loc_size, self.embedding_size, padding_idx=data_feature['loc_pad'])
+        self.LI_emb = nn.Embedding(self.loc_size, self.embedding_size, padding_idx=data_feature['loc_pad'])
+        self.IL_emb = nn.Embedding(self.loc_size, self.embedding_size, padding_idx=data_feature['loc_pad'])
 
         # 暂不采用矩阵复现思路
-        # self.UI = nn.Parameter(torch.randn(size=[self.n_users, self.n_factors]))
-        # self.IU = nn.Parameter(torch.randn(size=[self.n_items, self.n_factors]))
-        # self.LI = nn.Parameter(torch.randn(size=[self.n_items, self.n_factors]))
-        # self.IL = nn.Parameter(torch.randn(size=[self.n_items, self.n_factors]))
+        # self.UI = nn.Parameter(torch.randn(size=[self.uid_size, self.n_factors]))
+        # self.IU = nn.Parameter(torch.randn(size=[self.loc_size, self.n_factors]))
+        # self.LI = nn.Parameter(torch.randn(size=[self.loc_size, self.n_factors]))
+        # self.IL = nn.Parameter(torch.randn(size=[self.loc_size, self.n_factors]))
 
         self.apply(self._init_weights)
 
@@ -37,16 +37,16 @@ class FPMC(AbstractModel):
     
     def forward(self, batch):
         # 矩阵复现法，这样写应该需要单独做一个 FPMCExecutor，感觉不太美观，还是尝试一下赵老师那边的复现思路
-        # UI_m_IU = torch.matmul(self.UI, self.IU.T) # n_users * n_items
+        # UI_m_IU = torch.matmul(self.UI, self.IU.T) # uid_size * loc_size
         # # 取出 batch 中每个 uid 对应的行
-        # UI_m_IU_user = torch.index_select(UI_m_IU, 0, batch['uid']) # batch_size * n_items
+        # UI_m_IU_user = torch.index_select(UI_m_IU, 0, batch['uid']) # batch_size * loc_size
         
-        # IL_m_LI = torch.matmul(self.IL, self.LI.T) # n_items * n_items
+        # IL_m_LI = torch.matmul(self.IL, self.LI.T) # loc_size * loc_size
         # # 取出 batch 中每个 last_current_loc 对应的行
         # last_loc_index = torch.LongTensor(batch.get_origin_len('current_len')) - 1 # Markov chain 仅根据最后一个位置来预测，所以要拿出最后一个位置
         # last_loc = torch.gather(batch['current_loc'], dim=1, index=last_loc_index.unsqueeze(1)) # batch_size * 1
-        # IL_m_LI_last_loc = torch.index_select(IL_m_LI, 0, last_loc.squeeze()) # batch_size * n_items
-        # scores = UI_m_IU_user + IL_m_LI_last_loc # batch_size * n_items
+        # IL_m_LI_last_loc = torch.index_select(IL_m_LI, 0, last_loc.squeeze()) # batch_size * loc_size
+        # scores = UI_m_IU_user + IL_m_LI_last_loc # batch_size * loc_size
 
         # Embedding 复现思路
         last_loc_index = torch.LongTensor(batch.get_origin_len('current_len')) - 1 # Markov chain 仅根据最后一个位置来预测，所以要拿出最后一个位置
