@@ -82,7 +82,9 @@ class TrajectoryDataset(AbstractDataset):
         res = {
             'loc_size': self.data['loc_size'],
             'tim_size': self.data['tim_size'],
-            'uid_size': self.data['uid_size']
+            'uid_size': self.data['uid_size'],
+            'loc_pad': self.pad_item['current_loc'] if self.pad_item != None else None,
+            'tim_pad': self.pad_item['current_tim'] if self.pad_item != None else None
         }
         return res
 
