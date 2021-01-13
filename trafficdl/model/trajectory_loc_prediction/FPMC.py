@@ -49,7 +49,7 @@ class FPMC(AbstractModel):
         # scores = UI_m_IU_user + IL_m_LI_last_loc # batch_size * loc_size
 
         # Embedding 复现思路
-        last_loc_index = torch.LongTensor(batch.get_origin_len('current_len')) - 1 # Markov chain 仅根据最后一个位置来预测，所以要拿出最后一个位置
+        last_loc_index = torch.LongTensor(batch.get_origin_len('current_loc')) - 1 # Markov chain 仅根据最后一个位置来预测，所以要拿出最后一个位置
         last_loc = torch.gather(batch['current_loc'], dim=1, index=last_loc_index.unsqueeze(1)) # batch_size * 1
         
         user_emb = self.UI_emb(batch['uid']) # batch_size * embedding_size
