@@ -1,0 +1,60 @@
+from trafficdl.data import get_dataset
+from trafficdl.utils import get_logger, get_executor, get_model
+
+if __name__ == '__main__':
+    config = {
+        'log_level': 'INFO',
+        'input_window': 12,
+        'output_window': 3,
+        'train_rate': 0.7,
+        'eval_rate': 0.1,
+        'cache_dataset': True,
+        'batch_size': 50,
+        'num_workers': 1,
+        'Ks': 3,
+        'Kt': 3,
+        'blocks': [[1, 32, 64], [64, 32, 128]],  # blocks[0][0]是输入特征的维度
+        'drop_prob': 0,
+        'epochs': 50,
+        'epoch': 0,
+        'base_lr': 1e-3,
+        'evaluator': 'TrafficSpeedPredEvaluator',
+        'dataset_class': 'TrafficSpeedDataset',
+        'executor': 'TrafficSpeedPredExecutor',
+        'model': 'STGCN',
+        'learning_rate': 0.001,
+        'learner': 'rmsprop',
+        'lr_decay_ratio': 0.7,
+        'step_size': 5,
+        'lr_scheduler': 'steplr',
+        'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
+        'gpu': True,
+        'dataset': 'METR_LA',
+        'weight_col': 'cost',
+        'calculate_weight': True,
+        # 'dataset': 'PeMSD7M',
+        # 'weight_col': 'weight',
+        # 'calculate_weight': False,
+        'add_time_in_day': True,
+        'add_day_in_week': False,
+    }
+    logger = get_logger(config)
+    dataset = get_dataset(config)
+    train_data, valid_data, test_data = dataset.get_data()
+    print(len(train_data.dataset), train_data.dataset[0][0].shape, train_data.dataset[0][1].shape,
+          train_data.batch_size)
+    print(len(valid_data.dataset), valid_data.dataset[0][0].shape, valid_data.dataset[0][1].shape,
+          valid_data.batch_size)
+    print(len(test_data.dataset), test_data.dataset[0][0].shape, test_data.dataset[0][1].shape, test_data.batch_size)
+
+    data_feature = dataset.get_data_feature()
+    print(data_feature['adj_mx'].shape)
+    print(data_feature['adj_mx'].sum())
+    model = get_model(config, data_feature)
+    executor = get_executor(config, model)
+    executor.train(train_data, valid_data)
+    model_cache_file = './trafficdl/cache/model_cache/STGCN_PeMSD7M.m'
+    executor.save_model(model_cache_file)
+    executor.load_model(model_cache_file)
+    # 评估，评估结果将会放在 cache/evaluate_cache 下
+    executor.evaluate(test_data)
