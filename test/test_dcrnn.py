@@ -11,7 +11,7 @@ config = {
     'evaluator': 'TrafficSpeedPredEvaluator',
     'executor': 'TrafficSpeedPredExecutor',
     'dataset_class': 'TrafficSpeedDataset',
-    'metrics': ['MAE', 'MSE', 'RMSE', 'MAPE'],
+    'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
     'calculate_weight': True,
     'adj_epsilon': 0.1,

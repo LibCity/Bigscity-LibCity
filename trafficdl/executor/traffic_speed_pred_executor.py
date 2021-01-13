@@ -97,9 +97,9 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) \
                        + '_' + self.config['model'] + '_predictions.npz'
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
-            self.evaluator.clear()
-            self.evaluator.collect({'y_true': y_truths, 'y_pred': y_preds})
-            self.evaluator.save_result(self.evaluate_res_dir)
+            # self.evaluator.clear()
+            # self.evaluator.collect({'y_true': y_truths, 'y_pred': y_preds})
+            # self.evaluator.save_result(self.evaluate_res_dir)
 
     def train(self, train_dataloader, eval_dataloader):
         epochs = self.config.get('epochs', 100)
@@ -153,7 +153,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
                 if wait == self.config.get('patience', 50):
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
-        self.model = self.load_model_with_epoch(best_epoch)
+        self.load_model_with_epoch(best_epoch)
 
     def _train_epoch(self, train_dataloader, epoch_idx, batches_seen, loss_func=None):
         self.model = self.model.train()

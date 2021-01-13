@@ -6,11 +6,13 @@ from trafficdl.model import loss
 from logging import getLogger
 from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
 
+
 class TrafficSpeedPredEvaluator(AbstractEvaluator):
 
     def __init__(self, config):
         self.metrics = config['metrics']  # 评估指标, 是一个 list
-        self.allowed_metrics = ['MAE', 'MSE', 'RMSE', 'MAPE']
+        self.allowed_metrics = ['MAE', 'MSE', 'RMSE', 'MAPE', 'masked_MAE',
+                                'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR']
         self.config = config
         self.result = {}  # 每一种指标的结果
         self.intermediate_result = {}  # 每一种指标每一个batch的结果
@@ -36,14 +38,26 @@ class TrafficSpeedPredEvaluator(AbstractEvaluator):
         y_true = batch['y_true']  # ndarray
         y_pred = batch['y_pred']  # ndarray
         for metric in self.metrics:
-            if metric == 'MAE':
+            if metric == 'masked_MAE':
                 self.intermediate_result[metric].append(loss.masked_mae_np(y_pred, y_true, 0))
-            elif metric == 'MSE':
+            elif metric == 'masked_MSE':
                 self.intermediate_result[metric].append(loss.masked_mse_np(y_pred, y_true, 0))
-            elif metric == 'RMSE':
+            elif metric == 'masked_RMSE':
                 self.intermediate_result[metric].append(loss.masked_rmse_np(y_pred, y_true, 0))
-            elif metric == 'MAPE':
+            elif metric == 'masked_MAPE':
                 self.intermediate_result[metric].append(loss.masked_mape_np(y_pred, y_true, 0))
+            elif metric == 'MAE':
+                self.intermediate_result[metric].append(loss.masked_mae_np(y_pred, y_true))
+            elif metric == 'MSE':
+                self.intermediate_result[metric].append(loss.masked_mse_np(y_pred, y_true))
+            elif metric == 'RMSE':
+                self.intermediate_result[metric].append(loss.masked_rmse_np(y_pred, y_true))
+            elif metric == 'MAPE':
+                self.intermediate_result[metric].append(loss.masked_mape_np(y_pred, y_true))
+            elif metric == 'R2':
+                self.intermediate_result[metric].append(loss.r2_score_np(y_pred, y_true))
+            elif metric == 'EVAR':
+                self.intermediate_result[metric].append(loss.explained_variance_score_np(y_pred, y_true))
 
     def evaluate(self):
         '''
