@@ -8,6 +8,7 @@ from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
 from trafficdl.utils import StandardScaler, ensure_dir
 
+
 class TrafficSpeedDataset(AbstractDataset):
 
     def __init__(self, config):
@@ -195,6 +196,7 @@ class TrafficSpeedDataset(AbstractDataset):
         self.feature_dim = x_train.shape[-1]
         # 特征归一化
         self.scaler = StandardScaler(mean=x_train[..., 0].mean(), std=x_train[..., 0].std())
+        self._logger.info('Scaler mean: ' + str(self.scaler.mean) + ', std: ' + str(self.scaler.std))
         x_train[..., 0] = self.scaler.transform(x_train[..., 0])
         y_train[..., 0] = self.scaler.transform(y_train[..., 0])
         x_val[..., 0] = self.scaler.transform(x_val[..., 0])
