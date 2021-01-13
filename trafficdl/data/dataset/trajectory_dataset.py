@@ -145,9 +145,10 @@ class TrajectoryDataset(AbstractDataset):
                 sessions.append(session)
             if len(sessions) >= min_sessions:
                 res[str(uid)] = sessions
+        # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了
         poi = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.config['dataset'])))
         loc_size = poi.shape[0]
-        uid_size = len(res)
+        uid_size = len(user_set)
         print('loc_size: {}, uid_size: {}'.format(loc_size, uid_size))
         return {
             'loc_size': loc_size,
