@@ -90,6 +90,7 @@ def masked_mae_np(preds, labels, null_val=np.nan):
 
 
 def masked_mape_np(preds, labels, null_val=np.nan):
+    labels[labels < 1e-4] = 0
     with np.errstate(divide='ignore', invalid='ignore'):
         if np.isnan(null_val):
             mask = ~np.isnan(labels)

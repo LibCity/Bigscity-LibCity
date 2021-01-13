@@ -112,7 +112,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             y_preds = []
             for batch in test_dataloader:
                 batch.to_tensor(gpu=self.gpu)
-                output = self.model(batch)
+                output = self.model.predict(batch)
                 y_true = self._scaler.inverse_transform(batch['y'].cpu().numpy()[..., 0])
                 y_pred = self._scaler.inverse_transform(output.cpu().numpy()[..., 0])
                 y_truths.append(y_true)
@@ -158,7 +158,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
                     log_lr = self.lr_scheduler.get_last_lr()[0]
                 else:
                     log_lr = self.learning_rate
-                message = 'Epoch [{}/{}] train_mae: {:.4f}, val_mae: {:.4f}, lr: {:.6f}, {:.1f}s'.\
+                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.1f}s'.\
                     format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 
