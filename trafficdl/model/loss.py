@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from sklearn.metrics import r2_score, explained_variance_score
 
 
 def masked_mae_loss(y_pred, y_true):
@@ -89,6 +90,7 @@ def masked_mae_np(preds, labels, null_val=np.nan):
 
 
 def masked_mape_np(preds, labels, null_val=np.nan):
+    labels[labels < 1e-4] = 0
     with np.errstate(divide='ignore', invalid='ignore'):
         if np.isnan(null_val):
             mask = ~np.isnan(labels)
@@ -99,3 +101,15 @@ def masked_mape_np(preds, labels, null_val=np.nan):
         mape = np.abs(np.divide(np.subtract(preds, labels).astype('float32'), labels))
         mape = np.nan_to_num(mask * mape)
         return np.mean(mape)
+
+
+def r2_score_np(preds, labels):
+    preds = preds.flatten()
+    labels = labels.flatten()
+    return r2_score(labels, preds)
+
+
+def explained_variance_score_np(preds, labels):
+    preds = preds.flatten()
+    labels = labels.flatten()
+    return explained_variance_score(labels, preds)

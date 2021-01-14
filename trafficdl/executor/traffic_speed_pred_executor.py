@@ -1,6 +1,5 @@
 import os
 import time
-
 import numpy as np
 import torch
 from logging import getLogger
@@ -8,8 +7,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
-
-from trafficdl.model import loss
 
 
 class TrafficSpeedPredExecutor(AbstractExecutor):
@@ -32,13 +29,28 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
 
         self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
-        self.scaler = self.model.get_data_feature().get('scaler')
-        self.data_loader = self.model.get_data_feature().get('data_loader')
+        self._scaler = self.model.get_data_feature().get('scaler')
 
+        self.epochs = self.config.get('epochs', 100)
+        self.learning_rate = self.config.get('learning_rate', 0.01)
+        self.learner = self.config.get('learner', 'adam')
+        self.epsilon = self.config.get('epsilon', 1e-8)
+        self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
+        self.lr_decay_ratio = self.config.get('lr_decay_ratio', 0.1)
+        self.milestones = self.config.get('steps', [])
+        self.step_size = self.config.get('step_size', 10)
         self.max_grad_norm = self.config.get('max_grad_norm', 1.)
+        self.clip_grad_norm = self.config.get('clip_grad_norm', False)
+        self.log_every = self.config.get('log_every', 1)
+        self.saved = self.config.get('save_model', True)
+        self.patience = self.config.get('patience', 50)
+        self.gpu = self.config.get('gpu', True)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
+
+        self.optimizer = self._build_optimizer()
+        self.lr_scheduler = self._build_lr_scheduler()
 
     def save_model(self, cache_name):
         ensure_dir(self.cache_dir)
@@ -46,7 +58,6 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         torch.save(self.model.state_dict(), cache_name)
 
     def load_model(self, cache_name):
-        self._setup_graph()
         self._logger.info("Loaded model at " + cache_name)
         self.model.load_state_dict(torch.load(cache_name))
 
@@ -55,37 +66,55 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         config = dict(self.config)
         config['model_state_dict'] = self.model.state_dict()
         config['epoch'] = epoch
-        torch.save(config, self.cache_dir+'/epoch%d.tar' % epoch)
+        model_path = self.cache_dir + '/' + self.config['model'] + '_epoch%d.tar' % epoch
+        torch.save(config, model_path)
         self._logger.info("Saved model at {}".format(epoch))
-        return self.cache_dir+'/epoch%d.tar' % epoch
+        return model_path
 
     def load_model_with_epoch(self, epoch):
-        self._setup_graph()
-        assert os.path.exists(self.cache_dir+'/epoch%d.tar' % epoch), 'Weights at epoch %d not found' % epoch
-        checkpoint = torch.load(self.cache_dir+'/epoch%d.tar' % epoch, map_location='cpu')
+        model_path = self.cache_dir + '/' + self.config['model'] + '_epoch%d.tar' % epoch
+        assert os.path.exists(model_path), 'Weights at epoch %d not found' % epoch
+        checkpoint = torch.load(model_path, map_location='cpu')
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self._logger.info("Loaded model at {}".format(epoch))
 
-    def _setup_graph(self):
-        with torch.no_grad():
-            self.model = self.model.eval()
-            for batch in self.data_loader:
-                batch.to_tensor(gpu=self.config['gpu'])
-                output = self.model(batch)
-                break
+    def _build_optimizer(self):
+        if self.learner.lower() == 'adam':
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+        elif self.learner.lower() == 'sgd':
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'adagrad':
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'rmsprop':
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+        elif self.learner.lower() == 'sparse_adam':
+            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate)
+        else:
+            self._logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+        return optimizer
+
+    def _build_lr_scheduler(self):
+        if self.lr_scheduler_type.lower() == 'multisteplr':
+            lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
+        elif self.lr_scheduler_type.lower() == 'steplr':
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.lr_decay_ratio)
+        else:
+            lr_scheduler = None
+        return lr_scheduler
 
     def evaluate(self, test_dataloader):
         self._logger.info('Start evaluating ...')
         with torch.no_grad():
-            self.model = self.model.eval()
+            self.model.eval()
             self.evaluator.clear()
             y_truths = []
             y_preds = []
             for batch in test_dataloader:
-                batch.to_tensor(gpu=self.config['gpu'])
-                output = self.model(batch)
-                y_true = self.scaler.inverse_transform(batch['y'].cpu().numpy()[..., 0])
-                y_pred = self.scaler.inverse_transform(output.cpu().numpy()[..., 0])
+                batch.to_tensor(gpu=self.gpu)
+                output = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(batch['y'].cpu().numpy()[..., 0])
+                y_pred = self._scaler.inverse_transform(output.cpu().numpy()[..., 0])
                 y_truths.append(y_true)
                 y_preds.append(y_pred)
                 evaluate_input = {'y_true': y_true, 'y_pred': y_pred}
@@ -97,101 +126,83 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) \
                        + '_' + self.config['model'] + '_predictions.npz'
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
-            self.evaluator.clear()
-            self.evaluator.collect({'y_true': y_truths, 'y_pred': y_preds})
-            self.evaluator.save_result(self.evaluate_res_dir)
+            # self.evaluator.clear()
+            # self.evaluator.collect({'y_true': y_truths, 'y_pred': y_preds})
+            # self.evaluator.save_result(self.evaluate_res_dir)
 
     def train(self, train_dataloader, eval_dataloader):
-        epochs = self.config.get('epochs', 100)
+        self._logger.info('Start training ...')
         min_val_loss = float('inf')
         wait = 0
+        best_epoch = 0
 
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.get('base_lr'), eps=self.config.get('epsilon', 1e-8))
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer,
-                            milestones=self.config.get('steps'), gamma=self.config.get('lr_decay_ratio', 0.1))
-        self._logger.info('Start training ...')
-
-        # this will fail if model is loaded with a changed batch_size
         if len(train_dataloader.dataset) % train_dataloader.batch_size:
             num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size + 1
         else:
             num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size
-
         self._logger.info("num_batches:{}".format(num_batches))
 
-        batches_seen = num_batches * self._epoch_num
-        best_epoch = 0
-        for epoch_idx in range(self._epoch_num, epochs):
+        for epoch_idx in range(self._epoch_num, self.epochs):
             start_time = time.time()
-            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self._compute_loss)
-            self._logger.info("epoch complete")
-            self.lr_scheduler.step()
-
+            losses = self._train_epoch(train_dataloader, epoch_idx)
+            self._writer.add_scalar('training loss', np.mean(losses), epoch_idx)
+            self._logger.info("epoch complete!")
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             self._logger.info("evaluating now!")
-            val_loss = self._valid_epoch(eval_dataloader, epoch_idx, batches_seen, self._compute_loss)
+            val_loss = self._valid_epoch(eval_dataloader, epoch_idx)
             end_time = time.time()
-            self._writer.add_scalar('training loss', np.mean(losses), batches_seen)
 
-            log_every = self.config.get('log_every', 1)
-            if (epoch_idx % log_every) == log_every - 1:
-                message = 'Epoch [{}/{}] ({}) train_mae: {:.4f}, val_mae: {:.4f}, lr: {:.6f}, ' \
-                          '{:.1f}s'.format(epoch_idx, epochs, batches_seen,
-                                           np.mean(losses), val_loss, self.lr_scheduler.get_lr()[0],
-                                           (end_time - start_time))
+            if (epoch_idx % self.log_every) == 0:
+                if self.lr_scheduler is not None:
+                    log_lr = self.lr_scheduler.get_last_lr()[0]
+                else:
+                    log_lr = self.learning_rate
+                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.1f}s'.\
+                    format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 
             if val_loss < min_val_loss:
                 wait = 0
-                if self.config.get('save_model', 1):
+                if self.saved:
                     model_file_name = self.save_model_with_epoch(epoch_idx)
                     self._logger.info('Val loss decrease from {:.4f} to {:.4f}, '
                                       'saving to {}'.format(min_val_loss, val_loss, model_file_name))
                 min_val_loss = val_loss
                 best_epoch = epoch_idx
-            elif val_loss >= min_val_loss:
+            else:
                 wait += 1
-                if wait == self.config.get('patience', 50):
+                if wait == self.patience:
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
-        self.model = self.load_model_with_epoch(best_epoch)
+        self.load_model_with_epoch(best_epoch)
 
-    def _train_epoch(self, train_dataloader, epoch_idx, batches_seen, loss_func=None):
-        self.model = self.model.train()
+    def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
+        self.model.train()
         loss_func = loss_func if loss_func is not None else self.model.calculate_loss
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.config['gpu'])
-            output = self.model(batch, batches_seen)
-            if batches_seen == 0:
-                # this is a workaround to accommodate dynamically registered parameters in DCGRUCell
-                self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.config.get('base_lr'), eps=self.config.get('epsilon', 1e-8))
-            loss = loss_func(batch['y'], output)
+            batch.to_tensor(gpu=self.gpu)
+            loss = loss_func(batch)
             self._logger.debug(loss.item())
             losses.append(loss.item())
-            batches_seen += 1
             loss.backward()
-            # gradient clipping - this does it in place
-            if self.config['clip_grad_norm']:
+            if self.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
             self.optimizer.step()
-        return losses, batches_seen
+        return losses
 
-    def _valid_epoch(self, eval_dataloader, epoch_idx, batches_seen, loss_func=None):
+    def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
         with torch.no_grad():
-            self.model = self.model.eval()
+            self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.config['gpu'])
-                output = self.model(batch)
-                loss = loss_func(batch['y'], output)
+                batch.to_tensor(gpu=self.gpu)
+                loss = loss_func(batch)
+                self._logger.debug(loss.item())
                 losses.append(loss.item())
             mean_loss = np.mean(losses)
-            self._writer.add_scalar('eval loss', mean_loss, batches_seen)
+            self._writer.add_scalar('eval loss', mean_loss, epoch_idx)
             return mean_loss
-
-    def _compute_loss(self, y_true, y_predicted):
-        y_true = self.scaler.inverse_transform(y_true[..., 0])
-        y_predicted = self.scaler.inverse_transform(y_predicted[..., 0])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
