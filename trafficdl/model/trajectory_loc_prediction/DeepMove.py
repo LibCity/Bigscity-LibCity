@@ -69,8 +69,8 @@ class DeepMove(AbstractModel):
         self.gpu = config['gpu']
         self.rnn_type = config['rnn_type']
 
-        self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size)
-        self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size)
+        self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size, padding_idx=data_feature['loc_pad'])
+        self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size, padding_idx=data_feature['tim_pad'])
 
         input_size = self.loc_emb_size + self.tim_emb_size
         self.attn = Attn(self.attn_type, self.hidden_size, self.gpu)

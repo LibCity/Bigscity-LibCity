@@ -82,7 +82,9 @@ class TrajectoryDataset(AbstractDataset):
         res = {
             'loc_size': self.data['loc_size'],
             'tim_size': self.data['tim_size'],
-            'uid_size': self.data['uid_size']
+            'uid_size': self.data['uid_size'],
+            'loc_pad': self.pad_item['current_loc'] if self.pad_item != None else None,
+            'tim_pad': self.pad_item['current_tim'] if self.pad_item != None else None
         }
         return res
 
@@ -143,9 +145,10 @@ class TrajectoryDataset(AbstractDataset):
                 sessions.append(session)
             if len(sessions) >= min_sessions:
                 res[str(uid)] = sessions
+        # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了
         poi = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.config['dataset'])))
         loc_size = poi.shape[0]
-        uid_size = len(res)
+        uid_size = len(user_set)
         print('loc_size: {}, uid_size: {}'.format(loc_size, uid_size))
         return {
             'loc_size': loc_size,
