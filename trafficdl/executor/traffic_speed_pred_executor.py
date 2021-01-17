@@ -33,6 +33,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
 
         self.epochs = self.config.get('epochs', 100)
         self.learning_rate = self.config.get('learning_rate', 0.01)
+        self.weight_decay = self.config.get('weight_decay', 0)
         self.learner = self.config.get('learner', 'adam')
         self.epsilon = self.config.get('epsilon', 1e-8)
         self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
@@ -45,6 +46,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.saved = self.config.get('save_model', True)
         self.patience = self.config.get('patience', 50)
         self.gpu = self.config.get('gpu', True)
+        self.output_dim = config.get('output_dim', 1)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
@@ -80,7 +82,8 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
 
     def _build_optimizer(self):
         if self.learner.lower() == 'adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
+                                         eps=self.epsilon, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sgd':
             optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'adagrad':
@@ -113,8 +116,8 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             for batch in test_dataloader:
                 batch.to_tensor(gpu=self.gpu)
                 output = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(batch['y'].cpu().numpy()[..., 0])
-                y_pred = self._scaler.inverse_transform(output.cpu().numpy()[..., 0])
+                y_true = self._scaler.inverse_transform(batch['y'].cpu().numpy()[..., :self.output_dim])
+                y_pred = self._scaler.inverse_transform(output.cpu().numpy()[..., :self.output_dim])
                 y_truths.append(y_true)
                 y_preds.append(y_pred)
                 evaluate_input = {'y_true': y_true, 'y_pred': y_pred}

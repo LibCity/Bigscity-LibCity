@@ -29,6 +29,7 @@ config = {
     'filter_type': 'dual_random_walk',
     'input_window': 12,
     'output_window': 12,
+    'output_dim': 1,
     'l1_decay': 0,
     'max_diffusion_step': 2,
     'num_rnn_layers': 2,
@@ -39,6 +40,7 @@ config = {
 
     'learning_rate': 0.01,
     'learner': 'adam',
+    'weight_decay': 0,
     'dropout': 0,
     'epoch': 0,
     'epochs': 100,
@@ -70,7 +72,7 @@ print(data_feature['adj_mx'].sum())
 model = get_model(config, data_feature)
 
 # 加载执行器
-model_cache_file = './trafficdl/cache/model_cache/DCRNN_METR_LA.m'
+model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
 if config['model'] == 'DCRNN':
     executor = get_executor(config, model)
 

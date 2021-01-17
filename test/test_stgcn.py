@@ -5,7 +5,8 @@ if __name__ == '__main__':
     config = {
         'log_level': 'INFO',
         'input_window': 12,
-        'output_window': 3,
+        'output_window': 12,
+        'output_dim': 1,
         'train_rate': 0.7,
         'eval_rate': 0.1,
         'cache_dataset': True,
@@ -14,7 +15,7 @@ if __name__ == '__main__':
         'Ks': 3,
         'Kt': 3,
         'blocks': [[1, 32, 64], [64, 32, 128]],  # blocks[0][0]是输入特征的维度
-        'drop_prob': 0,
+        'dropout': 0,
         'epochs': 50,
         'epoch': 0,
         'base_lr': 1e-3,
@@ -24,6 +25,7 @@ if __name__ == '__main__':
         'model': 'STGCN',
         'learning_rate': 0.001,
         'learner': 'rmsprop',
+        'weight_decay': 0,
         'lr_decay_ratio': 0.7,
         'step_size': 5,
         'lr_scheduler': 'steplr',
@@ -53,7 +55,7 @@ if __name__ == '__main__':
     model = get_model(config, data_feature)
     executor = get_executor(config, model)
     executor.train(train_data, valid_data)
-    model_cache_file = './trafficdl/cache/model_cache/STGCN_PeMSD7M.m'
+    model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
     executor.save_model(model_cache_file)
     executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下

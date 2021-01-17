@@ -222,7 +222,7 @@ class Seq2SeqAttrs:
         self.filter_type = config.get('filter_type', 'laplacian')
         self.num_nodes = int(config.get('num_nodes', 1))
         self.num_rnn_layers = int(config.get('num_rnn_layers', 1))
-        self.rnn_units = int(config.get('rnn_units'))
+        self.rnn_units = int(config.get('rnn_units', 64))
         self.hidden_state_size = self.num_nodes * self.rnn_units
 
 
@@ -304,7 +304,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.decoder_model = DecoderModel(config, self.adj_mx)
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
-        self.input_window = config.get('input_window')
+        self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
@@ -367,7 +367,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
 
         if labels is not None:
             labels = labels.permute(1, 0, 2, 3)  # (output_window, batch_size, num_nodes, output_dim)
-            labels = labels[..., :self.output_dim].view(self.output_window, batch_size, num_nodes * self.output_dim).to(device)
+            labels = labels[..., :self.output_dim].contiguous().view(self.output_window, batch_size, num_nodes * self.output_dim).to(device)
             self._logger.debug("y: {}".format(labels.size()))
 
         encoder_hidden_state = self.encoder(inputs)
@@ -386,8 +386,8 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
     def calculate_loss(self, batch, batches_seen=None):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
-        y_true = self._scaler.inverse_transform(y_true[..., 0])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., 0])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):
