@@ -186,6 +186,7 @@ class TrafficSpeedDataset(AbstractDataset):
             test_dataloader (pytorch.DataLoader)
             all the dataloaders are composed of Batch (class)
         '''
+        self.output_dim = self.config.get('output_dim', 1)
         x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
         if self.data == None:
             self.data = {}
@@ -195,14 +196,14 @@ class TrafficSpeedDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test, x_offsets, y_offsets = self._generate_train_val_test()
         self.feature_dim = x_train.shape[-1]
         # 特征归一化
-        self.scaler = StandardScaler(mean=x_train[..., 0].mean(), std=x_train[..., 0].std())
+        self.scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(), std=x_train[..., :self.output_dim].std())
         self._logger.info('Scaler mean: ' + str(self.scaler.mean) + ', std: ' + str(self.scaler.std))
-        x_train[..., 0] = self.scaler.transform(x_train[..., 0])
-        y_train[..., 0] = self.scaler.transform(y_train[..., 0])
-        x_val[..., 0] = self.scaler.transform(x_val[..., 0])
-        y_val[..., 0] = self.scaler.transform(y_val[..., 0])
-        x_test[..., 0] = self.scaler.transform(x_test[..., 0])
-        y_test[..., 0] = self.scaler.transform(y_test[..., 0])
+        x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
+        y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
+        x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
+        y_val[..., :self.output_dim] = self.scaler.transform(y_val[..., :self.output_dim])
+        x_test[..., :self.output_dim] = self.scaler.transform(x_test[..., :self.output_dim])
+        y_test[..., :self.output_dim] = self.scaler.transform(y_test[..., :self.output_dim])
         # 转List
         train_data = list(zip(x_train, y_train))
         eval_data = list(zip(x_val, y_val))

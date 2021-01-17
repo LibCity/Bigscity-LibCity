@@ -95,21 +95,21 @@ class st_conv_block(nn.Module):
 
 
 class fully_conv_layer(nn.Module):
-    def __init__(self, c):
+    def __init__(self, c, out_dim):
         super(fully_conv_layer, self).__init__()
-        self.conv = nn.Conv2d(c, 1, 1)
+        self.conv = nn.Conv2d(c, out_dim, 1)  # c,self.output_dim,1
 
     def forward(self, x):
         return self.conv(x)
 
 
 class output_layer(nn.Module):
-    def __init__(self, c, T, n):
+    def __init__(self, c, T, n, out_dim):
         super(output_layer, self).__init__()
         self.tconv1 = temporal_conv_layer(T, c, c, "GLU")
         self.ln = nn.LayerNorm([n, c])
         self.tconv2 = temporal_conv_layer(1, c, c, "sigmoid")
-        self.fc = fully_conv_layer(c)
+        self.fc = fully_conv_layer(c, out_dim)
 
     def forward(self, x):
         # (batch_size, input_dim(c), T, num_nodes)
@@ -132,8 +132,10 @@ class STGCN(AbstractModel):
         self.Ks = config['Ks']
         self.Kt = config['Kt']
         self.blocks = config['blocks']
-        self.input_window = config['input_window']
-        self.drop_prob = config['drop_prob']
+        self.input_window = config.get('input_window', 1)
+        self.output_window = config.get('output_window', 1)
+        self.output_dim = config.get('output_dim', 1)
+        self.drop_prob = config['dropout']
         self.blocks[0][0] = self.feature_dim
         if self.input_window - 4 * (self.Kt - 1) <= 0:
             raise ValueError('Input_window must bigger than 4*(Kt-1) for 2 st_conv_block'
@@ -152,7 +154,7 @@ class STGCN(AbstractModel):
         # 模型结构
         self.st_conv1 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[0], self.drop_prob, self.Lk)
         self.st_conv2 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[1], self.drop_prob, self.Lk)
-        self.output = output_layer(self.blocks[1][2], self.input_window - 4 * (self.Kt - 1), self.num_nodes)
+        self.output = output_layer(self.blocks[1][2], self.input_window - 4 * (self.Kt - 1), self.num_nodes, self.output_dim)
 
     def forward(self, batch):
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
@@ -169,8 +171,8 @@ class STGCN(AbstractModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
-        y_true = self._scaler.inverse_transform(y_true[..., 0])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., 0])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true, 0)
 
     def predict(self, batch):
