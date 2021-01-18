@@ -9,7 +9,8 @@ general_arguments = {
     "train_rate": "float",
     "eval_rate": "float",
     "learning_rate": "float",
-    "max_epoch": "int"
+    "max_epoch": "int",
+    "gpu_id": "int"
 }
 
 def str2bool(s):
