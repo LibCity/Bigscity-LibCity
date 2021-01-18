@@ -68,13 +68,13 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         config = dict(self.config)
         config['model_state_dict'] = self.model.state_dict()
         config['epoch'] = epoch
-        model_path = self.cache_dir + '/' + self.config['model'] + '_epoch%d.tar' % epoch
+        model_path = self.cache_dir + '/' + self.config['model'] + '_' + self.config['dataset'] + '_epoch%d.tar' % epoch
         torch.save(config, model_path)
         self._logger.info("Saved model at {}".format(epoch))
         return model_path
 
     def load_model_with_epoch(self, epoch):
-        model_path = self.cache_dir + '/' + self.config['model'] + '_epoch%d.tar' % epoch
+        model_path = self.cache_dir + '/' + self.config['model'] + '_' + self.config['dataset'] + '_epoch%d.tar' % epoch
         assert os.path.exists(model_path), 'Weights at epoch %d not found' % epoch
         checkpoint = torch.load(model_path, map_location='cpu')
         self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -116,10 +116,10 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             for batch in test_dataloader:
                 batch.to_tensor(gpu=self.gpu)
                 output = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(batch['y'].cpu().numpy()[..., :self.output_dim])
-                y_pred = self._scaler.inverse_transform(output.cpu().numpy()[..., :self.output_dim])
-                y_truths.append(y_true)
-                y_preds.append(y_pred)
+                y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
+                y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
+                y_truths.append(y_true.cpu().numpy())
+                y_preds.append(y_pred.cpu().numpy())
                 evaluate_input = {'y_true': y_true, 'y_pred': y_pred}
                 self.evaluator.collect(evaluate_input)
             self.evaluator.save_result(self.evaluate_res_dir)
@@ -129,9 +129,9 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) \
                        + '_' + self.config['model'] + '_predictions.npz'
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
-            # self.evaluator.clear()
-            # self.evaluator.collect({'y_true': y_truths, 'y_pred': y_preds})
-            # self.evaluator.save_result(self.evaluate_res_dir)
+            self.evaluator.clear()
+            self.evaluator.collect({'y_true': torch.tensor(y_truths), 'y_pred': torch.tensor(y_preds)})
+            self.evaluator.save_result(self.evaluate_res_dir)
 
     def train(self, train_dataloader, eval_dataloader):
         self._logger.info('Start training ...')

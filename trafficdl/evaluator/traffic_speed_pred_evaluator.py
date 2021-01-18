@@ -35,29 +35,29 @@ class TrafficSpeedPredEvaluator(AbstractEvaluator):
         for metric in self.metrics:
             if metric not in self.intermediate_result:
                 self.intermediate_result[metric] = []
-        y_true = batch['y_true']  # ndarray
-        y_pred = batch['y_pred']  # ndarray
+        y_true = batch['y_true']  # tensor
+        y_pred = batch['y_pred']  # tensor
         for metric in self.metrics:
             if metric == 'masked_MAE':
-                self.intermediate_result[metric].append(loss.masked_mae_np(y_pred, y_true, 0))
+                self.intermediate_result[metric].append(loss.masked_mae_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_MSE':
-                self.intermediate_result[metric].append(loss.masked_mse_np(y_pred, y_true, 0))
+                self.intermediate_result[metric].append(loss.masked_mse_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_RMSE':
-                self.intermediate_result[metric].append(loss.masked_rmse_np(y_pred, y_true, 0))
+                self.intermediate_result[metric].append(loss.masked_rmse_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_MAPE':
-                self.intermediate_result[metric].append(loss.masked_mape_np(y_pred, y_true, 0))
+                self.intermediate_result[metric].append(loss.masked_mape_torch(y_pred, y_true, 0).item())
             elif metric == 'MAE':
-                self.intermediate_result[metric].append(loss.masked_mae_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.masked_mae_torch(y_pred, y_true).item())
             elif metric == 'MSE':
-                self.intermediate_result[metric].append(loss.masked_mse_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.masked_mse_torch(y_pred, y_true).item())
             elif metric == 'RMSE':
-                self.intermediate_result[metric].append(loss.masked_rmse_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.masked_rmse_torch(y_pred, y_true).item())
             elif metric == 'MAPE':
-                self.intermediate_result[metric].append(loss.masked_mape_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.masked_mape_torch(y_pred, y_true).item())
             elif metric == 'R2':
-                self.intermediate_result[metric].append(loss.r2_score_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.r2_score_torch(y_pred, y_true).item())
             elif metric == 'EVAR':
-                self.intermediate_result[metric].append(loss.explained_variance_score_np(y_pred, y_true))
+                self.intermediate_result[metric].append(loss.explained_variance_score_torch(y_pred, y_true).item())
 
     def evaluate(self):
         '''
