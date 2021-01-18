@@ -315,8 +315,8 @@ class GWNET(AbstractModel):
         y_predicted = self.predict(batch)
         # print('y_true', y_true.shape)
         # print('y_predicted', y_predicted.shape)
-        y_true = self._scaler.inverse_transform(y_true[..., 0])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., 0])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch):
