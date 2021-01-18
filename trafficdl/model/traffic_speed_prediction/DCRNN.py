@@ -7,8 +7,6 @@ from logging import getLogger
 from trafficdl.model.abstract_model import AbstractModel
 from trafficdl.model import loss
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 def calculate_normalized_laplacian(adj):
     """
@@ -59,15 +57,16 @@ def count_parameters(model):
 
 
 class LayerParams:
-    def __init__(self, rnn_network: torch.nn.Module, layer_type: str):
+    def __init__(self, rnn_network: torch.nn.Module, layer_type: str, gpu: bool):
         self._rnn_network = rnn_network
         self._params_dict = {}
         self._biases_dict = {}
         self._type = layer_type
+        self._device = torch.device("cuda" if gpu else "cpu")
 
     def get_weights(self, shape):
         if shape not in self._params_dict:
-            nn_param = torch.nn.Parameter(torch.empty(*shape, device=device))
+            nn_param = torch.nn.Parameter(torch.empty(*shape, device=self._device))
             torch.nn.init.xavier_normal_(nn_param)
             self._params_dict[shape] = nn_param
             self._rnn_network.register_parameter('{}_weight_{}'.format(self._type, str(shape)),
@@ -76,7 +75,7 @@ class LayerParams:
 
     def get_biases(self, length, bias_start=0.0):
         if length not in self._biases_dict:
-            biases = torch.nn.Parameter(torch.empty(length, device=device))
+            biases = torch.nn.Parameter(torch.empty(length, device=self._device))
             torch.nn.init.constant_(biases, bias_start)
             self._biases_dict[length] = biases
             self._rnn_network.register_parameter('{}_biases_{}'.format(self._type, str(length)),
@@ -86,7 +85,7 @@ class LayerParams:
 
 
 class DCGRUCell(torch.nn.Module):
-    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, nonlinearity='tanh',
+    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, gpu, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True):
         """
 
@@ -104,6 +103,7 @@ class DCGRUCell(torch.nn.Module):
         # support other nonlinearities up here?
         self._num_nodes = num_nodes
         self._num_units = num_units
+        self._device = torch.device("cuda" if gpu else "cpu")
         self._max_diffusion_step = max_diffusion_step
         self._supports = []
         self._use_gc_for_ru = use_gc_for_ru
@@ -118,13 +118,13 @@ class DCGRUCell(torch.nn.Module):
         else:
             supports.append(calculate_scaled_laplacian(adj_mx))
         for support in supports:
-            self._supports.append(self._build_sparse_matrix(support))
+            self._supports.append(self._build_sparse_matrix(support, self._device))
 
-        self._fc_params = LayerParams(self, 'fc')
-        self._gconv_params = LayerParams(self, 'gconv')
+        self._fc_params = LayerParams(self, 'fc', gpu)
+        self._gconv_params = LayerParams(self, 'gconv', gpu)
 
     @staticmethod
-    def _build_sparse_matrix(L):
+    def _build_sparse_matrix(L, device):
         L = L.tocoo()
         indices = np.column_stack((L.row, L.col))
         # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
@@ -230,8 +230,9 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
+        self.device = torch.device("cuda" if config['gpu'] else "cpu")
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes,
+            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, config['gpu'],
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, hidden_state=None):
@@ -247,7 +248,7 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         """
         batch_size, _ = inputs.size()
         if hidden_state is None:
-            hidden_state = torch.zeros((self.num_rnn_layers, batch_size, self.hidden_state_size), device=device)
+            hidden_state = torch.zeros((self.num_rnn_layers, batch_size, self.hidden_state_size), device=self.device)
         hidden_states = []
         output = inputs
         for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
@@ -264,7 +265,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         self.output_dim = config.get('output_dim', 1)
         self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes,
+            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, config['gpu'],
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, hidden_state=None):
@@ -306,6 +307,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
+        self.device = torch.device("cuda" if config.get('gpu', True) else "cpu")
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
@@ -334,7 +336,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         :return: output: (self.output_window, batch_size, self.num_nodes * self.output_dim)
         """
         batch_size = encoder_hidden_state.size(1)
-        go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim),device=device)
+        go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
         decoder_hidden_state = encoder_hidden_state
         decoder_input = go_symbol
 
@@ -362,12 +364,13 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         labels = batch['y']
         batch_size, _, num_nodes, input_dim = inputs.shape
         inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
-        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(device)
+        inputs = inputs.view(self.input_window, batch_size, num_nodes * input_dim).to(self.device)
         self._logger.debug("X: {}".format(inputs.size()))
 
         if labels is not None:
             labels = labels.permute(1, 0, 2, 3)  # (output_window, batch_size, num_nodes, output_dim)
-            labels = labels[..., :self.output_dim].contiguous().view(self.output_window, batch_size, num_nodes * self.output_dim).to(device)
+            labels = labels[..., :self.output_dim].contiguous().view(
+                self.output_window, batch_size, num_nodes * self.output_dim).to(self.device)
             self._logger.debug("y: {}".format(labels.size()))
 
         encoder_hidden_state = self.encoder(inputs)
