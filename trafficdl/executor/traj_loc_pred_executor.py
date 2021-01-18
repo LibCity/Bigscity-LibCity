@@ -11,10 +11,10 @@ from trafficdl.utils import get_model, get_evaluator
 class TrajLocPredExecutor(AbstractExecutor):
 
     def __init__(self, config, model):
-        self.model = model.to(self.config['device'])
         self.evaluator = get_evaluator(config)
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
+        self.model = model.to(self.config['device'])
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
