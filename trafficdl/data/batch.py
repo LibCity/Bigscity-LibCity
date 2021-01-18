@@ -66,27 +66,15 @@ class Batch(object):
     def get_origin_len(self, key):
         return self.origin_len[key]
 
-    def to_tensor(self, gpu=True):
+    def to_tensor(self, device):
         for key in self.data:
-            if gpu:
-                if self.feature_name[key] == 'int':
-                    self.data[key] = torch.LongTensor(self.data[key]).cuda()
-                elif self.feature_name[key] == 'float':
-                    self.data[key] = torch.FloatTensor(self.data[key]).cuda()
-                elif self.feature_name[key] == 'array of int':
-                    for i in range(len(self.data[key])):
-                        for j in range(len(self.data[key][i])):
-                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).cuda()
-                else:
-                    raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
+            if self.feature_name[key] == 'int':
+                self.data[key] = torch.LongTensor(self.data[key]).to(device)
+            elif self.feature_name[key] == 'float':
+                self.data[key] = torch.FloatTensor(self.data[key]).to(device)
+            elif self.feature_name[key] == 'array of int':
+                for i in range(len(self.data[key])):
+                    for j in range(len(self.data[key][i])):
+                        self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).to(device)
             else:
-                if self.feature_name[key] == 'int':
-                    self.data[key] = torch.LongTensor(self.data[key])
-                elif self.feature_name[key] == 'float':
-                    self.data[key] = torch.FloatTensor(self.data[key])
-                elif self.feature_name[key] == 'array of int':
-                    for i in range(len(self.data[key])):
-                        for j in range(len(self.data[key][i])):
-                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j])
-                else:
-                    raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
+                raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))

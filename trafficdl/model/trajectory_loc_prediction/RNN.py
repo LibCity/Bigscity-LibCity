@@ -13,7 +13,7 @@ class RNN(AbstractModel):
         self.tim_size = data_feature['tim_size']
         self.tim_emb_size = config['tim_emb_size']
         self.hidden_size = config['hidden_size']
-        self.gpu = config['gpu']
+        self.device = config['gpu']
         self.rnn_type = config['rnn_type']
 
         self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size, padding_idx=data_feature['loc_pad'])
@@ -51,11 +51,8 @@ class RNN(AbstractModel):
         tim = batch['current_tim']
         batch_size = loc.shape[0]
         
-        h1 = torch.zeros(1, batch_size, self.hidden_size)
-        c1 = torch.zeros(1, batch_size, self.hidden_size)
-        if self.gpu:
-            h1 = h1.cuda()
-            c1 = c1.cuda()
+        h1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
+        c1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
 
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
@@ -86,8 +83,6 @@ class RNN(AbstractModel):
         return self.forward(batch)
     
     def calculate_loss(self, batch):
-        criterion = nn.NLLLoss()
-        if self.gpu:
-            criterion = criterion.cuda()
+        criterion = nn.NLLLoss().to(self.device)
         scores = self.forward(batch)
         return criterion(scores, batch['target'])

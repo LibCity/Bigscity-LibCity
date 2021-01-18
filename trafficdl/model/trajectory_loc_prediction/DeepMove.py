@@ -15,12 +15,11 @@ class Attn(nn.Module):
     """Attention Module. Heavily borrowed from Practical Pytorch
     https://github.com/spro/practical-pytorch/tree/master/seq2seq-translation"""
 
-    def __init__(self, method, hidden_size, gpu):
+    def __init__(self, method, hidden_size, device):
         super(Attn, self).__init__()
 
         self.method = method
         self.hidden_size = hidden_size
-        self.gpu = gpu
         if self.method == 'general':
             self.attn = nn.Linear(self.hidden_size, self.hidden_size)
         elif self.method == 'concat':
@@ -31,11 +30,7 @@ class Attn(nn.Module):
         seq_len = history.size()[1]
         state_len = out_state.size()[1]
         batch_size = history.size()[0]
-        
-        if self.gpu:
-            attn_energies = torch.zeros(batch_size, state_len, seq_len).cuda()
-        else:
-            attn_energies = torch.zeros(batch_size, state_len, seq_len)
+        attn_energies = torch.zeros(batch_size, state_len, seq_len).to(self.device)
         for i in range(state_len):
             for j in range(seq_len):
                 for k in range(batch_size):
@@ -66,14 +61,14 @@ class DeepMove(AbstractModel):
         self.tim_emb_size = config['tim_emb_size']
         self.hidden_size = config['hidden_size']
         self.attn_type = config['attn_type']
-        self.gpu = config['gpu']
+        self.device = config['device']
         self.rnn_type = config['rnn_type']
 
         self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size, padding_idx=data_feature['loc_pad'])
         self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size, padding_idx=data_feature['tim_pad'])
 
         input_size = self.loc_emb_size + self.tim_emb_size
-        self.attn = Attn(self.attn_type, self.hidden_size, self.gpu)
+        self.attn = Attn(self.attn_type, self.hidden_size, self.device)
         self.fc_attn = nn.Linear(input_size, self.hidden_size)
 
         if self.rnn_type == 'GRU':
@@ -113,15 +108,10 @@ class DeepMove(AbstractModel):
         loc_len = batch.get_origin_len('current_loc')
         history_len = batch.get_origin_len('history_loc')
         batch_size = loc.shape[0]
-        h1 = torch.zeros(1, batch_size, self.hidden_size)
-        h2 = torch.zeros(1, batch_size, self.hidden_size)
-        c1 = torch.zeros(1, batch_size, self.hidden_size)
-        c2 = torch.zeros(1, batch_size, self.hidden_size)
-        if self.gpu:
-            h1 = h1.cuda()
-            h2 = h2.cuda()
-            c1 = c1.cuda()
-            c2 = c2.cuda()
+        h1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
+        h2 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
+        c1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
+        c2 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
 
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
@@ -166,8 +156,6 @@ class DeepMove(AbstractModel):
         return self.forward(batch)
     
     def calculate_loss(self, batch):
-        criterion = nn.NLLLoss()
-        if self.gpu:
-            criterion = criterion.cuda()
+        criterion = nn.NLLLoss().to(self.device)
         scores = self.forward(batch)
         return criterion(scores, batch['target'])

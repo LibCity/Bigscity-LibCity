@@ -1,5 +1,6 @@
 import os
 import json
+import torch
 
 from trafficdl.utils import trans_naming_rule
 class ConfigParser(object):
@@ -20,6 +21,7 @@ class ConfigParser(object):
         self._parse_external_config(task, model, dataset, other_args)
         self._parse_config_file(config_file)
         self._load_default_config()
+        self._init_device()
 
     def _parse_external_config(self, task, model, dataset, other_args=None):
         if task == None:
@@ -91,6 +93,12 @@ class ConfigParser(object):
                 for key in x:
                     if key not in self.config:
                         self.config[key] = x[key]
+    
+    def _init_device(self):
+        use_gpu = self.config['gpu']
+        if use_gpu:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.config['gpu_id'])
+        self.config['device'] = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
         
     def __getitem__(self, key):
         if key in self.config:

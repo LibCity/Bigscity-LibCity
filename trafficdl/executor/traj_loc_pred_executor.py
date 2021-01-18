@@ -16,7 +16,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         if self.config['gpu']:
-            self.model = self.model.cuda()
+            self.model = self.model.to(self.config['device'])
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
@@ -80,7 +80,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         test_total_batch = len(test_dataloader.dataset) / test_dataloader.batch_size
         cnt = 0
         for batch in test_dataloader:
-            batch.to_tensor(gpu=self.config['gpu'])
+            batch.to_tensor(device=self.config['device'])
             scores = self.model.predict(batch)
             evaluate_input = {
                 'uid': batch['uid'].tolist(),
@@ -102,7 +102,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         for batch in data_loader:
             # one batch, one step
             optimizer.zero_grad()
-            batch.to_tensor(gpu=gpu)
+            batch.to_tensor(device=self.config['device'])
             loss = loss_func(batch)
             loss.backward()
             total_loss.append(loss.data.cpu().numpy().tolist())
@@ -125,7 +125,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.evaluator.clear()
         cnt = 0
         for batch in data_loader:
-            batch.to_tensor(gpu=gpu)
+            batch.to_tensor(device=self.config['device'])
             scores = model.predict(batch)
             evaluate_input = {
                 'uid': batch['uid'].tolist(),
