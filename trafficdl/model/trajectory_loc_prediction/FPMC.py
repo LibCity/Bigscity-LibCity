@@ -67,3 +67,14 @@ class FPMC(AbstractModel):
         fmc = torch.squeeze(fmc, dim=1)
         score = mf + fmc # batch_size * loc_size
         return score
+
+    def predict(self, batch):
+        return self.forward(batch)
+    
+    def calculate_loss(self, batch):
+        # 这个 loss 不太对，之后再改
+        criterion = nn.NLLLoss()
+        if self.gpu:
+            criterion = criterion.cuda()
+        scores = self.forward(batch)
+        return criterion(scores, batch['target'])
