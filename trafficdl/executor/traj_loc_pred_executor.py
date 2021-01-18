@@ -11,12 +11,10 @@ from trafficdl.utils import get_model, get_evaluator
 class TrajLocPredExecutor(AbstractExecutor):
 
     def __init__(self, config, model):
-        self.model = model
+        self.model = model.to(self.config['device'])
         self.evaluator = get_evaluator(config)
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
-        if self.config['gpu']:
-            self.model = self.model.to(self.config['device'])
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
@@ -36,11 +34,11 @@ class TrajLocPredExecutor(AbstractExecutor):
         eval_total_batch = len(eval_dataloader.dataset) / eval_dataloader.batch_size
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
-            self.model, avg_loss = self.run(train_dataloader, self.model, self.config['gpu'], optimizer, 
+            self.model, avg_loss = self.run(train_dataloader, self.model, optimizer, 
                                         self.config['learning_rate'], self.config['clip'], train_total_batch, self.config['verbose'])
             print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(epoch, avg_loss, lr))
             # eval stage
-            avg_acc = self._valid_epoch(eval_dataloader, self.model, self.config['gpu'], eval_total_batch, self.config['verbose'])
+            avg_acc = self._valid_epoch(eval_dataloader, self.model, eval_total_batch, self.config['verbose'])
             print('==>Eval Acc:{:.4f}'.format(avg_acc))
             metrics['accuracy'].append(avg_acc)
             save_name_tmp = 'ep_' + str(epoch) + '.m'
@@ -93,7 +91,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def run(self, data_loader, model, gpu, optimizer, lr, clip, total_batch, verbose):
+    def run(self, data_loader, model, optimizer, lr, clip, total_batch, verbose):
         model.train(True)
         total_loss = []
         cnt = 0
@@ -120,7 +118,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
-    def _valid_epoch(self, data_loader, model, gpu, total_batch, verbose):
+    def _valid_epoch(self, data_loader, model, total_batch, verbose):
         model.train(False)
         self.evaluator.clear()
         cnt = 0

@@ -13,7 +13,7 @@ class RNN(AbstractModel):
         self.tim_size = data_feature['tim_size']
         self.tim_emb_size = config['tim_emb_size']
         self.hidden_size = config['hidden_size']
-        self.device = config['gpu']
+        self.device = config['device']
         self.rnn_type = config['rnn_type']
 
         self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size, padding_idx=data_feature['loc_pad'])
