@@ -20,12 +20,9 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
+        self.loss_func = None # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
     
     def train(self, train_dataloader, eval_dataloader):
-        if self.config['gpu']:
-            criterion = nn.NLLLoss().cuda()
-        else:
-            criterion = nn.NLLLoss()
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.config['learning_rate'],
                             weight_decay=self.config['L2'])
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=self.config['lr_step'],
@@ -34,19 +31,17 @@ class TrajLocPredExecutor(AbstractExecutor):
         if not os.path.exists(self.tmp_path):
             os.makedirs(self.tmp_path)
         metrics = {}
-        metrics['train_loss'] = []
         metrics['accuracy'] = []
         train_total_batch = len(train_dataloader.dataset) / train_dataloader.batch_size
         eval_total_batch = len(eval_dataloader.dataset) / eval_dataloader.batch_size
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
-            self.model, avg_loss = self.run(train_dataloader, self.model, self.config['gpu'], optimizer, criterion, 
+            self.model, avg_loss = self.run(train_dataloader, self.model, self.config['gpu'], optimizer, 
                                         self.config['learning_rate'], self.config['clip'], train_total_batch, self.config['verbose'])
             print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(epoch, avg_loss, lr))
-            metrics['train_loss'].append(avg_loss)
             # eval stage
-            avg_loss, avg_acc = self._valid_epoch(eval_dataloader, self.model, self.config['gpu'], eval_total_batch, self.config['verbose'], criterion)
-            print('==>Test Acc:{:.4f} Loss:{:.4f}'.format(avg_acc, avg_loss))
+            avg_acc = self._valid_epoch(eval_dataloader, self.model, self.config['gpu'], eval_total_batch, self.config['verbose'])
+            print('==>Eval Acc:{:.4f}'.format(avg_acc))
             metrics['accuracy'].append(avg_acc)
             save_name_tmp = 'ep_' + str(epoch) + '.m'
             torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
@@ -86,7 +81,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         cnt = 0
         for batch in test_dataloader:
             batch.to_tensor(gpu=self.config['gpu'])
-            scores = self.model(batch)
+            scores = self.model.predict(batch)
             evaluate_input = {
                 'uid': batch['uid'].tolist(),
                 'loc_true': batch['target'].tolist(),
@@ -98,18 +93,17 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def run(self, data_loader, model, gpu, optimizer, criterion, lr, clip, total_batch, verbose):
+    def run(self, data_loader, model, gpu, optimizer, lr, clip, total_batch, verbose):
         model.train(True)
         total_loss = []
         cnt = 0
         loc_size = model.loc_size
+        loss_func = self.loss_func or model.calculate_loss
         for batch in data_loader:
-            # use accumulating gradients
             # one batch, one step
             optimizer.zero_grad()
             batch.to_tensor(gpu=gpu)
-            scores = model(batch)
-            loss = criterion(scores, batch['target'])
+            loss = loss_func(batch)
             loss.backward()
             total_loss.append(loss.data.cpu().numpy().tolist())
             try:
@@ -126,16 +120,13 @@ class TrajLocPredExecutor(AbstractExecutor):
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
-    def _valid_epoch(self, data_loader, model, gpu, total_batch, verbose, criterion):
+    def _valid_epoch(self, data_loader, model, gpu, total_batch, verbose):
         model.train(False)
         self.evaluator.clear()
-        total_loss = []
         cnt = 0
         for batch in data_loader:
             batch.to_tensor(gpu=gpu)
-            scores = model(batch) # batch_size * target_len * loc_size
-            loss = criterion(scores, batch['target'])
-            total_loss.append(loss.data.cpu().numpy().tolist())
+            scores = model.predict(batch)
             evaluate_input = {
                 'uid': batch['uid'].tolist(),
                 'loc_true': batch['target'].tolist(),
@@ -145,6 +136,5 @@ class TrajLocPredExecutor(AbstractExecutor):
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
-        avg_loss = np.mean(total_loss, dtype=np.float64)
         avg_acc = self.evaluator.evaluate()[self.metrics] # 随便选一个就行
-        return avg_loss, avg_acc
+        return avg_acc

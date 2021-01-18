@@ -7,5 +7,6 @@
     "lr_decay": 0.1,
     "clip": 5.0,
     "schedule_threshold": 1e-3,
-    "verbose": 10
+    "verbose": 10,
+    "loss_func": "default"
 }

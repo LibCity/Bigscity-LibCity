@@ -81,3 +81,13 @@ class RNN(AbstractModel):
             else:
                 true_scores = torch.cat((true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
         return true_scores
+
+    def predict(self, batch):
+        return self.forward(batch)
+    
+    def calculate_loss(self, batch):
+        criterion = nn.NLLLoss()
+        if self.gpu:
+            criterion = criterion.cuda()
+        scores = self.forward(batch)
+        return criterion(scores, batch['target'])
