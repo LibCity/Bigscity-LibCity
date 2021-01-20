@@ -2,9 +2,10 @@ import os
 import json
 import pandas as pd
 import math
+import numpy as np
 
 from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils import parseTime, calculateBaseTime, calculateTimeOff
+from trafficdl.utils import parseTime, calculateBaseTime, calculateTimeOff, caculate_time_sim
 from trafficdl.data.utils import generate_dataloader
 
 class TrajectoryDataset(AbstractDataset):
@@ -86,6 +87,10 @@ class TrajectoryDataset(AbstractDataset):
             'loc_pad': self.pad_item['current_loc'] if self.pad_item != None else None,
             'tim_pad': self.pad_item['current_tim'] if self.pad_item != None else None
         }
+        res['poi_profile'] = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.config['dataset'])))
+        if self.config['model'] == 'LSTPM':
+            # 这个模型需要加一个新的东西
+            res['tim_sim_matrix'] = caculate_time_sim(self.data)
         return res
 
     def cutter_filter(self):
