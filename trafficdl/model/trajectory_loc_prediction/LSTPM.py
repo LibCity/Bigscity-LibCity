@@ -194,6 +194,13 @@ class LSTPM(AbstractModel):
         actual_next_tokens = batch['current_loc'][:, 1:]
         logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
         loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
+        if loss.dtype != torch.float32:
+            # 将当前 batch 保存到本地
+            torch.save(batch['current_loc'], 'current_loc.pt')
+            torch.save(batch['current_tim'], 'current_tim.pt')
+            torch.save(batch['uid'], 'uid.pt')
+            torch.save(batch['history_loc'], "history_loc.pt")
+            torch.save(batch['history_tim'], 'history_tim.pt')
         return loss
     
     def predict(self, batch):
@@ -201,4 +208,4 @@ class LSTPM(AbstractModel):
         logp_seq = self.forward(batch, False)
         # 不知道为什么要舍弃掉最 -1
         # 因为没有做 batch 所以直接就是最后一个？
-        return logp_seq[:, -2]
+        return logp_seq[:, -1]
