@@ -61,7 +61,7 @@ def top_k(loc_pred, loc_true, topK):
         dcg (float)
     '''
     assert topK > 0, "top-k ACC评估方法：k值应不小于1"
-    loc_pred = torch.FloatTensor(loc_pred)
+    loc_pred = torch.LongTensor(loc_pred)
     val, index = torch.topk(loc_pred, topK, 1) # 使用 torch 的 topk 来实现
     index = index.numpy()
     hit = 0

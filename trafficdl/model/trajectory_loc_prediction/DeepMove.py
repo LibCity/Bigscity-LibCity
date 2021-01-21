@@ -20,6 +20,7 @@ class Attn(nn.Module):
 
         self.method = method
         self.hidden_size = hidden_size
+        self.device = device
         if self.method == 'general':
             self.attn = nn.Linear(self.hidden_size, self.hidden_size)
         elif self.method == 'concat':
