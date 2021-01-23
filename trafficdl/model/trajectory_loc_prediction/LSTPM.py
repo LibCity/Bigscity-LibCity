@@ -196,7 +196,7 @@ class LSTPM(AbstractModel):
         # loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
         criterion = nn.NLLLoss().to(self.device)
         scores = logp_seq[:, -1]
-        loss = criterion(loss, batch['target'])
+        loss = criterion(scores, batch['target'])
         if loss.dtype != torch.float32:
             # 将当前 batch 保存到本地
             torch.save(batch['current_loc'], 'current_loc.pt')
