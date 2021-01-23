@@ -188,12 +188,15 @@ class LSTPM(AbstractModel):
     def calculate_loss(self, batch):
         # 仍然不考虑做 batch 的情况
         logp_seq = self.forward(batch, True)
-        mask_batch_ix = torch.FloatTensor([[1.0]*(batch['current_loc'].shape[1] - 1) + [0.0] * 1]).to(self.device)
-        predictions_logp = logp_seq[:, :-1] * mask_batch_ix[:, :-1, None] #为什么要把最后一个点去掉？？
-        # predictions_logp = logp_seq[:, -1] # 我们仍然只评测最后一个点预测的对不对
-        actual_next_tokens = batch['current_loc'][:, 1:]
-        logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
-        loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
+        # mask_batch_ix = torch.FloatTensor([[1.0]*(batch['current_loc'].shape[1] - 1) + [0.0] * 1]).to(self.device)
+        # predictions_logp = logp_seq[:, :-1] * mask_batch_ix[:, :-1, None] #为什么要把最后一个点去掉？？
+        # # predictions_logp = logp_seq[:, -1] # 我们仍然只评测最后一个点预测的对不对
+        # actual_next_tokens = batch['current_loc'][:, 1:]
+        # logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
+        # loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
+        criterion = nn.NLLLoss().to(self.device)
+        scores = logp_seq[:, -1]
+        loss = criterion(loss, batch['target'])
         if loss.dtype != torch.float32:
             # 将当前 batch 保存到本地
             torch.save(batch['current_loc'], 'current_loc.pt')
