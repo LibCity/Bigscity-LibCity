@@ -118,8 +118,6 @@ class TrajLocPredExecutor(AbstractExecutor):
             cnt += 1
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
-        with open('test_loss.pny', 'wb') as f:
-            np.save(f, total_loss)
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 

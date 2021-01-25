@@ -20,7 +20,7 @@ class LSTPM(AbstractModel):
         self.emb_size = config['emb_size']
         self.device = config['device']
         ## todo why embeding?
-        self.item_emb = nn.Embedding(self.loc_size, self.emb_size)
+        self.item_emb = nn.Embedding(self.loc_size, self.emb_size, padding_idx=data_feature['loc_pad'])
         # self.emb_tim = nn.Embedding(self.tim_size, 10) 根本就没有用时间???这都能 soda ??
         self.lstmcell = nn.LSTM(input_size=self.emb_size, hidden_size=self.hidden_size)
         self.lstmcell_history = nn.LSTM(input_size=self.emb_size, hidden_size=self.hidden_size)
@@ -43,8 +43,8 @@ class LSTPM(AbstractModel):
         for t in b:
             nn.init.constant(t, 0)
 
-    def _create_dilated_rnn_input(self, session_sequence_current):
-        sequence_length = len(session_sequence_current)
+    def _create_dilated_rnn_input(self, session_sequence_current_padded, sequence_length):
+        session_sequence_current = session_sequence_current_padded[:sequence_length]
         session_sequence_current.reverse()
         session_dilated_rnn_input_index = [0] * sequence_length
         for i in range(sequence_length - 1):
@@ -63,21 +63,26 @@ class LSTPM(AbstractModel):
         session_sequence_current.reverse()
         return session_dilated_rnn_input_index
     
-    def _pad_batch_of_lists_masks(self, current_session):
+    def _pad_batch_of_lists_masks(self, current_session, origin_len):
         # 因为没有 pad 所以 max_len == len(l)
-        padde_mask_non_local = [1.0] * (len(current_session))
+        padde_mask_non_local = [1.0] * (origin_len) + [0.0] * (len(current_session) - origin_len)
         padde_mask_non_local = torch.FloatTensor(padde_mask_non_local).to(self.device)
         return padde_mask_non_local
 
-    def forward(self, batch, is_train=True):
+    def forward(self, batch):
         # 因为源码是假设的 target 就是 current_loc 的最后一个点，所以需要做一下修改，把 target append 到 current_loc 里面
-        # 假设batch_size = 1
-        expand_current_loc = torch.cat([batch['current_loc'][0], batch['target']]).unsqueeze(0)
-        expand_current_tim = torch.cat([batch['current_tim'][0], torch.LongTensor([0]).to(self.device)]).unsqueeze(0)
+        batch_size = batch['current_loc'].shape[0]
+        pad_loc = torch.LongTensor([batch.pad_item['current_loc']] * batch_size).unsqueeze(1).to(self.device)
+        pad_tim = torch.LongTensor([batch.pad_item['current_tim']] * batch_size).unsqueeze(1).to(self.device)
+        expand_current_loc = torch.cat([batch['current_loc'], pad_loc], dim=1)
+        expand_current_tim = torch.cat([batch['current_tim'], pad_tim], dim=1)
+        origin_len = batch.get_origin_len('current_loc').copy()
+        for i in range(batch_size):
+            origin_len[i] += 1
+            expand_current_loc[i][origin_len[i] - 1] = batch['target'][i]
         # batch['current_loc'] = expand_current_loc
         # batch['current_tim'] = expand_current_tim
         item_vectors = expand_current_loc
-        batch_size = item_vectors.size()[0]
         sequence_size = item_vectors.size()[1]
         items = self.item_emb(item_vectors)
         item_vectors = item_vectors.tolist()
@@ -94,7 +99,7 @@ class LSTPM(AbstractModel):
         out_hie = []
         for ii in range(batch_size):
             ##########################################
-            current_session_input_dilated_rnn_index = self._create_dilated_rnn_input(expand_current_loc[ii].tolist())
+            current_session_input_dilated_rnn_index = self._create_dilated_rnn_input(expand_current_loc[ii].tolist(), origin_len[ii])
             hiddens_current = x1[ii]
             dilated_lstm_outs_h = []
             dilated_lstm_outs_c = []
@@ -115,22 +120,16 @@ class LSTPM(AbstractModel):
             dilated_out = torch.cat(dilated_lstm_outs_h, dim = 0).unsqueeze(0)
             out_hie.append(dilated_out)
             user_id_current = user_batch[ii]
-            current_session_timid = expand_current_tim[ii].tolist()[:-1]
+            current_session_timid = expand_current_tim[ii].tolist()[:origin_len[ii]-1] # 不包含我 pad 的那个点
             current_session_poiid = item_vectors[ii][:len(current_session_timid)]
             current_session_embed = out[ii] # sequence_len * embedding_size
-            current_session_mask = self._pad_batch_of_lists_masks(expand_current_loc[ii].cpu()).unsqueeze(1) # FloatTensor sequence_len * 1
+            current_session_mask = self._pad_batch_of_lists_masks(expand_current_loc[ii].cpu(), origin_len[ii]).unsqueeze(1) # FloatTensor sequence_len * 1
             # mask_batch_ix_non_local[ii].unsqueeze(1)
-            sequence_length = int(sum(np.array(current_session_mask.cpu())))
+            sequence_length = origin_len[ii]
             current_session_represent_list = []
-            if is_train:
-                for iii in range(sequence_length-1):
-                    current_session_represent = torch.sum(current_session_embed * current_session_mask, dim=0).unsqueeze(0)/sum(current_session_mask)
-                    current_session_represent_list.append(current_session_represent)
-            else:
-                for iii in range(sequence_length-1):
-                    current_session_represent_rep_item = current_session_embed[0:iii+1]
-                    current_session_represent_rep_item = torch.sum(current_session_represent_rep_item, dim = 0).unsqueeze(0)/(iii + 1)
-                    current_session_represent_list.append(current_session_represent_rep_item)
+            for iii in range(sequence_length-1):
+                current_session_represent = torch.sum(current_session_embed * current_session_mask, dim=0).unsqueeze(0)/sum(current_session_mask)
+                current_session_represent_list.append(current_session_represent)
 
             current_session_represent = torch.cat(current_session_represent_list, dim = 0)
             list_for_sessions = []
@@ -189,36 +188,33 @@ class LSTPM(AbstractModel):
         out_put_emb_v1 = torch.cat([y, out], dim=2)
         output_ln = self.linear(out_put_emb_v1)
         output = F.log_softmax(output_ln, dim=-1)
-        return output
+        # 因为 pad 了，所以得找到真正的 score
+        for i in range(output.shape[0]):
+            if i == 0:
+                true_scores = output[i][origin_len[i] - 2].reshape(1, -1) # 因为我把 target 拼进去了，所以得 - 2
+            else:
+                true_scores = torch.cat((true_scores, output[i][origin_len[i] - 2].reshape(1, -1)), 0)
+        return true_scores
 
     def calculate_loss(self, batch):
         # 仍然不考虑做 batch 的情况
-        logp_seq = self.forward(batch, True)
-        # mask_batch_ix = torch.FloatTensor([[1.0]*(batch['current_loc'].shape[1] - 1) + [0.0] * 1]).to(self.device)
-        # predictions_logp = logp_seq[:, :-1] * mask_batch_ix[:, :-1, None] #为什么要把最后一个点去掉？？
-        # # predictions_logp = logp_seq[:, -1] # 我们仍然只评测最后一个点预测的对不对
-        # actual_next_tokens = batch['current_loc'][:, 1:]
-        # logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
-        # loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
         criterion = nn.NLLLoss().to(self.device)
-        scores = logp_seq[:, -2]
+        scores = self.forward(batch)
         loss = criterion(scores, batch['target'])
-        if torch.isnan(loss):
-            # 将当前 batch 保存到本地
-            torch.save(batch['current_loc'], 'current_loc.pt')
-            torch.save(batch['current_tim'], 'current_tim.pt')
-            torch.save(batch['uid'], 'uid.pt')
-            torch.save(batch['history_loc'], "history_loc.pt")
-            torch.save(batch['history_tim'], 'history_tim.pt')
-            torch.save(batch['target'], 'target.pt')
-            torch.save(self.state_dict(), 'model_state.m')
-            print('loss is nan')
-            exit()
+        # 目测 NaN 是由于学习率过高导致梯度消失等现象，解决办法是加 batch
+        # if torch.isnan(loss):
+        #     # 将当前 batch 保存到本地
+        #     torch.save(batch['current_loc'], 'current_loc.pt')
+        #     torch.save(batch['current_tim'], 'current_tim.pt')
+        #     torch.save(batch['uid'], 'uid.pt')
+        #     torch.save(batch['history_loc'], "history_loc.pt")
+        #     torch.save(batch['history_tim'], 'history_tim.pt')
+        #     torch.save(batch['target'], 'target.pt')
+        #     torch.save(self.state_dict(), 'model_state.m')
+        #     print('loss is nan')
+        #     exit()
         return loss
     
     def predict(self, batch):
         # 得拿到 true score
-        logp_seq = self.forward(batch, False)
-        # 不知道为什么要舍弃掉最 -1
-        # 因为没有做 batch 所以直接就是最后一个？
-        return logp_seq[:, -2]
+        return self.forward(batch)

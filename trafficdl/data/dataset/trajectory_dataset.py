@@ -29,7 +29,7 @@ class TrajectoryDataset(AbstractDataset):
         self.history_type = config['history_type']
         # 对于这种 history 模式没办法做到 batch
         if self.history_type == 'cut_off':
-            self.config['batch_size'] = 1
+            # self.config['batch_size'] = 1
             self.feature_name['history_loc'] = 'array of int'
             self.feature_name['history_tim'] = 'array of int'
 
@@ -45,12 +45,19 @@ class TrajectoryDataset(AbstractDataset):
                 self.data = json.load(f)
                 loc_pad = self.data['loc_size'] - 1
                 tim_pad = self.data['tim_size'] - 1
-                self.pad_item = {
-                    'current_loc': loc_pad,
-                    'history_loc': loc_pad,
-                    'current_tim': tim_pad,
-                    'history_tim': tim_pad 
-                }
+                if self.history_type == 'cut_off':
+                    self.pad_item =  {
+                        'current_loc': loc_pad,
+                        'current_tim': tim_pad
+                    }
+                    # 这种情况下不对 history_loc history_tim 做补齐
+                else:
+                    self.pad_item = {
+                        'current_loc': loc_pad,
+                        'history_loc': loc_pad,
+                        'current_tim': tim_pad,
+                        'history_tim': tim_pad 
+                    }
                 f.close()
             else:
                 transformed_data = self.cutter_filter()
@@ -59,12 +66,19 @@ class TrajectoryDataset(AbstractDataset):
                 transformed_data['loc_size'] += 1
                 tim_pad = transformed_data['tim_size']
                 transformed_data['tim_size'] += 1
-                self.pad_item = {
-                    'current_loc': loc_pad,
-                    'history_loc': loc_pad,
-                    'current_tim': tim_pad,
-                    'history_tim': tim_pad 
-                }
+                if self.history_type == 'cut_off':
+                    self.pad_item =  {
+                        'current_loc': loc_pad,
+                        'current_tim': tim_pad
+                    }
+                    # 这种情况下不对 history_loc history_tim 做补齐
+                else:
+                    self.pad_item = {
+                        'current_loc': loc_pad,
+                        'history_loc': loc_pad,
+                        'current_tim': tim_pad,
+                        'history_tim': tim_pad 
+                    }
                 self.data = transformed_data
                 if self.config['cache_dataset']:
                     if not os.path.exists(self.cache_file_folder):
@@ -75,8 +89,6 @@ class TrajectoryDataset(AbstractDataset):
         # 划分训练集、测试集、验证集：有两种方式按 user 来划，以及按轨迹数来划。
         # TODO: 这里可以设一个参数，现在先按照轨迹数来划吧
         train_data, eval_data, test_data = self.gen_input()
-        if self.history_type == 'cut_off':
-            self.pad_item = None # 这种情况下不做 pad
         return generate_dataloader(train_data, eval_data, test_data, self.feature_name, self.config['batch_size'], self.config['num_workers'], self.pad_item, self.pad_max_len)
     
     def get_data_feature(self):
