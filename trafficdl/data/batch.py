@@ -75,6 +75,11 @@ class Batch(object):
             elif self.feature_name[key] == 'array of int':
                 for i in range(len(self.data[key])):
                     for j in range(len(self.data[key][i])):
-                        self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).to(device)
+                        try:
+                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).to(device)
+                        except TypeError:
+                            print('device is ', device)
+                            exit()
+
             else:
                 raise TypeError('Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
