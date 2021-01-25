@@ -197,13 +197,15 @@ class LSTPM(AbstractModel):
         criterion = nn.NLLLoss().to(self.device)
         scores = logp_seq[:, -1]
         loss = criterion(scores, batch['target'])
-        if loss.dtype != torch.float32:
+        if torch.isnan(loss):
             # 将当前 batch 保存到本地
             torch.save(batch['current_loc'], 'current_loc.pt')
             torch.save(batch['current_tim'], 'current_tim.pt')
             torch.save(batch['uid'], 'uid.pt')
             torch.save(batch['history_loc'], "history_loc.pt")
             torch.save(batch['history_tim'], 'history_tim.pt')
+            print('loss is nan')
+            exit()
         return loss
     
     def predict(self, batch):
