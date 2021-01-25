@@ -14,7 +14,7 @@ class LSTPM(AbstractModel):
     def __init__(self, config, data_feature):
         super(LSTPM, self).__init__(config, data_feature)
         self.loc_size = data_feature['loc_size']
-        # self.tim_size = data_feature['tim_size']
+        self.tim_size = data_feature['tim_size']
         self.poi_profile = data_feature['poi_profile']
         self.hidden_size = config['hidden_size']
         self.emb_size = config['emb_size']
@@ -70,6 +70,12 @@ class LSTPM(AbstractModel):
         return padde_mask_non_local
 
     def forward(self, batch, is_train=True):
+        # 因为源码是假设的 target 就是 current_loc 的最后一个点，所以需要做一下修改，把 target append 到 current_loc 里面
+        # 假设batch_size = 1
+        expand_current_loc = torch.cat([batch['current_loc'][0], batch['target']]).unsqueeze(0)
+        expand_current_tim = torch.cat([batch['current_tim'][0], torch.LongTensor([0]).to(self.device)]).unsqueeze(0)
+        batch['current_loc'] = expand_current_loc
+        batch['current_tim'] = expand_current_tim
         item_vectors = batch['current_loc']
         batch_size = item_vectors.size()[0]
         sequence_size = item_vectors.size()[1]
@@ -170,7 +176,7 @@ class LSTPM(AbstractModel):
             layer_2_current = (0.5 *out_y_current + 0.5 * current_session_embed[:sequence_length - 1]).unsqueeze(2)
             layer_2_sims =  F.softmax(sessions_represent.bmm(layer_2_current).squeeze(2) * 1.0/avg_distance, dim = 1).unsqueeze(1)##==>>current_items * 1 * history_session_length
             out_layer_2 = layer_2_sims.bmm(sessions_represent).squeeze(1)
-            out_y_current_padd = torch.FloatTensor(sequence_size - sequence_length + 1, self.emb_size).zero_().to(self.device)
+            out_y_current_padd = torch.FloatTensor(sequence_size - sequence_length + 1, self.emb_size).zero_().to(self.device) # TODO: 感觉他这个是把 target 当成 current 的最后一个点了，有点问题
             out_layer_2_list = []
             out_layer_2_list.append(out_layer_2)
             out_layer_2_list.append(out_y_current_padd)
@@ -195,7 +201,7 @@ class LSTPM(AbstractModel):
         # logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
         # loss = -logp_next.sum() / mask_batch_ix[:, :-1].sum()
         criterion = nn.NLLLoss().to(self.device)
-        scores = logp_seq[:, -1]
+        scores = logp_seq[:, -2]
         loss = criterion(scores, batch['target'])
         if torch.isnan(loss):
             # 将当前 batch 保存到本地
@@ -204,6 +210,8 @@ class LSTPM(AbstractModel):
             torch.save(batch['uid'], 'uid.pt')
             torch.save(batch['history_loc'], "history_loc.pt")
             torch.save(batch['history_tim'], 'history_tim.pt')
+            torch.save(batch['target'], 'target.pt')
+            torch.save(self.state_dict, 'model_state.m')
             print('loss is nan')
             exit()
         return loss
@@ -213,4 +221,4 @@ class LSTPM(AbstractModel):
         logp_seq = self.forward(batch, False)
         # 不知道为什么要舍弃掉最 -1
         # 因为没有做 batch 所以直接就是最后一个？
-        return logp_seq[:, -1]
+        return logp_seq[:, -2]

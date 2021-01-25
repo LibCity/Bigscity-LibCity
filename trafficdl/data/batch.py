@@ -25,6 +25,12 @@ class Batch(object):
             return self.data[key]
         else:
             raise KeyError('{} is not in the batch'.format(key))
+    
+    def __setitem__(self, key, value):
+        if key in self.data:
+            self.data[key] = value
+        else:
+            raise KeyError('{} is not in the batch'.format(key))
 
     def append(self, item):
         '''
