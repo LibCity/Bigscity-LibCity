@@ -74,9 +74,9 @@ class LSTPM(AbstractModel):
         # 假设batch_size = 1
         expand_current_loc = torch.cat([batch['current_loc'][0], batch['target']]).unsqueeze(0)
         expand_current_tim = torch.cat([batch['current_tim'][0], torch.LongTensor([0]).to(self.device)]).unsqueeze(0)
-        batch['current_loc'] = expand_current_loc
-        batch['current_tim'] = expand_current_tim
-        item_vectors = batch['current_loc']
+        # batch['current_loc'] = expand_current_loc
+        # batch['current_tim'] = expand_current_tim
+        item_vectors = expand_current_loc
         batch_size = item_vectors.size()[0]
         sequence_size = item_vectors.size()[1]
         items = self.item_emb(item_vectors)
@@ -94,7 +94,7 @@ class LSTPM(AbstractModel):
         out_hie = []
         for ii in range(batch_size):
             ##########################################
-            current_session_input_dilated_rnn_index = self._create_dilated_rnn_input(batch['current_loc'][ii].tolist())
+            current_session_input_dilated_rnn_index = self._create_dilated_rnn_input(expand_current_loc[ii].tolist())
             hiddens_current = x1[ii]
             dilated_lstm_outs_h = []
             dilated_lstm_outs_c = []
@@ -115,10 +115,10 @@ class LSTPM(AbstractModel):
             dilated_out = torch.cat(dilated_lstm_outs_h, dim = 0).unsqueeze(0)
             out_hie.append(dilated_out)
             user_id_current = user_batch[ii]
-            current_session_timid = batch['current_tim'][ii].tolist()[:-1]
+            current_session_timid = expand_current_tim[ii].tolist()[:-1]
             current_session_poiid = item_vectors[ii][:len(current_session_timid)]
             current_session_embed = out[ii] # sequence_len * embedding_size
-            current_session_mask = self._pad_batch_of_lists_masks(batch['current_loc'][ii].cpu()).unsqueeze(1) # FloatTensor sequence_len * 1
+            current_session_mask = self._pad_batch_of_lists_masks(expand_current_loc[ii].cpu()).unsqueeze(1) # FloatTensor sequence_len * 1
             # mask_batch_ix_non_local[ii].unsqueeze(1)
             sequence_length = int(sum(np.array(current_session_mask.cpu())))
             current_session_represent_list = []
@@ -211,7 +211,7 @@ class LSTPM(AbstractModel):
             torch.save(batch['history_loc'], "history_loc.pt")
             torch.save(batch['history_tim'], 'history_tim.pt')
             torch.save(batch['target'], 'target.pt')
-            torch.save(self.state_dict, 'model_state.m')
+            torch.save(self.state_dict(), 'model_state.m')
             print('loss is nan')
             exit()
         return loss
