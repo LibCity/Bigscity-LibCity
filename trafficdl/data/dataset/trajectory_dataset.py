@@ -25,7 +25,7 @@ class TrajectoryDataset(AbstractDataset):
             'history_loc': self.config['history_len'],
             'history_tim': self.config['history_len']
         }
-        self.feature_name = {'history_loc': 'int', 'history_tim': 'int', 'current_loc': 'int', 'current_tim': 'int', 'target': 'int', 'uid': 'int'}
+        self.feature_name = {'history_loc': 'int', 'history_tim': 'int', 'current_loc': 'int', 'current_tim': 'int', 'target': 'int', 'target_tim': 'int', 'uid': 'int'}
         self.history_type = config['history_type']
         # 对于这种 history 模式没办法做到 batch
         if self.history_type == 'cut_off':
@@ -100,6 +100,9 @@ class TrajectoryDataset(AbstractDataset):
             'tim_pad': self.pad_item['current_tim'] if self.pad_item != None else None
         }
         res['poi_profile'] = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.config['dataset'])))
+        with open(os.path.join(self.data_path, 'config.json'), 'r') as f:
+            config = json.load(f)
+            res['distance_upper'] = config['extra']['distance_upper']
         if self.config['model'] == 'LSTPM':
             # 这个模型需要加一个新的东西
             res['tim_sim_matrix'] = caculate_time_sim(self.data)
@@ -208,6 +211,7 @@ class TrajectoryDataset(AbstractDataset):
                     continue
                 # 为当前轨迹的最后一个点 target
                 target = current_session[-1][0]
+                target_tim = current_session[-1][1]
                 if self.history_type == 'splice':
                     history_loc = [s[0] for s in history_session]  # 把多个 history 路径合并成一个？
                     history_tim = [s[1] for s in history_session]
@@ -227,7 +231,8 @@ class TrajectoryDataset(AbstractDataset):
                 tim_np = [s[1] for s in loc_tim]
                 trace.append(loc_np) # loc 会与 history loc 有重合， loc 的前半部分为 history loc
                 trace.append(tim_np)
-                trace.append(target)  # target 会与 loc 有一段的重合，只有 target 的最后一位 loc 没有
+                trace.append(target)
+                trace.append(target_tim)
                 trace.append(int(u))
                 if i <= train_num:
                     train_data.append(trace)
