@@ -55,6 +55,9 @@ class TrajLocPredExecutor(AbstractExecutor):
                 break
         best = np.argmax(metrics['accuracy'])  # 这个不是最好的一次吗？
         avg_acc = metrics['accuracy'][best]
+        # save metrics
+        with open('./metrics.json', 'w') as f:
+            json.dump(metrics, f)
         load_name_tmp = 'ep_' + str(best) + '.m'
         self.model.load_state_dict(torch.load(self.tmp_path + load_name_tmp))
         # 删除之前创建的临时文件夹

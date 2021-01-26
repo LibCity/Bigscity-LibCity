@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pad_packed_sequence
 
 from trafficdl.model.abstract_model import AbstractModel
 
@@ -49,6 +51,7 @@ class RNN(AbstractModel):
     def forward(self, batch):
         loc = batch['current_loc']
         tim = batch['current_tim']
+        loc_len = batch.get_origin_len('current_loc')
         batch_size = loc.shape[0]
         
         h1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
@@ -59,12 +62,15 @@ class RNN(AbstractModel):
         x = torch.cat((loc_emb, tim_emb), 2).permute(1, 0, 2) # change batch * seq * input_size to seq * batch * input_size
         x = self.dropout(x)
 
+        # pack x and history_x
+        pack_x = pack_padded_sequence(x, lengths=loc_len, enforce_sorted=False)
         if self.rnn_type == 'GRU' or self.rnn_type == 'RNN':
-            out, h1 = self.rnn(x, h1)
+            out, h1 = self.rnn(pack_x, h1)
         elif self.rnn_type == 'LSTM':
-            out, (h1, c1) = self.rnn(x, (h1, c1))
+            out, (h1, c1) = self.rnn(pack_x, (h1, c1))
         # out = out.squeeze(1)
-        out = out.permute(1, 0, 2)
+        out, out_len = pad_packed_sequence(out, batch_first=True)
+        # out = out.permute(1, 0, 2)
         out = F.selu(out)
         out = self.dropout(out)
 

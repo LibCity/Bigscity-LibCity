@@ -1,8 +1,9 @@
 '''
 数据预处理阶段相关的工具函数
 '''
+import numpy as np
 from datetime import datetime, timedelta
-
+from collections import defaultdict
 '''
 将 json 中 time_format 格式的 time 转化为 local datatime
 '''
@@ -36,3 +37,30 @@ def calculateTimeOff(now_time, base_time):
     now_time = now_time - timedelta(minutes=now_time.minute, seconds=now_time.second)
     delta = now_time - base_time
     return delta.days * 24 + delta.seconds / 3600
+
+def caculate_time_sim(data):
+    time_checkin_set = defaultdict(set)
+    tim_size = data['tim_size']
+    data_neural = data['data']
+    for uid in data_neural:
+        uid_sessions = data_neural[uid]
+        for session in uid_sessions:
+            for checkin in session:
+                timid = checkin[1]
+                locid = checkin[0]
+                if timid not in time_checkin_set:
+                    time_checkin_set[timid] = set()
+                time_checkin_set[timid].add(locid)
+    sim_matrix = np.zeros((tim_size,tim_size))
+    for i in range(tim_size):
+        for j in range(tim_size):
+            set_i = time_checkin_set[i]
+            set_j = time_checkin_set[j]
+            if len(set_i | set_j) != 0:
+                jaccard_ij = len(set_i & set_j)/len(set_i | set_j)
+                sim_matrix[i][j] = jaccard_ij
+    return sim_matrix
+
+def parseCoordinate(coordinate):
+    items = coordinate[1:-1].split(',')
+    return float(items[0]), float(items[1])
