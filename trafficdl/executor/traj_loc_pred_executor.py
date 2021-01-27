@@ -109,15 +109,17 @@ class TrajLocPredExecutor(AbstractExecutor):
             total_loss.append(loss.data.cpu().numpy().tolist())
             try:
                 torch.nn.utils.clip_grad_norm(model.parameters(), clip)
-                for p in model.parameters():
-                    if p.requires_grad:
-                        p.data.add_(-lr, p.grad.data)
+                # for p in model.parameters():
+                #     if p.requires_grad:
+                #         p.data.add_(-lr, p.grad.data)
             except:
                 pass
             optimizer.step()
             cnt += 1
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
+        with open('run_loss.pny', 'wb') as f:
+            np.save(f, total_loss)
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
