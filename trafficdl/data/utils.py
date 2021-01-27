@@ -1,6 +1,7 @@
 import importlib
 import numpy as np
 from torch.utils.data import DataLoader
+import copy
 
 from trafficdl.data.list_dataset import ListDataset
 from trafficdl.data.batch import Batch
@@ -45,7 +46,7 @@ def generate_dataloader(train_data, eval_data, test_data, feature_name, batch_si
     def collator(indices):
         batch = Batch(feature_name, pad_item, pad_max_len)
         for item in indices:
-            batch.append(item)
+            batch.append(copy.deepcopy(item))
         batch.padding()
         return batch
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collator, shuffle=shuffle)
