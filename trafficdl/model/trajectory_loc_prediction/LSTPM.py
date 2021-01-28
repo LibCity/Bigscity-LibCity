@@ -201,17 +201,17 @@ class LSTPM(AbstractModel):
         logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
         loss = -logp_next.sum() / mask_batch_ix[:, :-2].sum()
         # 目测 NaN 是由于学习率过高导致梯度消失等现象，解决办法是加 batch
-        # if torch.isnan(loss):
-        #     # 将当前 batch 保存到本地
-        #     torch.save(batch['current_loc'], 'current_loc.pt')
-        #     torch.save(batch['current_tim'], 'current_tim.pt')
-        #     torch.save(batch['uid'], 'uid.pt')
-        #     torch.save(batch['history_loc'], "history_loc.pt")
-        #     torch.save(batch['history_tim'], 'history_tim.pt')
-        #     torch.save(batch['target'], 'target.pt')
-        #     torch.save(self.state_dict(), 'model_state.m')
-        #     print('loss is nan')
-        #     exit()
+        if torch.isnan(loss):
+            # 将当前 batch 保存到本地
+            torch.save(batch['current_loc'], 'current_loc.pt')
+            torch.save(batch['current_tim'], 'current_tim.pt')
+            torch.save(batch['uid'], 'uid.pt')
+            torch.save(batch['history_loc'], "history_loc.pt")
+            torch.save(batch['history_tim'], 'history_tim.pt')
+            torch.save(batch['target'], 'target.pt')
+            torch.save(self.state_dict(), 'model_state.m')
+            print('loss is nan')
+            exit()
         return loss
     
     def predict(self, batch):
