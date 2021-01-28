@@ -102,9 +102,9 @@ class TrajLocPredExecutor(AbstractExecutor):
         loss_func = self.loss_func or model.calculate_loss
         for batch in data_loader:
             # one batch, one step
+            optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
             loss = loss_func(batch)
-            optimizer.zero_grad()
             loss.backward()
             total_loss.append(loss.data.cpu().numpy().tolist())
             try:
