@@ -297,7 +297,6 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         config['num_nodes'] = self.num_nodes
         self.output_dim = config.get('output_dim', 1)
-        config['output_dim'] = self.output_dim
 
         super().__init__(config, data_feature)
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
@@ -390,7 +389,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):
