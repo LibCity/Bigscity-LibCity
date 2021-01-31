@@ -30,7 +30,6 @@ config = {
     'input_window': 12,
     'output_window': 12,
     'output_dim': 1,
-    'l1_decay': 0,
     'max_diffusion_step': 2,
     'num_rnn_layers': 2,
     'rnn_units': 64,
@@ -45,12 +44,10 @@ config = {
     'epoch': 0,
     'epochs': 100,
     'epsilon': 1.0e-3,
-    'global_step': 0,
+    'lr_decay': True,
     'lr_decay_ratio': 0.1,
     'max_grad_norm': 5,
     'clip_grad_norm': True,
-    'max_to_keep': 100,
-    'min_learning_rate': 2.0e-06,
     'lr_scheduler': 'multisteplr',
     'patience': 50,
     'steps': [20, 30, 40, 50],
@@ -73,8 +70,7 @@ model = get_model(config, data_feature)
 
 # 加载执行器
 model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
-if config['model'] == 'DCRNN':
-    executor = get_executor(config, model)
+executor = get_executor(config, model)
 
 # 训练
 executor.train(train_data, valid_data)
