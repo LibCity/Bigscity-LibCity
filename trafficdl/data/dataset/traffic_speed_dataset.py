@@ -13,7 +13,7 @@ class TrafficSpeedDataset(AbstractDataset):
 
     def __init__(self, config):
         self.config = config
-        self.dataset = self.config.get('dataset', '')
+        self.dataset = self.config.get('dataset', 'METR_LA')
         self.points_per_hour = self.config.get('points_per_hour', 12)
         self.input_window = self.config.get('input_window', 12)
         self.output_window = self.config.get('output_window', 12)
@@ -23,7 +23,7 @@ class TrafficSpeedDataset(AbstractDataset):
         self.add_time_in_day = self.config.get('add_time_in_day', False)
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.pad_with_last_sample = self.config.get('pad_with_last_sample', True)
-        self.weight_col = self.config.get('weight_col', '')
+        self.weight_col = self.config.get('weight_col', 'cost')
         self.calculate_weight = self.config.get('calculate_weight', False)
         self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
