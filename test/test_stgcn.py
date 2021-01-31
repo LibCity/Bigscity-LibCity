@@ -33,12 +33,18 @@ if __name__ == '__main__':
         'lr_scheduler': 'steplr',
         'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
         'gpu': True,
+        'gpu_id': '1',
         'dataset': 'METR_LA',
         'weight_col': 'cost',
         'calculate_weight': True,
         'add_time_in_day': True,
         'add_day_in_week': False,
     }
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = config['gpu_id']
+    import torch
+    config['device'] = torch.device("cuda" if torch.cuda.is_available() and config['gpu'] else "cpu")
+
     logger = get_logger(config)
     dataset = get_dataset(config)
     train_data, valid_data, test_data = dataset.get_data()
