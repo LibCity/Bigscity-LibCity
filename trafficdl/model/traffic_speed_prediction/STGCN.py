@@ -175,19 +175,19 @@ class STGCN(AbstractModel):
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true, 0)
 
-    def predict(self, batch):
+    def predict(self, batch):  # y_的feature_dim可能小于x_的！！！！！！！？？？？
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
         y = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
-        input_length = x.shape[1]
         output_length = y.shape[1]
-        tmp = torch.cat([x, y], dim=1)  # (batch_size, input_length + output_length, num_nodes, feature_dim)
         y_preds = []
-        for pred_idx in range(output_length):
-            end_idx = pred_idx + input_length
-            x_ = tmp[:, pred_idx: end_idx, :, :]
+        x_ = x.clone()  # copy!!
+        for i in range(output_length):
             batch_tmp = {'X': x_}
             y_ = self.forward(batch_tmp)  # (batch_size, 1(output_length), num_nodes, 1(feature_dim))
-            y_preds.append(y_)
+            y_preds.append(y_.clone())
+            if y_.shape[3] < x_.shape[3]:
+                y_ = torch.cat([y_, y[:, i:i+1, :, self.output_dim:]], dim=3)
+            x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
         y_preds = torch.cat(y_preds, dim=1)  # concat at time_length, y_preds.shape=y.shape
         return y_preds
 
