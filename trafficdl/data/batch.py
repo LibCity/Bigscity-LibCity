@@ -85,7 +85,7 @@ class Batch(object):
                 for i in range(len(self.data[key])):
                     for j in range(len(self.data[key][i])):
                         try:
-                            self.data[key][i][j] = torch.LongTensor(self.data[key][i][j]).to(device)
+                            self.data[key][i][j] = torch.LongTensor(np.array(self.data[key][i][j])).to(device)
                         except TypeError:
                             print('device is ', device)
                             exit()
