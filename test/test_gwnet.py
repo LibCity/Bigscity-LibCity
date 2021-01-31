@@ -20,6 +20,7 @@ if __name__ == '__main__':
 
         'learning_rate': 0.001,
         'learner': 'adam',
+        'lr_decay': False,
         'weight_decay': 0.0001,
         'dropout': 0.3,
         'epochs': 100,
