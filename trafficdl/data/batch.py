@@ -1,4 +1,7 @@
 import torch
+import numpy as np
+
+
 class Batch(object):
 
     def __init__(self, feature_name, pad_item=None, pad_max_len=None):
@@ -25,7 +28,7 @@ class Batch(object):
             return self.data[key]
         else:
             raise KeyError('{} is not in the batch'.format(key))
-    
+
     def __setitem__(self, key, value):
         if key in self.data:
             self.data[key] = value
@@ -75,9 +78,9 @@ class Batch(object):
     def to_tensor(self, device):
         for key in self.data:
             if self.feature_name[key] == 'int':
-                self.data[key] = torch.LongTensor(self.data[key]).to(device)
+                self.data[key] = torch.LongTensor(np.array(self.data[key])).to(device)
             elif self.feature_name[key] == 'float':
-                self.data[key] = torch.FloatTensor(self.data[key]).to(device)
+                self.data[key] = torch.FloatTensor(np.array(self.data[key])).to(device)
             elif self.feature_name[key] == 'array of int':
                 for i in range(len(self.data[key])):
                     for j in range(len(self.data[key][i])):

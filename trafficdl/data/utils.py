@@ -50,5 +50,5 @@ def generate_dataloader(train_data, eval_data, test_data, feature_name, batch_si
         return batch
     train_dataloader = DataLoader(dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collator, shuffle=shuffle)
     eval_dataloader = DataLoader(dataset=eval_dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collator, shuffle=shuffle)
-    test_dataloader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collator, shuffle=shuffle)
+    test_dataloader = DataLoader(dataset=test_dataset, batch_size=batch_size, num_workers=num_workers, collate_fn=collator, shuffle=False)
     return train_dataloader, eval_dataloader, test_dataloader
