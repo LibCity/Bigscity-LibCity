@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from logging import getLogger
 from torch.utils.tensorboard import SummaryWriter
-
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
 
@@ -37,6 +36,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.learner = self.config.get('learner', 'adam')
         self.epsilon = self.config.get('epsilon', 1e-8)
         self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
+        self.lr_decay = self.config.get('lr_decay', False)
         self.lr_decay_ratio = self.config.get('lr_decay_ratio', 0.1)
         self.milestones = self.config.get('steps', [])
         self.step_size = self.config.get('step_size', 10)
@@ -98,10 +98,15 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         return optimizer
 
     def _build_lr_scheduler(self):
-        if self.lr_scheduler_type.lower() == 'multisteplr':
-            lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
-        elif self.lr_scheduler_type.lower() == 'steplr':
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.lr_decay_ratio)
+        if self.lr_decay:
+            if self.lr_scheduler_type.lower() == 'multisteplr':
+                lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+                    self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
+            elif self.lr_scheduler_type.lower() == 'steplr':
+                lr_scheduler = torch.optim.lr_scheduler.StepLR(
+                    self.optimizer, step_size=self.step_size, gamma=self.lr_decay_ratio)
+            else:
+                lr_scheduler = None
         else:
             lr_scheduler = None
         return lr_scheduler
@@ -138,11 +143,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         min_val_loss = float('inf')
         wait = 0
         best_epoch = 0
-
-        if len(train_dataloader.dataset) % train_dataloader.batch_size:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size + 1
-        else:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size
+        num_batches = len(train_dataloader)
         self._logger.info("num_batches:{}".format(num_batches))
 
         for epoch_idx in range(self._epoch_num, self.epochs):
@@ -209,3 +210,4 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             mean_loss = np.mean(losses)
             self._writer.add_scalar('eval loss', mean_loss, epoch_idx)
             return mean_loss
+
