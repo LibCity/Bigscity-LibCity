@@ -22,7 +22,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
         with torch.no_grad():
             self.model.eval()
             for batch in self.data_loader:
-                batch.to_tensor(gpu=self.config['gpu'])
+                batch.to_tensor(self.device)
                 output = self.model(batch)
                 break
 
@@ -76,7 +76,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.gpu)
+            batch.to_tensor(self.device)
             loss = loss_func(batch, batches_seen)
             if batches_seen == 0:
                 # this is a workaround to accommodate dynamically registered parameters in DCGRUCell
@@ -96,7 +96,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 loss = loss_func(batch, batches_seen)
                 self._logger.debug(loss.item())
                 losses.append(loss.item())

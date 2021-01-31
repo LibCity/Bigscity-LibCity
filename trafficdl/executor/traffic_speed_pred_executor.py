@@ -10,12 +10,10 @@ from trafficdl.utils import get_evaluator, ensure_dir
 
 class TrafficSpeedPredExecutor(AbstractExecutor):
     def __init__(self, config, model):
-        self.model = model
         self.evaluator = get_evaluator(config)
-        self.metrics = config['metrics']
         self.config = config
-        if self.config['gpu']:
-            self.model = self.model.cuda()
+        self.model = model.to(self.config['device'])
+        self.metrics = self.config.get('metrics', 'MAE')
 
         self.tmp_path = './trafficdl/tmp/checkpoint'
         self.cache_dir = './trafficdl/cache/model_cache'
@@ -45,7 +43,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.log_every = self.config.get('log_every', 1)
         self.saved = self.config.get('save_model', True)
         self.patience = self.config.get('patience', 50)
-        self.gpu = self.config.get('gpu', True)
+        self.device = self.config.get('device', torch.device('cpu'))
         self.output_dim = config.get('output_dim', 1)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
@@ -119,7 +117,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             y_truths = []
             y_preds = []
             for batch in test_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 output = self.model.predict(batch)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
@@ -187,7 +185,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.gpu)
+            batch.to_tensor(self.device)
             loss = loss_func(batch)
             self._logger.debug(loss.item())
             losses.append(loss.item())
@@ -203,7 +201,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 loss = loss_func(batch)
                 self._logger.debug(loss.item())
                 losses.append(loss.item())
