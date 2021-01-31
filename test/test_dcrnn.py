@@ -16,11 +16,12 @@ config = {
     'calculate_weight': True,
     'adj_epsilon': 0.1,
     'add_time_in_day': True,
-    'add_day_in_week': True,
+    'add_day_in_week': False,
 
     'num_workers': 1,
     'cache_dataset': True,
     'gpu': True,
+    'gpu_id': '1',
     'batch_size': 64,
     'test_batch_size': 64,
     'val_batch_size': 64,
@@ -52,6 +53,11 @@ config = {
     'patience': 50,
     'steps': [20, 30, 40, 50],
 }
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = config['gpu_id']
+import torch
+config['device'] = torch.device("cuda" if torch.cuda.is_available() and config['gpu'] else "cpu")
 
 logger = get_logger(config)
 # 加载数据集

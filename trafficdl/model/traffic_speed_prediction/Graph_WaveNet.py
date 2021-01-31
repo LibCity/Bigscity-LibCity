@@ -125,7 +125,7 @@ class GWNET(AbstractModel):
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
         self.output_dim = config.get('output_dim', 1)
-        self.device = torch.device("cuda" if config['gpu'] else "cpu")
+        self.device = config.get('device', torch.device('cpu'))
 
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
