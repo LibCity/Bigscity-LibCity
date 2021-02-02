@@ -1,5 +1,5 @@
 {
-    "hidden_size": 500,
+    "hidden_size": 600,
     "emb_size": 500,
-    "dropout": 0.0
+    "dropout": 0.8
 }
