@@ -188,33 +188,39 @@ class LSTPM(AbstractModel):
         out_put_emb_v1 = torch.cat([y, out], dim=2)
         output_ln = self.linear(out_put_emb_v1)
         output = F.log_softmax(output_ln, dim=-1)
-        # 因为 pad 了，所以得找到真正的 score
-        for i in range(output.shape[0]):
-            if i == 0:
-                true_scores = output[i][origin_len[i] - 2].reshape(1, -1) # 因为我把 target 拼进去了，所以得 - 2
-            else:
-                true_scores = torch.cat((true_scores, output[i][origin_len[i] - 2].reshape(1, -1)), 0)
-        return true_scores
+        return output
 
     def calculate_loss(self, batch):
         # 仍然不考虑做 batch 的情况
-        criterion = nn.NLLLoss().to(self.device)
-        scores = self.forward(batch)
-        loss = criterion(scores, batch['target'])
+        origin_len = batch.get_origin_len('current_loc')
+        sequence_len = batch['current_loc'].shape[1]
+        mask_batch_ix = torch.FloatTensor([[1.0]*(l) + [0.0] * (sequence_len - l + 1) for l in origin_len]).to(self.device)
+        logp_seq = self.forward(batch)
+        predictions_logp = logp_seq[:, :-2] * mask_batch_ix[:, :-2, None]
+        actual_next_tokens = batch['current_loc'][:, 1:]
+        logp_next = torch.gather(predictions_logp, dim=2, index=actual_next_tokens[:, :, None])
+        loss = -logp_next.sum() / mask_batch_ix[:, :-2].sum()
         # 目测 NaN 是由于学习率过高导致梯度消失等现象，解决办法是加 batch
-        # if torch.isnan(loss):
-        #     # 将当前 batch 保存到本地
-        #     torch.save(batch['current_loc'], 'current_loc.pt')
-        #     torch.save(batch['current_tim'], 'current_tim.pt')
-        #     torch.save(batch['uid'], 'uid.pt')
-        #     torch.save(batch['history_loc'], "history_loc.pt")
-        #     torch.save(batch['history_tim'], 'history_tim.pt')
-        #     torch.save(batch['target'], 'target.pt')
-        #     torch.save(self.state_dict(), 'model_state.m')
-        #     print('loss is nan')
-        #     exit()
+        if torch.isnan(loss):
+            # 将当前 batch 保存到本地
+            torch.save(batch['current_loc'], 'current_loc.pt')
+            torch.save(batch['current_tim'], 'current_tim.pt')
+            torch.save(batch['uid'], 'uid.pt')
+            torch.save(batch['history_loc'], "history_loc.pt")
+            torch.save(batch['history_tim'], 'history_tim.pt')
+            torch.save(batch['target'], 'target.pt')
+            torch.save(self.state_dict(), 'model_state.m')
+            print('loss is nan')
+            exit()
         return loss
     
     def predict(self, batch):
         # 得拿到 true score
-        return self.forward(batch)
+        output = self.forward(batch)
+        origin_len = batch.get_origin_len('current_loc')
+        for i in range(output.shape[0]):
+            if i == 0:
+                true_scores = output[i][origin_len[i] - 1].reshape(1, -1) # 这里的 origin_len 并没有算新加的 target，所以 origin_len - 1 就是倒数第二个
+            else:
+                true_scores = torch.cat((true_scores, output[i][origin_len[i] - 1].reshape(1, -1)), 0)
+        return true_scores
