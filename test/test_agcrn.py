@@ -3,55 +3,54 @@ from trafficdl.utils import get_executor
 from trafficdl.utils import get_model
 from trafficdl.utils import get_logger
 
+
 config = {
     'log_level': 'INFO',
 
     'dataset': 'METR_LA',
-    'model': 'DCRNN',
+    'model': 'AGCRN',
     'evaluator': 'TrafficSpeedPredEvaluator',
-    'executor': 'DCRNNExecutor',
+    'executor': 'TrafficSpeedPredExecutor',
     'dataset_class': 'TrafficSpeedDataset',
-    'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
+    'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
     'calculate_weight': True,
     'adj_epsilon': 0.1,
-    'add_time_in_day': True,
+    'add_time_in_day': False,
     'add_day_in_week': False,
+    'pad_with_last_sample': False,
 
     'num_workers': 1,
     'cache_dataset': True,
     'gpu': True,
     'gpu_id': '1',
     'batch_size': 64,
-    'test_batch_size': 64,
-    'val_batch_size': 64,
 
-    'cl_decay_steps': 2000,
-    'filter_type': 'dual_random_walk',
     'input_window': 12,
     'output_window': 12,
     'output_dim': 1,
-    'max_diffusion_step': 2,
-    'num_rnn_layers': 2,
+    'tod': False,
+    'column_wise': False,
+    'default_graph': True,
+    'embed_dim': 10,
     'rnn_units': 64,
-    'use_curriculum_learning': True,
+    'num_layers': 2,
+    'cheb_order': 2,
+
+    'seed': 10,
     'train_rate': 0.7,
     'eval_rate': 0.1,
-
-    'learning_rate': 0.01,
+    'learning_rate': 0.003,
     'learner': 'adam',
-    'weight_decay': 0,
-    'dropout': 0,
+    'lr_decay': False,
+    'lr_decay_rate': 0.3,
+    'steps': [5, 20, 40, 70],
+    'lr_scheduler': 'multisteplr',
     'epoch': 0,
     'epochs': 100,
-    'epsilon': 1.0e-3,
-    'lr_decay': True,
-    'lr_decay_ratio': 0.1,
+    'clip_grad_norm': False,
     'max_grad_norm': 5,
-    'clip_grad_norm': True,
-    'lr_scheduler': 'multisteplr',
-    'patience': 50,
-    'steps': [20, 30, 40, 50],
+    'patience': 15,
 }
 
 import os
@@ -64,9 +63,9 @@ logger = get_logger(config)
 dataset = get_dataset(config)
 # 转换数据，并划分数据集
 train_data, valid_data, test_data = dataset.get_data()
-print(len(train_data.dataset), train_data.dataset[0][0].shape, train_data.dataset[0][1].shape, train_data.batch_size)
-print(len(valid_data.dataset), valid_data.dataset[0][0].shape, valid_data.dataset[0][1].shape, valid_data.batch_size)
-print(len(test_data.dataset), test_data.dataset[0][0].shape, test_data.dataset[0][1].shape, test_data.batch_size)
+print(len(train_data), len(train_data.dataset), train_data.dataset[0][0].shape, train_data.dataset[0][1].shape, train_data.batch_size)
+print(len(valid_data), len(valid_data.dataset), valid_data.dataset[0][0].shape, valid_data.dataset[0][1].shape, valid_data.batch_size)
+print(len(test_data), len(test_data.dataset), test_data.dataset[0][0].shape, test_data.dataset[0][1].shape, test_data.batch_size)
 
 data_feature = dataset.get_data_feature()
 print(data_feature['adj_mx'].shape)
@@ -77,7 +76,6 @@ model = get_model(config, data_feature)
 # 加载执行器
 model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
 executor = get_executor(config, model)
-
 # 训练
 executor.train(train_data, valid_data)
 executor.save_model(model_cache_file)

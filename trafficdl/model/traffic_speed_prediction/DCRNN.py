@@ -57,12 +57,12 @@ def count_parameters(model):
 
 
 class LayerParams:
-    def __init__(self, rnn_network: torch.nn.Module, layer_type: str, gpu: bool):
+    def __init__(self, rnn_network: torch.nn.Module, layer_type: str, device):
         self._rnn_network = rnn_network
         self._params_dict = {}
         self._biases_dict = {}
         self._type = layer_type
-        self._device = torch.device("cuda" if gpu else "cpu")
+        self._device = device
 
     def get_weights(self, shape):
         if shape not in self._params_dict:
@@ -85,7 +85,7 @@ class LayerParams:
 
 
 class DCGRUCell(torch.nn.Module):
-    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, gpu, nonlinearity='tanh',
+    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True):
         """
 
@@ -103,7 +103,7 @@ class DCGRUCell(torch.nn.Module):
         # support other nonlinearities up here?
         self._num_nodes = num_nodes
         self._num_units = num_units
-        self._device = torch.device("cuda" if gpu else "cpu")
+        self._device = device
         self._max_diffusion_step = max_diffusion_step
         self._supports = []
         self._use_gc_for_ru = use_gc_for_ru
@@ -120,8 +120,8 @@ class DCGRUCell(torch.nn.Module):
         for support in supports:
             self._supports.append(self._build_sparse_matrix(support, self._device))
 
-        self._fc_params = LayerParams(self, 'fc', gpu)
-        self._gconv_params = LayerParams(self, 'gconv', gpu)
+        self._fc_params = LayerParams(self, 'fc', device)
+        self._gconv_params = LayerParams(self, 'gconv', device)
 
     @staticmethod
     def _build_sparse_matrix(L, device):
@@ -230,9 +230,9 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
     def __init__(self, config, adj_mx):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
-        self.device = torch.device("cuda" if config['gpu'] else "cpu")
+        self.device = config.get('device', torch.device('cpu'))
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, config['gpu'],
+            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, self.device,
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, hidden_state=None):
@@ -263,9 +263,10 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, adj_mx)
         self.output_dim = config.get('output_dim', 1)
+        self.device = config.get('device', torch.device('cpu'))
         self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, config['gpu'],
+            [DCGRUCell(self.rnn_units, adj_mx, self.max_diffusion_step, self.num_nodes, self.device,
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, hidden_state=None):
@@ -297,7 +298,6 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         config['num_nodes'] = self.num_nodes
         self.output_dim = config.get('output_dim', 1)
-        config['output_dim'] = self.output_dim
 
         super().__init__(config, data_feature)
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
@@ -307,7 +307,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.device = torch.device("cuda" if config.get('gpu', True) else "cpu")
+        self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
@@ -390,7 +390,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         y_true = batch['y']
         y_predicted = self.predict(batch, batches_seen)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
 
     def predict(self, batch, batches_seen=None):

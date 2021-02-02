@@ -4,19 +4,16 @@ import numpy as np
 import torch
 from logging import getLogger
 from torch.utils.tensorboard import SummaryWriter
-
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
 
 
 class TrafficSpeedPredExecutor(AbstractExecutor):
     def __init__(self, config, model):
-        self.model = model
         self.evaluator = get_evaluator(config)
-        self.metrics = config['metrics']
         self.config = config
-        if self.config['gpu']:
-            self.model = self.model.cuda()
+        self.model = model.to(self.config['device'])
+        self.metrics = self.config.get('metrics', 'MAE')
 
         self.tmp_path = './trafficdl/tmp/checkpoint'
         self.cache_dir = './trafficdl/cache/model_cache'
@@ -30,6 +27,8 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
         self._scaler = self.model.get_data_feature().get('scaler')
+        for name, param in self.model.named_parameters():
+            self._logger.info(str(name) + '\t' + str(param.device) + '\t' + str(param.requires_grad))
 
         self.epochs = self.config.get('epochs', 100)
         self.learning_rate = self.config.get('learning_rate', 0.01)
@@ -37,6 +36,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.learner = self.config.get('learner', 'adam')
         self.epsilon = self.config.get('epsilon', 1e-8)
         self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
+        self.lr_decay = self.config.get('lr_decay', False)
         self.lr_decay_ratio = self.config.get('lr_decay_ratio', 0.1)
         self.milestones = self.config.get('steps', [])
         self.step_size = self.config.get('step_size', 10)
@@ -45,7 +45,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self.log_every = self.config.get('log_every', 1)
         self.saved = self.config.get('save_model', True)
         self.patience = self.config.get('patience', 50)
-        self.gpu = self.config.get('gpu', True)
+        self.device = self.config.get('device', torch.device('cpu'))
         self.output_dim = config.get('output_dim', 1)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
@@ -98,10 +98,15 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         return optimizer
 
     def _build_lr_scheduler(self):
-        if self.lr_scheduler_type.lower() == 'multisteplr':
-            lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
-        elif self.lr_scheduler_type.lower() == 'steplr':
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=self.step_size, gamma=self.lr_decay_ratio)
+        if self.lr_decay:
+            if self.lr_scheduler_type.lower() == 'multisteplr':
+                lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+                    self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
+            elif self.lr_scheduler_type.lower() == 'steplr':
+                lr_scheduler = torch.optim.lr_scheduler.StepLR(
+                    self.optimizer, step_size=self.step_size, gamma=self.lr_decay_ratio)
+            else:
+                lr_scheduler = None
         else:
             lr_scheduler = None
         return lr_scheduler
@@ -114,7 +119,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             y_truths = []
             y_preds = []
             for batch in test_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 output = self.model.predict(batch)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
@@ -138,11 +143,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         min_val_loss = float('inf')
         wait = 0
         best_epoch = 0
-
-        if len(train_dataloader.dataset) % train_dataloader.batch_size:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size + 1
-        else:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size
+        num_batches = len(train_dataloader)
         self._logger.info("num_batches:{}".format(num_batches))
 
         for epoch_idx in range(self._epoch_num, self.epochs):
@@ -186,7 +187,7 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.gpu)
+            batch.to_tensor(self.device)
             loss = loss_func(batch)
             self._logger.debug(loss.item())
             losses.append(loss.item())
@@ -202,10 +203,11 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 loss = loss_func(batch)
                 self._logger.debug(loss.item())
                 losses.append(loss.item())
             mean_loss = np.mean(losses)
             self._writer.add_scalar('eval loss', mean_loss, epoch_idx)
             return mean_loss
+

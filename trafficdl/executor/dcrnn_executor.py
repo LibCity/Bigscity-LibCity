@@ -22,7 +22,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
         with torch.no_grad():
             self.model.eval()
             for batch in self.data_loader:
-                batch.to_tensor(gpu=self.config['gpu'])
+                batch.to_tensor(self.device)
                 output = self.model(batch)
                 break
 
@@ -31,11 +31,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
         min_val_loss = float('inf')
         wait = 0
         best_epoch = 0
-
-        if len(train_dataloader.dataset) % train_dataloader.batch_size:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size + 1
-        else:
-            num_batches = len(train_dataloader.dataset) // train_dataloader.batch_size
+        num_batches = len(train_dataloader)
         self._logger.info("num_batches:{}".format(num_batches))
 
         batches_seen = num_batches * self._epoch_num
@@ -74,13 +70,13 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
                     break
         self.load_model_with_epoch(best_epoch)
 
-    def _train_epoch(self, train_dataloader, epoch_idx, batches_seen, loss_func=None):
+    def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
         self.model.train()
         loss_func = loss_func if loss_func is not None else self.model.calculate_loss
         losses = []
         for batch in train_dataloader:
             self.optimizer.zero_grad()
-            batch.to_tensor(gpu=self.gpu)
+            batch.to_tensor(self.device)
             loss = loss_func(batch, batches_seen)
             if batches_seen == 0:
                 # this is a workaround to accommodate dynamically registered parameters in DCGRUCell
@@ -94,13 +90,13 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
             self.optimizer.step()
         return losses, batches_seen
 
-    def _valid_epoch(self, eval_dataloader, epoch_idx, batches_seen, loss_func=None):
+    def _valid_epoch(self, eval_dataloader, epoch_idx, batches_seen=None, loss_func=None):
         with torch.no_grad():
             self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
             losses = []
             for batch in eval_dataloader:
-                batch.to_tensor(gpu=self.gpu)
+                batch.to_tensor(self.device)
                 loss = loss_func(batch, batches_seen)
                 self._logger.debug(loss.item())
                 losses.append(loss.item())

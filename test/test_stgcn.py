@@ -26,20 +26,25 @@ if __name__ == '__main__':
         'learning_rate': 0.001,
         'learner': 'rmsprop',
         'weight_decay': 0,
+        'lr_decay': True,
         'lr_decay_ratio': 0.7,
+        'clip_grad_norm': False,
         'step_size': 5,
         'lr_scheduler': 'steplr',
         'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
         'gpu': True,
+        'gpu_id': '1',
         'dataset': 'METR_LA',
         'weight_col': 'cost',
         'calculate_weight': True,
-        # 'dataset': 'PeMSD7M',
-        # 'weight_col': 'weight',
-        # 'calculate_weight': False,
         'add_time_in_day': True,
         'add_day_in_week': False,
     }
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = config['gpu_id']
+    import torch
+    config['device'] = torch.device("cuda" if torch.cuda.is_available() and config['gpu'] else "cpu")
+
     logger = get_logger(config)
     dataset = get_dataset(config)
     train_data, valid_data, test_data = dataset.get_data()

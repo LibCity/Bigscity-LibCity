@@ -53,11 +53,11 @@ class temporal_conv_layer(nn.Module):
 
 
 class spatio_conv_layer(nn.Module):
-    def __init__(self, ks, c, Lk):
+    def __init__(self, ks, c, Lk, device):
         super(spatio_conv_layer, self).__init__()
         self.Lk = Lk
-        self.theta = nn.Parameter(torch.FloatTensor(c, c, ks))
-        self.b = nn.Parameter(torch.FloatTensor(1, c, 1, 1))
+        self.theta = nn.Parameter(torch.FloatTensor(c, c, ks).to(device))
+        self.b = nn.Parameter(torch.FloatTensor(1, c, 1, 1).to(device))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -78,10 +78,10 @@ class spatio_conv_layer(nn.Module):
 
 
 class st_conv_block(nn.Module):
-    def __init__(self, ks, kt, n, c, p, Lk):
+    def __init__(self, ks, kt, n, c, p, Lk, device):
         super(st_conv_block, self).__init__()
         self.tconv1 = temporal_conv_layer(kt, c[0], c[1], "GLU")
-        self.sconv = spatio_conv_layer(ks, c[1], Lk)
+        self.sconv = spatio_conv_layer(ks, c[1], Lk, device)
         self.tconv2 = temporal_conv_layer(kt, c[1], c[2])
         self.ln = nn.LayerNorm([n, c[2]])
         self.dropout = nn.Dropout(p)
@@ -140,6 +140,7 @@ class STGCN(AbstractModel):
         if self.input_window - 4 * (self.Kt - 1) <= 0:
             raise ValueError('Input_window must bigger than 4*(Kt-1) for 2 st_conv_block'
                              ' have 4 kt-kernel convolutional layer.')
+        self.device = config.get('device', torch.device('cpu'))
         # 计算GCN邻接矩阵的切比雪夫估计
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
@@ -147,14 +148,14 @@ class STGCN(AbstractModel):
         adj_mx = self._scaled_laplacian(adj_mx)
         self.Lk = self._cheb_poly(adj_mx, self.Ks)
         self._logger.info('cheb_poly_Lk shape: ' + str(self.Lk.shape))
-        if config['gpu']:
-            self.Lk = torch.FloatTensor(self.Lk).cuda()
-        else:
-            self.Lk = torch.FloatTensor(self.Lk)
+        self.Lk = torch.FloatTensor(self.Lk).to(self.device)
         # 模型结构
-        self.st_conv1 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[0], self.drop_prob, self.Lk)
-        self.st_conv2 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[1], self.drop_prob, self.Lk)
-        self.output = output_layer(self.blocks[1][2], self.input_window - 4 * (self.Kt - 1), self.num_nodes, self.output_dim)
+        self.st_conv1 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[0],
+                                      self.drop_prob, self.Lk, self.device)
+        self.st_conv2 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[1],
+                                      self.drop_prob, self.Lk, self.device)
+        self.output = output_layer(self.blocks[1][2], self.input_window - 4 * (self.Kt - 1),
+                                   self.num_nodes, self.output_dim)
 
     def forward(self, batch):
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
@@ -178,16 +179,16 @@ class STGCN(AbstractModel):
     def predict(self, batch):
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
         y = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
-        input_length = x.shape[1]
         output_length = y.shape[1]
-        tmp = torch.cat([x, y], dim=1)  # (batch_size, input_length + output_length, num_nodes, feature_dim)
         y_preds = []
-        for pred_idx in range(output_length):
-            end_idx = pred_idx + input_length
-            x_ = tmp[:, pred_idx: end_idx, :, :]
+        x_ = x.clone()  # copy!!
+        for i in range(output_length):
             batch_tmp = {'X': x_}
             y_ = self.forward(batch_tmp)  # (batch_size, 1(output_length), num_nodes, 1(feature_dim))
-            y_preds.append(y_)
+            y_preds.append(y_.clone())
+            if y_.shape[3] < x_.shape[3]:  # y_的feature_dim可能小于x_的
+                y_ = torch.cat([y_, y[:, i:i+1, :, self.output_dim:]], dim=3)
+            x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
         y_preds = torch.cat(y_preds, dim=1)  # concat at time_length, y_preds.shape=y.shape
         return y_preds
 
