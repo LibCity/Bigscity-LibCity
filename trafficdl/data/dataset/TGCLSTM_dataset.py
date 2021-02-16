@@ -32,5 +32,4 @@ class TGCLSTMDataset(TrafficSpeedDataset):
 
     def get_data_feature(self):
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "FFR": self.FFR,
-                "data_loader": self.eval_dataloader,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim}

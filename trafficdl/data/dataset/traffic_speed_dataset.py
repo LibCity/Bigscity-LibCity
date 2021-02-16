@@ -187,6 +187,21 @@ class TrafficSpeedDataset(AbstractDataset):
         y_val = cat_data['y_val']
         return x_train, y_train, x_val, y_val, x_test, y_test
 
+    def _get_scalar(self, x_train, y_train, x_val, y_val, x_test, y_test):
+        if self.scaler_type == "normal":
+            scaler = NormalScaler(
+                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max(),
+                        x_val[..., :self.output_dim].max(), y_val[..., :self.output_dim].max(),
+                        x_test[..., :self.output_dim].max(), y_test[..., :self.output_dim].max()))
+            self._logger.info('Scaler max: ' + str(scaler.max))
+        elif self.scaler_type == "standard":
+            scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
+                                    std=x_train[..., :self.output_dim].std())
+            self._logger.info('Scaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
+        else:
+            raise ValueError('Scaler type error!')
+        return scaler
+
     def get_data(self):
         '''
         获取数据 返回DataLoader
@@ -204,17 +219,7 @@ class TrafficSpeedDataset(AbstractDataset):
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         self.feature_dim = x_train.shape[-1]
-        # 特征归一化
-        if self.scaler_type == "normal":
-            self.scaler = NormalScaler(
-                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max(),
-                        x_val[..., :self.output_dim].max(), y_val[..., :self.output_dim].max(),
-                        x_test[..., :self.output_dim].max(), y_test[..., :self.output_dim].max()))
-            self._logger.info('Scaler max: ' + str(self.scaler.max))
-        elif self.scaler_type == "standard":
-            self.scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
-                                         std=x_train[..., :self.output_dim].std())
-            self._logger.info('Scaler mean: ' + str(self.scaler.mean) + ', std: ' + str(self.scaler.std))
+        self.scaler = self._get_scalar(x_train, y_train, x_val, y_val, x_test, y_test)
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
         x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
@@ -237,6 +242,6 @@ class TrafficSpeedDataset(AbstractDataset):
         return:
             data_feature (dict)
         '''
-        return {"scaler": self.scaler, "adj_mx": self.adj_mx, "data_loader": self.eval_dataloader,
+        return {"scaler": self.scaler, "adj_mx": self.adj_mx,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim}
 
