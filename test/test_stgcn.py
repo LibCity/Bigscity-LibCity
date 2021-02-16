@@ -18,11 +18,11 @@ if __name__ == '__main__':
         'dropout': 0,
         'epochs': 50,
         'epoch': 0,
-        'base_lr': 1e-3,
         'evaluator': 'TrafficSpeedPredEvaluator',
         'dataset_class': 'TrafficSpeedDataset',
         'executor': 'TrafficSpeedPredExecutor',
         'model': 'STGCN',
+        'graph_conv_type': 'chebconv',  # or gcnconv(force Ks=2)
         'learning_rate': 0.001,
         'learner': 'rmsprop',
         'weight_decay': 0,
