@@ -83,6 +83,17 @@ class StandardScaler:
         return (data * self.std) + self.mean
 
 
+class NormalScaler:
+    def __init__(self, max):
+        self.max = max
+
+    def transform(self, data):
+        return data / self.max
+
+    def inverse_transform(self, data):
+        return data * self.max
+
+
 def ensure_dir(dir_path):
     r"""Make sure the directory exists, if it does not exist, create it
 

@@ -6,7 +6,7 @@ from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, ensure_dir
+from trafficdl.utils import StandardScaler, NormalScaler, ensure_dir
 
 
 class TrafficSpeedDataset(AbstractDataset):
@@ -28,6 +28,7 @@ class TrafficSpeedDataset(AbstractDataset):
         self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
         self.eval_rate = self.config.get('eval_rate', 0.1)
+        self.scaler_type = self.config.get('scaler', 'standard')
         # TODO: 分割比例加进来
         parameters_str = str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
                          + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
@@ -204,8 +205,16 @@ class TrafficSpeedDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         self.feature_dim = x_train.shape[-1]
         # 特征归一化
-        self.scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(), std=x_train[..., :self.output_dim].std())
-        self._logger.info('Scaler mean: ' + str(self.scaler.mean) + ', std: ' + str(self.scaler.std))
+        if self.scaler_type == "normal":
+            self.scaler = NormalScaler(
+                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max(),
+                        x_val[..., :self.output_dim].max(), y_val[..., :self.output_dim].max(),
+                        x_test[..., :self.output_dim].max(), y_test[..., :self.output_dim].max()))
+            self._logger.info('Scaler max: ' + str(self.scaler.max))
+        elif self.scaler_type == "standard":
+            self.scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
+                                         std=x_train[..., :self.output_dim].std())
+            self._logger.info('Scaler mean: ' + str(self.scaler.mean) + ', std: ' + str(self.scaler.std))
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
         x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
