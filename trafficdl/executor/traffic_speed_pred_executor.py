@@ -28,7 +28,8 @@ class TrafficSpeedPredExecutor(AbstractExecutor):
         self._logger = getLogger()
         self._scaler = self.model.get_data_feature().get('scaler')
         for name, param in self.model.named_parameters():
-            self._logger.info(str(name) + '\t' + str(param.device) + '\t' + str(param.requires_grad))
+            self._logger.info(str(name) + '\t' + str(param.shape) + '\t' +
+                              str(param.device) + '\t' + str(param.requires_grad))
 
         self.epochs = self.config.get('epochs', 100)
         self.learning_rate = self.config.get('learning_rate', 0.01)

@@ -9,23 +9,6 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
     def __init__(self, config, model):
         TrafficSpeedPredExecutor.__init__(self, config, model)
 
-    def load_model(self, cache_name):
-        self._setup_graph()
-        super(DCRNNExecutor, self).load_model(cache_name)
-
-    def load_model_with_epoch(self, epoch):
-        self._setup_graph()
-        super(DCRNNExecutor, self).load_model_with_epoch(epoch)
-
-    def _setup_graph(self):
-        self.data_loader = self.model.get_data_feature().get('data_loader')
-        with torch.no_grad():
-            self.model.eval()
-            for batch in self.data_loader:
-                batch.to_tensor(self.device)
-                output = self.model(batch)
-                break
-
     def train(self, train_dataloader, eval_dataloader):
         self._logger.info('Start training ...')
         min_val_loss = float('inf')
@@ -78,9 +61,6 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
             self.optimizer.zero_grad()
             batch.to_tensor(self.device)
             loss = loss_func(batch, batches_seen)
-            if batches_seen == 0:
-                # this is a workaround to accommodate dynamically registered parameters in DCGRUCell
-                self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
             self._logger.debug(loss.item())
             losses.append(loss.item())
             batches_seen += 1
