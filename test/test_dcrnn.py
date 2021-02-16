@@ -23,8 +23,6 @@ config = {
     'gpu': True,
     'gpu_id': '1',
     'batch_size': 64,
-    'test_batch_size': 64,
-    'val_batch_size': 64,
 
     'cl_decay_steps': 2000,
     'filter_type': 'dual_random_walk',
