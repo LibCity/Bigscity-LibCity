@@ -68,18 +68,18 @@ class TGCLSTM(AbstractModel):
         adj_mx[adj_mx > 1e-4] = 1
         adj_mx[adj_mx <= 1e-4] = 0
 
-        A = torch.FloatTensor(adj_mx)
+        A = torch.FloatTensor(adj_mx).to(self.device)
 
-        A_temp = torch.eye(self.feature_size, self.feature_size)
+        A_temp = torch.eye(self.feature_size, self.feature_size, device=self.device)
         for i in range(self.K):
-            A_temp = torch.matmul(A_temp, torch.Tensor(A))
+            A_temp = torch.matmul(A_temp, A)
             if config.get('Clamp_A', True):
                 # confine elements of A
                 A_temp = torch.clamp(A_temp, max=1.)
             if self.dataset_class == "TGCLSTMDataset":
                 self.A_list.append(
                     torch.mul(A_temp,
-                              torch.Tensor(data_feature['FFR'][config.get('back_length', 3)])))
+                              torch.Tensor(data_feature['FFR'][config.get('back_length', 3)]).to(self.device)))
             else:
                 self.A_list.append(A_temp)
 
@@ -158,7 +158,7 @@ class TGCLSTM(AbstractModel):
         y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mse_torch(y_predicted, y_true, 0)
+        return loss.masked_mse_torch(y_predicted, y_true)
 
     def predict(self, batch):
         x = batch['X']
