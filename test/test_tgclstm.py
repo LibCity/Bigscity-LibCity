@@ -14,6 +14,8 @@ config = {
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'adj',
     'calculate_weight': False,
+    'add_time_in_day': False,
+    'add_day_in_week': False,
 
     'num_workers': 1,
     'cache_dataset': True,
@@ -24,7 +26,6 @@ config = {
     'K_hop_numbers': 3,
     'back_length': 3,
     'Clamp_A': False,
-    'output_last': True,
     'input_window': 12,
     'output_window': 12,
     'output_dim': 1,
