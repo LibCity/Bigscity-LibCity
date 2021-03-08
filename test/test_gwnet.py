@@ -13,7 +13,7 @@ if __name__ == '__main__':
         'num_workers': 1,
 
         'evaluator': 'TrafficSpeedPredEvaluator',
-        'dataset_class': 'TrafficSpeedDataset',
+        'dataset_class': 'TrafficStatePointDataset',
         'executor': 'TrafficSpeedPredExecutor',
         'model': 'GWNET',
 

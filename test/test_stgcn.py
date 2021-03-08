@@ -18,7 +18,7 @@ if __name__ == '__main__':
         'epochs': 50,
         'epoch': 0,
         'evaluator': 'TrafficSpeedPredEvaluator',
-        'dataset_class': 'TrafficSpeedDataset',
+        'dataset_class': 'TrafficStatePointDataset',
         'executor': 'TrafficSpeedPredExecutor',
         'model': 'STGCN',
         'graph_conv_type': 'chebconv',  # or gcnconv(force Ks=2)

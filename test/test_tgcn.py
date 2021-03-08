@@ -12,7 +12,7 @@ config = {
     'model': 'TGCN',
     'evaluator': 'TrafficSpeedPredEvaluator',
     'executor': 'TrafficSpeedPredExecutor',
-    'dataset_class': 'TrafficSpeedDataset',
+    'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['MAE', 'MSE', 'RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'link_weight',
     'calculate_weight': False,
