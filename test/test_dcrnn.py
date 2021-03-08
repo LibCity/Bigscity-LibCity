@@ -10,7 +10,7 @@ config = {
     'model': 'DCRNN',
     'evaluator': 'TrafficSpeedPredEvaluator',
     'executor': 'DCRNNExecutor',
-    'dataset_class': 'TrafficSpeedDataset',
+    'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
     'data_col': ['traffic_speed'],

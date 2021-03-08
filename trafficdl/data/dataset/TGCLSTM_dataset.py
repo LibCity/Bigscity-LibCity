@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
-from trafficdl.data.dataset import TrafficSpeedDataset
+from trafficdl.data.dataset import TrafficStatePointDataset
 
 
-class TGCLSTMDataset(TrafficSpeedDataset):
+class TGCLSTMDataset(TrafficStatePointDataset):
     def __init__(self, config):
         self.FFR = []
         super(TGCLSTMDataset, self).__init__(config)

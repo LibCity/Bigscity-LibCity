@@ -11,7 +11,7 @@ config = {
     'model': 'AGCRN',
     'evaluator': 'TrafficSpeedPredEvaluator',
     'executor': 'TrafficSpeedPredExecutor',
-    'dataset_class': 'TrafficSpeedDataset',
+    'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
     'data_col': ['traffic_speed'],

@@ -9,7 +9,7 @@ from trafficdl.data.utils import generate_dataloader
 from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
 
 
-class TrafficSpeedDataset(AbstractDataset):
+class TrafficStatePointDataset(AbstractDataset):
 
     def __init__(self, config):
         self.config = config
@@ -49,8 +49,6 @@ class TrafficSpeedDataset(AbstractDataset):
         self._logger = getLogger()
         if os.path.exists(self.data_path + '.geo'):
             self._load_geo()
-        else:
-            raise ValueError('Error! No .geo file!')
         if os.path.exists(self.data_path + '.rel'):  # .rel file is not necessary
             self._load_rel()
         # TODO: 加载数据集的config.json文件
