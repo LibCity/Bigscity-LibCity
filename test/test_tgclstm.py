@@ -16,6 +16,7 @@ config = {
     'calculate_weight': False,
     'add_time_in_day': False,
     'add_day_in_week': False,
+    'scaler': 'normal',
 
     'num_workers': 1,
     'cache_dataset': True,
@@ -39,7 +40,6 @@ config = {
     'lr_scheduler': 'steplr',
     'epochs': 100,
     'patience': 50,
-    'scaler': 'normal',
 }
 
 import os

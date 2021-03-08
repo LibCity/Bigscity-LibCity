@@ -20,6 +20,7 @@ config = {
     'add_time_in_day': False,
     'add_day_in_week': False,
     'pad_with_last_sample': False,
+    'scaler': "standard",
 
     'num_workers': 1,
     'cache_dataset': True,

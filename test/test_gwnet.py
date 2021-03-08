@@ -36,6 +36,7 @@ if __name__ == '__main__':
         'calculate_weight': True,
         'add_time_in_day': False,
         'add_day_in_week': False,
+        'scaler': "standard",
     }
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = config['gpu_id']

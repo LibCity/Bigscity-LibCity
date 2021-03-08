@@ -19,6 +19,7 @@ config = {
     'adj_epsilon': 0.1,
     'add_time_in_day': False,
     'add_day_in_week': False,
+    'scaler': "normal",
 
     'num_workers': 0,
     'cache_dataset': True,
@@ -44,7 +45,6 @@ config = {
     'lr_scheduler': 'multisteplr',
     'patience': 20000,
     'steps': [20, 30, 40, 50],
-    'scaler_type': "normal",
     'lambda': 0.0015
 }
 
