@@ -59,7 +59,7 @@ class TGCLSTM(AbstractModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.input_dim = data_feature['feature_dim']
         self.in_features = self.input_dim * self.num_nodes
-        self.output_dim = config.get('output_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self.out_features = self.output_dim * self.num_nodes
         self.K = config.get('K_hop_numbers', 3)
         self.dataset_class = config.get('dataset_class', 'TrafficSpeedDataset')

@@ -28,7 +28,6 @@ config = {
 
     'input_window': 12,
     'output_window': 12,
-    'output_dim': 1,
     'rnn_units': 100,
     'train_rate': 0.8,
     'eval_rate': 0.2,

@@ -134,7 +134,7 @@ class TGCN(AbstractModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         config['num_nodes'] = self.num_nodes
         self.input_dim = self.data_feature.get('feature_dim', 1)
-        self.output_dim = config.get('output_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self.gru_units = int(config.get('rnn_units', 64))
         self.lam = config.get('lambda', 0.0015)
 

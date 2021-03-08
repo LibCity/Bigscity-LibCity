@@ -193,7 +193,7 @@ class STGCN(AbstractModel):
         self.blocks = config['blocks']
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.output_dim = config.get('output_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self.drop_prob = config['dropout']
         self.blocks[0][0] = self.feature_dim
         if self.input_window - len(self.blocks) * 2 * (self.Kt - 1) <= 0:
