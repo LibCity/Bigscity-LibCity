@@ -14,6 +14,7 @@ config = {
     'dataset_class': 'TrafficSpeedDataset',
     'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
+    'data_col': ['traffic_speed'],
     'calculate_weight': True,
     'adj_epsilon': 0.1,
     'add_time_in_day': False,
@@ -28,7 +29,6 @@ config = {
 
     'input_window': 12,
     'output_window': 12,
-    'output_dim': 1,
     'tod': False,
     'column_wise': False,
     'default_graph': True,

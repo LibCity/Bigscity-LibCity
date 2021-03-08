@@ -124,7 +124,7 @@ class GWNET(AbstractModel):
         self.end_channels = config.get('end_channels', self.nhid * 16)
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.output_dim = config.get('output_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self.device = config.get('device', torch.device('cpu'))
 
         self._logger = getLogger()

@@ -28,7 +28,6 @@ config = {
     'Clamp_A': False,
     'input_window': 12,
     'output_window': 12,
-    'output_dim': 1,
     'train_rate': 0.7,
     'eval_rate': 0.1,
 

@@ -321,7 +321,7 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         config['num_nodes'] = self.num_nodes
         config['feature_dim'] = self.feature_dim
-        self.output_dim = config.get('output_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
 
         super().__init__(config, data_feature)
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
