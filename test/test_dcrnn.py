@@ -18,6 +18,7 @@ config = {
     'adj_epsilon': 0.1,
     'add_time_in_day': True,
     'add_day_in_week': False,
+    'scaler': "standard",
 
     'num_workers': 1,
     'cache_dataset': True,
