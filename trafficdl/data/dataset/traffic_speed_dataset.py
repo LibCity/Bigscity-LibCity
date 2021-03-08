@@ -6,7 +6,7 @@ from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, NormalScaler, ensure_dir
+from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
 
 
 class TrafficSpeedDataset(AbstractDataset):
@@ -29,9 +29,9 @@ class TrafficSpeedDataset(AbstractDataset):
         self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
         self.eval_rate = self.config.get('eval_rate', 0.1)
-        self.scaler_type = self.config.get('scaler', 'standard')
+        self.scaler_type = self.config.get('scaler', 'none')
         parameters_str = str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
-                         + str(self.train_rate) + '_' + str(self.eval_rate) + '_' \
+                         + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
                          + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
                          + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
@@ -274,11 +274,24 @@ class TrafficSpeedDataset(AbstractDataset):
                 max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max(),
                         x_val[..., :self.output_dim].max(), y_val[..., :self.output_dim].max(),
                         x_test[..., :self.output_dim].max(), y_test[..., :self.output_dim].max()))
-            self._logger.info('Scaler max: ' + str(scaler.max))
+            self._logger.info('NormalScaler max: ' + str(scaler.max))
         elif self.scaler_type == "standard":
             scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
                                     std=x_train[..., :self.output_dim].std())
-            self._logger.info('Scaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
+            self._logger.info('StandardScaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
+        elif self.scaler_type == "minmax01":
+            scaler = MinMax01Scaler(
+                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
+                min=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+            self._logger.info('MinMax01Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
+        elif self.scaler_type == "minmax11":
+            scaler = MinMax11Scaler(
+                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
+                min=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+            self._logger.info('MinMax11Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
+        elif self.scaler_type == "none":
+            scaler = NoneScaler()
+            self._logger.info('NoneScaler')
         else:
             raise ValueError('Scaler type error!')
         return scaler
@@ -308,8 +321,6 @@ class TrafficSpeedDataset(AbstractDataset):
                 self.output_dim = self.output_dim - 1
             if self.add_day_in_week:
                 self.output_dim = self.output_dim - 7
-        print('????????????????????????????')
-        print(self.output_dim)
         self.scaler = self._get_scalar(x_train, y_train, x_val, y_val, x_test, y_test)
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
