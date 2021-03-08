@@ -39,11 +39,11 @@ class Batch(object):
         '''
         append a new item into the batch
         Args:
-            item (dict): 特征名作为键
+            item (list): 一组输入，跟feature_name的顺序一致，feature_name即是这一组输入的名字
         '''
         if len(item) != len(self.feature_name):
             raise KeyError('when append a batch, item is not equal length with feature_name')
-        for i,key in enumerate(self.feature_name):
+        for i, key in enumerate(self.feature_name):
             # dict.keys() 返回的键的顺序与插入顺序一致，所以只要保证 item 每个特征的顺序与 feature_name 中每个特征的顺序一致即可。
             self.data[key].append(item[i])
             if key in self.pad_item:
