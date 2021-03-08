@@ -4,11 +4,13 @@ import datetime
 import os
 import sys
 
+
 def get_executor(config, model):
     try:
         return getattr(importlib.import_module('trafficdl.executor'), config['executor'])(config, model)
     except AttributeError:
         raise AttributeError('executor is not found')
+
 
 def get_model(config, data_feature):
     try:
@@ -16,11 +18,13 @@ def get_model(config, data_feature):
     except AttributeError:
         raise AttributeError('model is not found')
 
+
 def get_evaluator(config):
     try:
         return getattr(importlib.import_module('trafficdl.evaluator'), config['evaluator'])(config)
     except AttributeError:
         raise AttributeError('evaluator is not found')
+
 
 def get_logger(config, name=None):
     log_dir = './trafficdl/log'
@@ -67,33 +71,6 @@ def get_local_time():
     return cur
 
 
-class StandardScaler:
-    """
-    Standard the input
-    """
-
-    def __init__(self, mean, std):
-        self.mean = mean
-        self.std = std
-
-    def transform(self, data):
-        return (data - self.mean) / self.std
-
-    def inverse_transform(self, data):
-        return (data * self.std) + self.mean
-
-
-class NormalScaler:
-    def __init__(self, max):
-        self.max = max
-
-    def transform(self, data):
-        return data / self.max
-
-    def inverse_transform(self, data):
-        return data * self.max
-
-
 def ensure_dir(dir_path):
     r"""Make sure the directory exists, if it does not exist, create it
 
@@ -103,6 +80,7 @@ def ensure_dir(dir_path):
     """
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
+
 
 def trans_naming_rule(origin, origin_rule, target_rule):
     '''
