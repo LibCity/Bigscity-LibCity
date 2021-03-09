@@ -7,7 +7,7 @@ from logging import getLogger
 from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
 
 
-class TrafficSpeedPredEvaluator(AbstractEvaluator):
+class TrafficStateEvaluator(AbstractEvaluator):
 
     def __init__(self, config):
         self.metrics = config['metrics']  # 评估指标, 是一个 list

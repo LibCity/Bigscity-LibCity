@@ -17,9 +17,9 @@ if __name__ == '__main__':
         'dropout': 0,
         'epochs': 50,
         'epoch': 0,
-        'evaluator': 'TrafficSpeedPredEvaluator',
+        'evaluator': 'TrafficStateEvaluator',
         'dataset_class': 'TrafficStatePointDataset',
-        'executor': 'TrafficSpeedPredExecutor',
+        'executor': 'TrafficStateExecutor',
         'model': 'STGCN',
         'graph_conv_type': 'chebconv',  # or gcnconv(force Ks=2)
         'learning_rate': 0.001,

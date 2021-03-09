@@ -8,7 +8,7 @@ config = {
 
     'dataset': 'METR_LA',
     'model': 'DCRNN',
-    'evaluator': 'TrafficSpeedPredEvaluator',
+    'evaluator': 'TrafficStateEvaluator',
     'executor': 'DCRNNExecutor',
     'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],

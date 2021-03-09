@@ -12,9 +12,9 @@ if __name__ == '__main__':
         'batch_size': 64,
         'num_workers': 1,
 
-        'evaluator': 'TrafficSpeedPredEvaluator',
+        'evaluator': 'TrafficStateEvaluator',
         'dataset_class': 'TrafficStatePointDataset',
-        'executor': 'TrafficSpeedPredExecutor',
+        'executor': 'TrafficStateExecutor',
         'model': 'GWNET',
 
         'learning_rate': 0.001,
