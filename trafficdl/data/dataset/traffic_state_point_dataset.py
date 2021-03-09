@@ -254,6 +254,9 @@ class TrafficStatePointDataset(AbstractDataset):
         y_test = cat_data['y_test']
         x_val = cat_data['x_val']
         y_val = cat_data['y_val']
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test
 
     def _get_scalar(self, x_train, y_train, x_val, y_val, x_test, y_test):

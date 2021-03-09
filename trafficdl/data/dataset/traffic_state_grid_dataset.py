@@ -36,7 +36,7 @@ class TrafficStateGridDataset(AbstractDataset):
                          + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
                          + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
-                                            'point_based_{}.npz'.format(parameters_str))
+                                            'grid_based_{}.npz'.format(parameters_str))
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         ensure_dir(self.cache_file_folder)
         self.cache_dataset = self.config.get('cache_dataset', True)
@@ -304,6 +304,9 @@ class TrafficStateGridDataset(AbstractDataset):
         y_test = cat_data['y_test']
         x_val = cat_data['x_val']
         y_val = cat_data['y_val']
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test
 
     def _get_scalar(self, x_train, y_train, x_val, y_val, x_test, y_test):
