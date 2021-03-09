@@ -9,7 +9,8 @@ from trafficdl.data.utils import generate_dataloader
 from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
 
 
-class TrafficStatePointDataset(AbstractDataset):
+class TrafficStateGridOdDataset(AbstractDataset):
+    # TODO: grid_od也可以用四维张量，即起点和终点都用网格id表示，而非行和列
 
     def __init__(self, config):
         self.config = config
@@ -51,20 +52,28 @@ class TrafficStatePointDataset(AbstractDataset):
             self._load_geo()
         if os.path.exists(self.data_path + '.rel'):  # .rel file is not necessary
             self._load_rel()
+        else:
+            self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
         # TODO: 加载数据集的config.json文件
 
     def _load_geo(self):
         """
-        加载.geo文件，格式[geo_id, type, coordinates, properties(若干列)]
+        加载.geo文件，格式[geo_id, type, coordinates, row_id, column_id, properties(若干列)]
         :return:
         """
         geofile = pd.read_csv(self.data_path + '.geo')
         self.geo_ids = list(geofile['geo_id'])
         self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
+        self.geo_to_rc = {}
         for index, id in enumerate(self.geo_ids):
             self.geo_to_ind[id] = index
-        self._logger.info("Loaded file " + self.dataset + '.geo' + ', num_nodes=' + str(len(self.geo_ids)))
+        for i in range(geofile.shape[0]):
+            self.geo_to_rc[geofile['geo_id'][i]] = [geofile['row_id'][i], geofile['column_id'][i]]
+        self.len_row = max(list(geofile['row_id'])) + 1
+        self.len_column = max(list(geofile['column_id'])) + 1
+        self._logger.info("Loaded file " + self.dataset + '.geo' + ', num_grids=' + str(len(self.geo_ids))
+                          + ', grid_size=' + str((self.len_row, self.len_column)))
 
     def _load_rel(self):
         """
@@ -146,25 +155,112 @@ class TrafficStatePointDataset(AbstractDataset):
         self._logger.info("Loaded file " + self.dataset + '.dyna' + ', shape=' + str(data.shape))
         return data
 
+    def _load_grid_4d(self):
+        """
+        加载.grid文件，格式[dyna_id, type, time, row_id, column_id, properties(若干列)]
+        .geo文件中的id顺序应该跟.dyna中一致
+        其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
+        :return: 4d-array (len_time, len_row, len_column, feature_dim)
+        """
+        # 加载数据集
+        gridfile = pd.read_csv(self.data_path + '.grid')
+        if self.data_col != '':  # 根据指定的列加载数据集
+            if isinstance(self.data_col, list):
+                data_col = self.data_col
+            else:  # str
+                data_col = [self.data_col]
+            data_col.insert(0, 'time')
+            data_col.insert(1, 'row_id')
+            data_col.insert(2, 'column_id')
+            gridfile = gridfile[data_col]
+        else:  # 不指定则加载所有列
+            gridfile = gridfile[gridfile.columns[2:]]  # 从time列开始所有列
+        # 求时间序列
+        self.timesolts = list(gridfile['time'][:int(gridfile.shape[0] / len(self.geo_ids))])
+        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+        # 转4-d数组
+        feature_dim = len(gridfile.columns) - 3
+        df = gridfile[gridfile.columns[-feature_dim:]]
+        len_time = self.timesolts.shape[0]
+        data = []
+        for i in range(self.len_row):
+            tmp = []
+            for j in range(self.len_column):
+                index = (i * self.len_column + j) * len_time
+                tmp.append(df[index:index + len_time].values)
+            data.append(tmp)
+        data = np.array(data, dtype=np.float)      # (len_row, len_column, len_time, feature_dim)
+        data = data.swapaxes(2, 0).swapaxes(1, 2)  # (len_time, len_row, len_column, feature_dim)
+        self._logger.info("Loaded file " + self.dataset + '.grid' + ', shape=' + str(data.shape))
+        return data
+
+    def _load_grid_od_6d(self):
+        """
+        加载.grid文件，格式[dyna_id, type, time, origin_row_id, origin_column_id,
+                            destination_row_id, destination_column_id, properties(若干列)]
+        .geo文件中的id顺序应该跟.dyna中一致
+        其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
+        :return: 6d-array (len_time, len_row, len_column, len_row, len_column, feature_dim)
+        """
+        # 加载数据集
+        gridodfile = pd.read_csv(self.data_path + '.gridod')
+        if self.data_col != '':  # 根据指定的列加载数据集
+            if isinstance(self.data_col, list):
+                data_col = self.data_col
+            else:  # str
+                data_col = [self.data_col]
+            data_col.insert(0, 'time')
+            data_col.insert(1, 'origin_row_id')
+            data_col.insert(2, 'origin_column_id')
+            data_col.insert(3, 'destination_row_id')
+            data_col.insert(4, 'destination_column_id')
+            gridodfile = gridodfile[data_col]
+        else:  # 不指定则加载所有列
+            gridodfile = gridodfile[gridodfile.columns[2:]]  # 从time列开始所有列
+        # 求时间序列
+        self.timesolts = list(gridodfile['time'][:int(gridodfile.shape[0] / len(self.geo_ids) / len(self.geo_ids))])
+        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+        # 转6-d数组
+        feature_dim = len(gridodfile.columns) - 5
+        df = gridodfile[gridodfile.columns[-feature_dim:]]
+        # print(df.shape)
+        len_time = self.timesolts.shape[0]
+        data = np.zeros((self.len_row, self.len_column, self.len_row, self.len_column, len_time, feature_dim))
+        for oi in range(self.len_row):
+            for oj in range(self.len_column):
+                origin_index = (oi * self.len_column + oj) * len_time * len(self.geo_ids)  # 每个起点占据len_t*n行
+                for di in range(self.len_row):
+                    for dj in range(self.len_column):
+                        destination_index = (di * self.len_column + dj) * len_time  # 每个终点占据len_t行
+                        index = origin_index + destination_index
+                        # print(index, index + len_time)
+                        data[oi][oj][di][dj] = df[index:index + len_time].values
+        data = data.transpose((4, 0, 1, 2, 3, 5))  # (len_time, len_row, len_column, len_row, len_column, feature_dim)
+        self._logger.info("Loaded file " + self.dataset + '.gridod' + ', shape=' + str(data.shape))
+        return data
+
     def _add_time_meta_information(self, df):
         """
         增加时间元信息（一周中的星期几/day of week，一天中的某个时刻/time of day）
-        :param df: ndarray (len_time, num_nodes, feature_dim)
-        :return: data: ndarray (len_time, num_nodes, feature_dim_plus)
+        :param df: ndarray (len_time, len_row, len_column, len_row, len_column, feature_dim)
+        :return: data: ndarray (len_time, len_row, len_column, len_row, len_column, feature_dim_plus)
         """
-        num_samples, num_nodes, feature_dim = df.shape
+        num_samples, len_row, len_column, _, _, feature_dim = df.shape
         data_list = [df]
 
         if self.add_time_in_day:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
-            time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+            time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]).\
+                transpose((5, 1, 2, 3, 4, 0))
             data_list.append(time_in_day)
         if self.add_day_in_week:
             dayofweek = []
             for day in self.timesolts.astype("datetime64[D]"):
                 dayofweek.append(datetime.datetime.strptime(str(day), '%Y-%m-%d').weekday())
-            day_in_week = np.zeros(shape=(num_samples, num_nodes, 7))
-            day_in_week[np.arange(num_samples), :, dayofweek] = 1
+            day_in_week = np.zeros(shape=(num_samples, len_row, len_column, len_row, len_column, 7))
+            day_in_week[np.arange(num_samples), :, :, :, :, dayofweek] = 1
             data_list.append(day_in_week)
 
         data = np.concatenate(data_list, axis=-1)
@@ -172,14 +268,14 @@ class TrafficStatePointDataset(AbstractDataset):
 
     def _generate_input_data(self, df):
         """
-        根据全局参数`input_window`和`output_window`切分输入，产生模型需要的四维张量输入
+        根据全局参数`input_window`和`output_window`切分输入，产生模型需要的7维张量输入
         模型使用过去`input_window`长度的时间序列去预测未来`output_window`长度的时间序列
-        :param df: ndarray (len_time, num_nodes, feature_dim)
+        :param df: ndarray (len_time, len_row, len_column, len_row, len_column, feature_dim)
         :return:
-        # x: (epoch_size, input_length, num_nodes, feature_dim)
-        # y: (epoch_size, output_length, num_nodes, feature_dim)
+        # x: (epoch_size, input_length, len_row, len_column, len_row, len_column, feature_dim)
+        # y: (epoch_size, output_length, len_row, len_column, len_row, len_column, feature_dim)
         """
-        num_samples, num_nodes, feature_dim = df.shape
+        num_samples, len_row, len_column, _, _, feature_dim = df.shape
 
         # 预测用的过去时间窗口长度 取决于self.input_window
         x_offsets = np.sort(np.concatenate((np.arange(-self.input_window+1, 1, 1),)))
@@ -201,12 +297,13 @@ class TrafficStatePointDataset(AbstractDataset):
     def _generate_train_val_test(self):
         """
         加载数据集，并划分训练集、测试集、验证集，并缓存数据集
-        :return: x_train, y_train, x_val, y_val, x_test, y_test: (num_samples, input_length, num_nodes, feature_dim)
+        :return: x_train, y_train, x_val, y_val, x_test, y_test:
+                    (num_samples, input_length, len_row, len_column, len_row, len_column, feature_dim)
         """
-        df = self._load_dyna_3d()  # (len_time, num_nodes, feature_dim)
+        df = self._load_grid_od_6d()  # (len_time, len_row, len_column, len_row, len_column, feature_dim)
         df = self._add_time_meta_information(df)
-        # x: (num_samples, input_length, num_nodes, input_dim)
-        # y: (num_samples, output_length, num_nodes, output_dim)
+        # x: (num_samples, input_length, len_row, len_column, len_row, len_column, input_dim)
+        # y: (num_samples, output_length, len_row, len_column, len_row, len_column, output_dim)
         x, y = self._generate_input_data(df)
         self._logger.info("Dataset created")
         self._logger.info("x shape: " + str(x.shape) + ", y shape: " + str(y.shape))
@@ -244,7 +341,8 @@ class TrafficStatePointDataset(AbstractDataset):
     def _load_cache_train_val_test(self):
         """
         加载之前缓存好的训练集、测试集、验证集
-        :return: x_train, y_train, x_val, y_val, x_test, y_test: (num_samples, input_length, num_nodes, feature_dim)
+        :return: x_train, y_train, x_val, y_val, x_test, y_test:
+                    (num_samples, input_length, len_row, len_column, len_row, len_column, feature_dim)
         """
         self._logger.info('Loading ' + self.cache_file_name)
         cat_data = np.load(self.cache_file_name)
@@ -327,7 +425,7 @@ class TrafficStatePointDataset(AbstractDataset):
         x_test[..., :self.output_dim] = self.scaler.transform(x_test[..., :self.output_dim])
         y_test[..., :self.output_dim] = self.scaler.transform(y_test[..., :self.output_dim])
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
-        # x_train/y_train: (num_samples, input_length, num_nodes, feature_dim)
+        # x_train/y_train: (num_samples, input_length, len_row, len_column, len_row, len_column, feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
         train_data = list(zip(x_train, y_train))
         eval_data = list(zip(x_val, y_val))
@@ -340,11 +438,12 @@ class TrafficStatePointDataset(AbstractDataset):
 
     def get_data_feature(self):
         '''
-        返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是点的个数，
+        返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是网格的个数，
+                      len_row是网格的行数，len_column是网格的列数，
                      feature_dim是输入数据的维度，output_dim是模型输出的维度(可以根据参数指定，不指定则是原始交通状况数据的维度)
         return:
             data_feature (dict)
         '''
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
-                "output_dim": self.output_dim}
+                "output_dim": self.output_dim, "len_row": self.len_row, "len_column": self.len_column}

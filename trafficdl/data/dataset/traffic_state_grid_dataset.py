@@ -120,7 +120,7 @@ class TrafficStateGridDataset(AbstractDataset):
         self.adj_mx = np.exp(-np.square(self.adj_mx / std))
         self.adj_mx[self.adj_mx < self.adj_epsilon] = 0
 
-    def _load_dyna(self):
+    def _load_dyna_3d(self):
         """
         加载.dyna文件，格式[dyna_id, type, time, entity_id, properties(若干列)]
         .geo文件中的id顺序应该跟.dyna中一致
