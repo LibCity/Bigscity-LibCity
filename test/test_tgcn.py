@@ -43,7 +43,7 @@ config = {
     'max_grad_norm': 5,
     'clip_grad_norm': False,
     'lr_scheduler': 'multisteplr',
-    'patience': 20000,
+    'use_early_stop': False,
     'steps': [20, 30, 40, 50],
     'lambda': 0.0015
 }

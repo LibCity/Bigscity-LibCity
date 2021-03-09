@@ -3,9 +3,7 @@ import scipy.sparse as sp
 import torch
 import torch.nn as nn
 from logging import getLogger
-from trafficdl.model.abstract_model import AbstractModel
-from trafficdl.model import loss
-import sys
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def calculate_normalized_laplacian(adj):
@@ -127,14 +125,13 @@ class TGCNCell(nn.Module):
         return x1
 
 
-class TGCN(AbstractModel):
+class TGCN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-        self.data_feature = data_feature
-        self.adj_mx = self.data_feature.get('adj_mx')
-        self.num_nodes = self.data_feature.get('num_nodes', 1)
+        self.adj_mx = data_feature.get('adj_mx')
+        self.num_nodes = data_feature.get('num_nodes', 1)
         config['num_nodes'] = self.num_nodes
-        self.input_dim = self.data_feature.get('feature_dim', 1)
-        self.output_dim = self.data_feature.get('output_dim', 1)
+        self.input_dim = data_feature.get('feature_dim', 1)
+        self.output_dim = data_feature.get('output_dim', 1)
         self.gru_units = int(config.get('rnn_units', 64))
         self.lam = config.get('lambda', 0.0015)
 
@@ -172,9 +169,6 @@ class TGCN(AbstractModel):
         output = output.unsqueeze(-1)  # (batch_size, self.num_nodes, self.output_window, 1)
         output = output.permute(0, 2, 1, 3).to(self.device)
         return output
-
-    def get_data_feature(self):
-        return self.data_feature
 
     def calculate_loss(self, batch):
         lam = self.lam
