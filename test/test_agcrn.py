@@ -50,6 +50,7 @@ config = {
     'epoch': 0,
     'epochs': 100,
     'clip_grad_norm': False,
+    'use_early_stop': True,
     'max_grad_norm': 5,
     'patience': 15,
 }

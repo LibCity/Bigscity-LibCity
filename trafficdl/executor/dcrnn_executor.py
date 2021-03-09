@@ -48,7 +48,7 @@ class DCRNNExecutor(TrafficStateExecutor):
                 best_epoch = epoch_idx
             else:
                 wait += 1
-                if wait == self.patience:
+                if wait == self.patience and self.use_early_stop:
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
         self.load_model_with_epoch(best_epoch)
