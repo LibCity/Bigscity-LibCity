@@ -8,7 +8,7 @@ from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
 
 
-class TrafficSpeedPredExecutor(AbstractExecutor):
+class TrafficStateExecutor(AbstractExecutor):
     def __init__(self, config, model):
         self.evaluator = get_evaluator(config)
         self.config = config
