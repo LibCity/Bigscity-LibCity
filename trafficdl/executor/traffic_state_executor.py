@@ -30,6 +30,8 @@ class TrafficStateExecutor(AbstractExecutor):
         for name, param in self.model.named_parameters():
             self._logger.info(str(name) + '\t' + str(param.shape) + '\t' +
                               str(param.device) + '\t' + str(param.requires_grad))
+        total_num = sum([param.nelement() for param in self.model.parameters()])
+        self._logger.info('Total parameter numbers: {}'.format(total_num))
 
         self.epochs = self.config.get('epochs', 100)
         self.learning_rate = self.config.get('learning_rate', 0.01)

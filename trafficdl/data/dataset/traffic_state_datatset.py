@@ -116,7 +116,7 @@ class TrafficStateDataset(AbstractDataset):
             if row[0] not in self.geo_to_ind or row[1] not in self.geo_to_ind:
                 continue
             self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
-        self._logger.info("Loaded file " + self.dataset + '.rel')
+        self._logger.info("Loaded file " + self.dataset + '.rel, shape=' + str(self.adj_mx.shape))
         # 计算权重
         if self.calculate_weight:
             self._calculate_adjacency_matrix()
