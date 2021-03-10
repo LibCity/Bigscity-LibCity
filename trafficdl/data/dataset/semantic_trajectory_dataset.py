@@ -84,6 +84,7 @@ class SemanticTrajectoryDataset(AbstractDataset):
             'uid_size': self.data['uid_size'],
             'loc_pad': self.pad_item['current_loc'] if self.pad_item != None else None,
             'tim_pad': self.pad_item['current_tim'] if self.pad_item != None else None,
+            'text_pad': self.pad_item['text'] if self.pad_item != None else None,
             'word_vec': self.data['word_vec'],
             'text_size': self.data['text_size']
         }
