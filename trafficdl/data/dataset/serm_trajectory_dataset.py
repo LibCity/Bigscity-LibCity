@@ -10,7 +10,7 @@ from trafficdl.data.utils import generate_dataloader
 
 allow_dataset = ['foursquare_tky', 'foursquare_nyk']
 WORD_VEC_PATH = './raw_data/word_vec/glove.twitter.27B.50d.txt'
-class SemanticTrajectoryDataset(AbstractDataset):
+class SermTrajectoryDataset(AbstractDataset):
     
     def __init__(self, config):
         self.config = config
@@ -18,10 +18,10 @@ class SemanticTrajectoryDataset(AbstractDataset):
         if self.config['dataset'] not in allow_dataset:
             raise TypeError('the {} dataset do not support sematic trajectory. only support {}'.format(self.config['dataset'], allow_dataset))
         parameters_str = ''
-        for key in ['dataset', 'min_session_len', 'min_sessions', 'time_window_size']:
+        for key in ['dataset', 'min_session_len', 'min_sessions']:
             if key in self.config: 
                 parameters_str += '_' + str(self.config[key])
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/', 'semantic_trajectory_{}.json'.format(parameters_str))# 缓存切好的轨迹
+        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/', 'serm_trajectory_{}.json'.format(parameters_str))# 缓存切好的轨迹
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.data = None
@@ -121,7 +121,7 @@ class SemanticTrajectoryDataset(AbstractDataset):
         res = {}
         min_session_len = self.config['min_session_len']
         min_sessions = self.config['min_sessions']
-        time_window_size = self.config['time_window_size']
+        time_window_size = 24 # serm 论文的时间编码方式比较独特
         base_zero = time_window_size > 12
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
@@ -144,7 +144,10 @@ class SemanticTrajectoryDataset(AbstractDataset):
                                 useful_vec[w] = text_vec[w]
                             if w in useful_vec:
                                 useful_words_list.append(w)
-                    session.append([row['location'], start_time.hour - base_time.hour, useful_words_list]) # time encode from 0 ~ time_window_size
+                    time_code = start_time.hour - base_time.hour
+                    if start_time.weekday() == 5 or start_time.weekday() == 6:
+                        time_code += 24
+                    session.append([row['location'], time_code, useful_words_list]) # time encode from 0 ~ time_window_size
                 else:
                     now_time = parseTime(row['time'], int(row['timezone_offset_in_minutes']))
                     time_off = calculateTimeOff(now_time, base_time)
@@ -160,8 +163,12 @@ class SemanticTrajectoryDataset(AbstractDataset):
                             if w in useful_vec:
                                 useful_words_list.append(w)
                     if time_off < time_window_size and time_off >=0:
+                        # 特殊的时间编码
+                        time_code = int(time_off)
+                        if now_time.weekday() in [5,6]:
+                            time_code += 24
                         assert int(time_off) < time_window_size
-                        session.append([row['location'], int(time_off), useful_words_list])
+                        session.append([row['location'], time_code, useful_words_list])
                     else:
                         if len(session) >= min_session_len:
                             sessions.append(session)
@@ -169,7 +176,10 @@ class SemanticTrajectoryDataset(AbstractDataset):
                         start_time = now_time
                         base_time = calculateBaseTime(start_time, base_zero)
                         assert start_time.hour - base_time.hour < time_window_size
-                        session.append([row['location'], start_time.hour - base_time.hour, useful_words_list])
+                        time_code = start_time.hour - base_time.hour
+                        if start_time.weekday() in [5, 6]:
+                            time_code += 24
+                        session.append([row['location'], time_code, useful_words_list])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
@@ -187,7 +197,7 @@ class SemanticTrajectoryDataset(AbstractDataset):
         print('loc_size: {}, uid_size: {}, text_size: {}'.format(loc_size, uid_size, text_size))
         return {
             'loc_size': loc_size,
-            'tim_size': time_window_size,
+            'tim_size': 48,
             'uid_size': uid_size,
             'text_size': text_size,
             'word_vec': word_vec,

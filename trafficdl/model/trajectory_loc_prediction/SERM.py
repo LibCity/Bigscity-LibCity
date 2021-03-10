@@ -39,8 +39,8 @@ class SERM(AbstractModel):
         self.hidden_size = config['hidden_size']
 
         #Embedding layer
-        self.emb_loc = nn.Embedding(num_embeddings = self.loc_size, embedding_dim = self.loc_emb_size, padding_idx = 0)
-        self.emb_tim = nn.Embedding(num_embeddings = self.tim_size, embedding_dim = self.tim_emb_size, padding_idx = 0)
+        self.emb_loc = nn.Embedding(num_embeddings = self.loc_size, embedding_dim = self.loc_emb_size, padding_idx = data_feature['loc_pad'])
+        self.emb_tim = nn.Embedding(num_embeddings = self.tim_size, embedding_dim = self.tim_emb_size, padding_idx = data_feature['tim_pad'])
         self.emb_user = nn.Embedding(num_embeddings = self.user_size, embedding_dim = self.user_emb_size)
         self.emb_text = EmbeddingMatrix(self.text_size, self.emb_size, data_feature['word_vec'])
 
