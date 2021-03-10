@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from trafficdl.evaluator.abstract_model import AbstractModel
+from trafficdl.model.abstract_model import AbstractModel
 
 
 class EmbeddingMatrix(nn.Module):#text_embdeding
@@ -16,7 +16,7 @@ class EmbeddingMatrix(nn.Module):#text_embdeding
         #self.weight output_size*input_size namely length_of_wordvect_glove_pretrained(50)*text_size(the size of dictionary)
         #按照论文源代码 word_vec = text_size(the size of dictionary)*length_of_wordvect_glove_pretrained
         word_vec = nn.Tensor(word_vec).t()#转置
-        self.layer.weight = nn.Parameter(word_vec);
+        self.layer.weight = nn.Parameter(word_vec)
         
         
     def forward(self, x): #x:batch*seq*input_size    
@@ -54,10 +54,10 @@ class SERM(AbstractModel):
     def forward(self, batch):
         #input
         # batch*seq
-        loc = torch.LongTensor(batch['current_loc'])
-        tim = torch.LongTensor(batch['current_tim'])
-        user = torch.LongTensor(batch['uid'])
-        text = torch.Tensor(batch['text'])
+        loc = batch['current_loc']
+        tim = batch['current_tim']
+        user = batch['uid']
+        text = batch['text']
 
         # batch*seq*emb_size
         loc_emb = self.emb_loc(loc)
