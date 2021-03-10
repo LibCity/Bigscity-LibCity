@@ -145,7 +145,7 @@ class SermTrajectoryDataset(AbstractDataset):
         res = {}
         min_session_len = self.config['min_session_len']
         min_sessions = self.config['min_sessions']
-        time_window_size = self.config['time_window_size']
+        time_window_size = 24  # serm 论文的时间编码方式比较独特
         base_zero = time_window_size > 12
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
@@ -171,10 +171,11 @@ class SermTrajectoryDataset(AbstractDataset):
                                 useful_vec[w] = text_vec[w]
                             if w in useful_vec:
                                 useful_words_list.append(w)
-                    # time encode from 0 ~ time_window_size
-                    session.append(
-                        [row['location'], start_time.hour - base_time.hour,
-                         useful_words_list])
+                    time_code = start_time.hour - base_time.hour
+                    if start_time.weekday() == 5 or start_time.weekday() == 6:
+                        time_code += 24
+                    session.append([row['location'], time_code,
+                                    useful_words_list])
                 else:
                     now_time = parseTime(row['time'], int(
                         row['timezone_offset_in_minutes']))
@@ -193,19 +194,24 @@ class SermTrajectoryDataset(AbstractDataset):
                             if w in useful_vec:
                                 useful_words_list.append(w)
                     if time_off < time_window_size and time_off >= 0:
+                        # 特殊的时间编码
+                        time_code = int(time_off)
+                        if now_time.weekday() in [5, 6]:
+                            time_code += 24
                         assert int(time_off) < time_window_size
-                        session.append(
-                            [row['location'], int(time_off),
-                             useful_words_list])
+                        session.append([row['location'], time_code,
+                                        useful_words_list])
                     else:
                         if len(session) >= min_session_len:
                             sessions.append(session)
                         session = []
                         start_time = now_time
                         base_time = calculateBaseTime(start_time, base_zero)
-                        session.append(
-                            [row['location'], start_time.hour - base_time.hour,
-                             useful_words_list])
+                        time_code = start_time.hour - base_time.hour
+                        if start_time.weekday() in [5, 6]:
+                            time_code += 24
+                        session.append([row['location'], time_code,
+                                        useful_words_list])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
@@ -224,7 +230,7 @@ class SermTrajectoryDataset(AbstractDataset):
             loc_size, uid_size, text_size))
         return {
             'loc_size': loc_size,
-            'tim_size': time_window_size,
+            'tim_size': 48,
             'uid_size': uid_size,
             'text_size': text_size,
             'word_vec': word_vec,
