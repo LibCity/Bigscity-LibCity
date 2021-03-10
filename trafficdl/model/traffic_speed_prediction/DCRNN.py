@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from logging import getLogger
-from trafficdl.model.abstract_model import AbstractModel
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from trafficdl.model import loss
 
 
@@ -313,15 +313,14 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         return output, torch.stack(hidden_states)
 
 
-class DCRNN(AbstractModel, Seq2SeqAttrs):
+class DCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
-        self.data_feature = data_feature
-        self.adj_mx = self.data_feature.get('adj_mx')
-        self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature.get('feature_dim', 1)
+        self.adj_mx = data_feature.get('adj_mx')
+        self.num_nodes = data_feature.get('num_nodes', 1)
+        self.feature_dim = data_feature.get('feature_dim', 1)
         config['num_nodes'] = self.num_nodes
         config['feature_dim'] = self.feature_dim
-        self.output_dim = self.data_feature.get('output_dim', 1)
+        self.output_dim = data_feature.get('output_dim', 1)
 
         super().__init__(config, data_feature)
         Seq2SeqAttrs.__init__(self, config, self.adj_mx)
@@ -410,9 +409,6 @@ class DCRNN(AbstractModel, Seq2SeqAttrs):
             self._logger.info("Total trainable parameters {}".format(count_parameters(self)))
         outputs = outputs.view(self.output_window, batch_size, self.num_nodes, self.output_dim).permute(1, 0, 2, 3)
         return outputs
-
-    def get_data_feature(self):
-        return self.data_feature
 
     def calculate_loss(self, batch, batches_seen=None):
         y_true = batch['y']

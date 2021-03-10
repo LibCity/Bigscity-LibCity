@@ -8,8 +8,8 @@ config = {
 
     'dataset': 'Loop_Seattle',
     'model': 'TGCLSTM',
-    'evaluator': 'TrafficSpeedPredEvaluator',
-    'executor': 'TrafficSpeedPredExecutor',
+    'evaluator': 'TrafficStateEvaluator',
+    'executor': 'TrafficStateExecutor',
     'dataset_class': 'TGCLSTMDataset',
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'adj',
@@ -39,6 +39,7 @@ config = {
     'step_size': 25,
     'lr_scheduler': 'steplr',
     'epochs': 100,
+    'use_early_stop': False,
     'patience': 50,
 }
 

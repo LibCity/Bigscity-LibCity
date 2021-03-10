@@ -2,12 +2,12 @@ import time
 import numpy as np
 import torch
 
-from trafficdl.executor.traffic_speed_pred_executor import TrafficSpeedPredExecutor
+from trafficdl.executor.traffic_state_executor import TrafficStateExecutor
 
 
-class DCRNNExecutor(TrafficSpeedPredExecutor):
+class DCRNNExecutor(TrafficStateExecutor):
     def __init__(self, config, model):
-        TrafficSpeedPredExecutor.__init__(self, config, model)
+        TrafficStateExecutor.__init__(self, config, model)
 
     def train(self, train_dataloader, eval_dataloader):
         self._logger.info('Start training ...')
@@ -48,7 +48,7 @@ class DCRNNExecutor(TrafficSpeedPredExecutor):
                 best_epoch = epoch_idx
             else:
                 wait += 1
-                if wait == self.patience:
+                if wait == self.patience and self.use_early_stop:
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
         self.load_model_with_epoch(best_epoch)

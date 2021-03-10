@@ -8,7 +8,7 @@ config = {
 
     'dataset': 'METR_LA',
     'model': 'DCRNN',
-    'evaluator': 'TrafficSpeedPredEvaluator',
+    'evaluator': 'TrafficStateEvaluator',
     'executor': 'DCRNNExecutor',
     'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
@@ -49,6 +49,7 @@ config = {
     'max_grad_norm': 5,
     'clip_grad_norm': True,
     'lr_scheduler': 'multisteplr',
+    'use_early_stop': True,
     'patience': 50,
     'steps': [20, 30, 40, 50],
 }
