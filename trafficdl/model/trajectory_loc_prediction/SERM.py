@@ -65,10 +65,10 @@ class SERM(AbstractModel):
     def forward(self, batch):
         # input
         # batch*seq
-        loc = torch.LongTensor(batch['current_loc'])
-        tim = torch.LongTensor(batch['current_tim'])
-        user = torch.LongTensor(batch['uid'])
-        text = torch.Tensor(batch['text'])
+        loc = batch['current_loc']
+        tim = batch['current_tim']
+        user = batch['uid']
+        text = batch['text']
 
         # batch*seq*emb_size
         loc_emb = self.emb_loc(loc)
