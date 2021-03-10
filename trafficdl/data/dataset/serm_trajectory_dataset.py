@@ -105,6 +105,8 @@ class SermTrajectoryDataset(AbstractDataset):
             None else None,
             'tim_pad': self.pad_item['current_tim'] if self.pad_item is not
             None else None,
+            'text_pad': self.pad_item['text'] if self.pad_item is not
+            None else None,
             'word_vec': self.data['word_vec'],
             'text_size': self.data['text_size']
         }
