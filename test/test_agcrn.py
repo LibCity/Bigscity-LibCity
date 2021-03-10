@@ -9,8 +9,8 @@ config = {
 
     'dataset': 'METR_LA',
     'model': 'AGCRN',
-    'evaluator': 'TrafficSpeedPredEvaluator',
-    'executor': 'TrafficSpeedPredExecutor',
+    'evaluator': 'TrafficStateEvaluator',
+    'executor': 'TrafficStateExecutor',
     'dataset_class': 'TrafficStatePointDataset',
     'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR'],
     'weight_col': 'cost',
@@ -50,6 +50,7 @@ config = {
     'epoch': 0,
     'epochs': 100,
     'clip_grad_norm': False,
+    'use_early_stop': True,
     'max_grad_norm': 5,
     'patience': 15,
 }

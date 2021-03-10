@@ -1,4 +1,3 @@
-from trafficdl.model.abstract_model import AbstractModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,6 +5,7 @@ from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 from trafficdl.model import loss
 import math
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class FilterLinear(nn.Module):
@@ -45,7 +45,7 @@ class FilterLinear(nn.Module):
                + ', bias=' + str(self.bias is not None) + ')'
 
 
-class TGCLSTM(AbstractModel):
+class TGCLSTM(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         '''
         Args:
@@ -55,9 +55,8 @@ class TGCLSTM(AbstractModel):
             Clamp_A: Boolean value, clamping all elements of A between 0. to 1.
         '''
         super(TGCLSTM, self).__init__(config, data_feature)
-        self.data_feature = data_feature
         self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.input_dim = data_feature['feature_dim']
+        self.input_dim = data_feature.get('feature_dim', 1)
         self.in_features = self.input_dim * self.num_nodes
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.out_features = self.output_dim * self.num_nodes
@@ -151,15 +150,12 @@ class TGCLSTM(AbstractModel):
                                  1, 2).unsqueeze(1)
         return output  # [batch_size, 1, num_nodes, out_dim]
 
-    def get_data_feature(self):
-        return self.data_feature
-
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mse_torch(y_predicted, y_true, 0)
+        return loss.masked_mse_torch(y_predicted, y_true)
 
     def predict(self, batch):
         x = batch['X']

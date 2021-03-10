@@ -1,2 +1,2 @@
 from trafficdl.evaluator.traj_loc_pred_evaluator import TrajLocPredEvaluator
-from trafficdl.evaluator.traffic_speed_pred_evaluator import TrafficSpeedPredEvaluator
+from trafficdl.evaluator.traffic_state_evaluator import TrafficStateEvaluator

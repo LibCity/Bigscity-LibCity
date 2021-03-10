@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 from trafficdl.model import loss
-from trafficdl.model.abstract_model import AbstractModel
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def calculate_scaled_laplacian(A):
@@ -182,12 +182,11 @@ class output_layer(nn.Module):
         # (batch_size, output_dim, 1, num_nodes)
 
 
-class STGCN(AbstractModel):
+class STGCN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
-        self.data_feature = data_feature
         self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature['feature_dim']
+        self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.Ks = config['Ks']
         self.Kt = config['Kt']
         self.blocks = config['blocks']
@@ -235,9 +234,6 @@ class STGCN(AbstractModel):
         outputs = self.output(x_st2)  # (batch_size, output_dim(1), output_length(1), num_nodes)
         outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim(1))
         return outputs
-
-    def get_data_feature(self):
-        return self.data_feature
 
     def calculate_loss(self, batch):
         y_true = batch['y']

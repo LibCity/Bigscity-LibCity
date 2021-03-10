@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from logging import getLogger
-from trafficdl.model.abstract_model import AbstractModel
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from trafficdl.model import loss
 import numpy as np
 import scipy.sparse as sp
@@ -100,12 +100,11 @@ class gcn(nn.Module):
         return h
 
 
-class GWNET(AbstractModel):
+class GWNET(AbstractTrafficStateModel):
     def __init__(self,  config, data_feature):
-        self.data_feature = data_feature
-        self.adj_mx = self.data_feature.get('adj_mx')
-        self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature.get('feature_dim', 2)
+        self.adj_mx = data_feature.get('adj_mx')
+        self.num_nodes = data_feature.get('num_nodes', 1)
+        self.feature_dim = data_feature.get('feature_dim', 2)
         super().__init__(config, data_feature)
 
         self.dropout = config.get('dropout', 0.3)
@@ -306,9 +305,6 @@ class GWNET(AbstractModel):
             self.adj_mx = [np.diag(np.ones(self.adj_mx.shape[0])).astype(np.float32)]
         else:
             assert 0, "adj type not defined"
-
-    def get_data_feature(self):
-        return self.data_feature
 
     def calculate_loss(self, batch):
         y_true = batch['y']

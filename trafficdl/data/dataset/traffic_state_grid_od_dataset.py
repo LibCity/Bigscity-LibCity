@@ -3,15 +3,14 @@ import os
 from trafficdl.data.dataset import TrafficStateDataset
 
 
-class TrafficStateGridDataset(TrafficStateDataset):
+class TrafficStateGridOdDataset(TrafficStateDataset):
 
     def __init__(self, config):
         super().__init__(config)
         self.use_row_column = self.config.get('use_row_column', True)
         self.parameters_str = self.parameters_str + '_' + str(self.use_row_column)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
-                                            'grid_based_{}.npz'.format(self.parameters_str))
-        self.use_row_column = self.config.get('use_row_column', True)
+                                            'grid_od_based_{}.npz'.format(self.parameters_str))
         self._load_rel()  # don't care whether there is a .rel file
 
     def _load_geo(self):
@@ -30,28 +29,30 @@ class TrafficStateGridDataset(TrafficStateDataset):
 
     def _load_dyna(self):
         """
-        加载.grid文件，格式[dyna_id, type, time, row_id, column_id, properties(若干列)]
+        加载.gridod文件，格式[dyna_id, type, time, origin_row_id, origin_column_id,
+                            destination_row_id, destination_column_id, properties(若干列)]
         .geo文件中的id顺序应该跟.dyna中一致
         其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
-        根据参数`use_row_column`确定转成3d还是4d的数组，True为4d
-        :return: 3d-array or 4d-array (len_time, num_nodes, feature_dim) / (len_time, len_row, len_column, feature_dim)
+        根据参数`use_row_column`确定转成4d还是6d的数组，True为6d
+        :return: 4d-array or 6d-array (len_time, num_grids, num_grids, feature_dim)
+                    / (len_time, len_row, len_column, len_row, len_column, feature_dim)
         """
         if self.use_row_column:
-            return super()._load_grid_4d()
+            return super()._load_grid_od_6d()
         else:
-            return super()._load_grid_3d()
+            return super()._load_grid_od_4d()
 
     def _add_time_meta_information(self, df):
         """
         增加时间元信息（一周中的星期几/day of week，一天中的某个时刻/time of day）
-        根据参数`use_row_column`确定是3d还是4d的数组，True为4d
+        根据参数`use_row_column`确定是4d还是6d的数组，True为6d
         :param df: ndarray (len_time, ..., feature_dim)
         :return: data: ndarray (len_time, ..., feature_dim_plus)
         """
         if self.use_row_column:
-            return super()._add_time_meta_information_4d(df)
+            return super()._add_time_meta_information_6d(df)
         else:
-            return super()._add_time_meta_information_3d(df)
+            return super()._add_time_meta_information_4d(df)
 
     def get_data_feature(self):
         '''

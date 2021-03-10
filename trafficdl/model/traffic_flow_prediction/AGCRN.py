@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from logging import getLogger
-from trafficdl.model.abstract_model import AbstractModel
+from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from trafficdl.model import loss
 
 
@@ -98,12 +98,10 @@ class AVWDCRNN(nn.Module):
         return torch.stack(init_states, dim=0)      # (num_layers, B, N, hidden_dim)
 
 
-class AGCRN(AbstractModel):
+class AGCRN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-        self.data_feature = data_feature
-        # self.adj_mx = self.data_feature.get('adj_mx')
-        self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature.get('feature_dim', 1)
+        self.num_nodes = data_feature.get('num_nodes', 1)
+        self.feature_dim = data_feature.get('feature_dim', 1)
         config['num_nodes'] = self.num_nodes
         config['feature_dim'] = self.feature_dim
 
@@ -129,12 +127,6 @@ class AGCRN(AbstractModel):
                 nn.init.xavier_uniform_(p)
             else:
                 nn.init.uniform_(p)
-        self._logger.info('*****************Model Parameter*****************')
-        for name, param in self.named_parameters():
-            self._logger.info(str(name) + '\t' + str(param.shape) + '\t' + str(param.requires_grad))
-        total_num = sum([param.nelement() for param in self.parameters()])
-        self._logger.info('Total params num: {}'.format(total_num))
-        self._logger.info('*****************Finish Parameter****************')
 
     def forward(self, batch):
         # source: B, T_1, N, D
@@ -151,9 +143,6 @@ class AGCRN(AbstractModel):
         output = output.squeeze(-1).reshape(-1, self.output_window, self.output_dim, self.num_nodes)
         output = output.permute(0, 1, 3, 2)                      # B, T, N, C
         return output
-
-    def get_data_feature(self):
-        return self.data_feature
 
     def calculate_loss(self, batch):
         y_true = batch['y']
