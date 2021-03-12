@@ -28,22 +28,22 @@ class TrafficStatePointDataset(TrafficStateDataset):
         """
         super()._load_rel()
 
-    def _load_dyna(self):
+    def _load_dyna(self, filename):
         """
         加载.dyna文件，格式[dyna_id, type, time, entity_id, properties(若干列)]
         .geo文件中的id顺序应该跟.dyna中一致
         其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
         :return: 3d-array (len_time, num_nodes, feature_dim)
         """
-        return super()._load_dyna_3d()
+        return super()._load_dyna_3d(filename)
 
-    def _add_time_meta_information(self, df):
+    def _add_external_information(self, df, ext_data=None):
         """
-        增加时间元信息（一周中的星期几/day of week，一天中的某个时刻/time of day）
+        增加外部信息（一周中的星期几/day of week，一天中的某个时刻/time of day，外部数据）
         :param df: ndarray (len_time, num_nodes, feature_dim)
         :return: data: ndarray (len_time, num_nodes, feature_dim_plus)
         """
-        return super()._add_time_meta_information_3d(df)
+        return super()._add_external_information_3d(df, ext_data)
 
     def get_data_feature(self):
         '''
