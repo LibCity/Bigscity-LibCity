@@ -28,7 +28,7 @@ class TrafficStateGridDataset(TrafficStateDataset):
         """
         super()._load_grid_rel()
 
-    def _load_dyna(self):
+    def _load_dyna(self, filename):
         """
         加载.grid文件，格式[dyna_id, type, time, row_id, column_id, properties(若干列)]
         .geo文件中的id顺序应该跟.dyna中一致
@@ -37,21 +37,21 @@ class TrafficStateGridDataset(TrafficStateDataset):
         :return: 3d-array or 4d-array (len_time, num_nodes, feature_dim) / (len_time, len_row, len_column, feature_dim)
         """
         if self.use_row_column:
-            return super()._load_grid_4d()
+            return super()._load_grid_4d(filename)
         else:
-            return super()._load_grid_3d()
+            return super()._load_grid_3d(filename)
 
-    def _add_time_meta_information(self, df):
+    def _add_external_information(self, df, ext_data=None):
         """
-        增加时间元信息（一周中的星期几/day of week，一天中的某个时刻/time of day）
+        增加外部信息（一周中的星期几/day of week，一天中的某个时刻/time of day，外部数据）
         根据参数`use_row_column`确定是3d还是4d的数组，True为4d
         :param df: ndarray (len_time, ..., feature_dim)
         :return: data: ndarray (len_time, ..., feature_dim_plus)
         """
         if self.use_row_column:
-            return super()._add_time_meta_information_4d(df)
+            return super()._add_external_information_4d(df, ext_data)
         else:
-            return super()._add_time_meta_information_3d(df)
+            return super()._add_external_information_3d(df, ext_data)
 
     def get_data_feature(self):
         '''
