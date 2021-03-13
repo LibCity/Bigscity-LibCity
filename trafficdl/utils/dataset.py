@@ -108,7 +108,8 @@ def timestamp2array(timestamps, T):
         minu = vec_minu[idx]
         # 24*60/T 表示一个时间步是多少分钟
         # hour * 60 + minu 是从0:0开始到现在是多少分钟，相除计算是第几个时间步
-        v[(hour * 60 + minu) / (24 * 60 / T)] = 1
+        print(hour, minu, T, (hour * 60 + minu) / (24 * 60 / T))
+        v[int((hour * 60 + minu) / (24 * 60 / T))] = 1
         # +8是因为v前边有表示星期的8位
         if hour >= 18 or hour < 6:
             v.append(0)  # night
