@@ -12,6 +12,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     交通状态预测数据集的另一个基类
     部分交通预测模型通过对接近度(closeness)/周期(period)/趋势(trend)进行建模实现预测。
     默认使用`len_closeness`/`len_period`/`len_trend`的数据预测当前时刻的数据，即一个X，一个y。（一般是单步预测）
+    **数据原始的时间戳不能为空！**
     一般对外部数据进行单独建模，因此数据为[X, y, X_ext(可选), y_ext(可选)]。
     默认使用`train_rate`和`eval_rate`在样本数量(num_samples)维度上直接切分训练集、测试集、验证集。
     """
