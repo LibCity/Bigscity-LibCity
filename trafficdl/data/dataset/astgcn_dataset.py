@@ -125,18 +125,18 @@ class ASTGCNDataset(TrafficStatePointDataset):
             targets.append(target)
 
         sources = []
-        if len(trend_samples) > 0:
-            trend_samples = np.concatenate(trend_samples, axis=0)  # (num_samples,Tw,N,F)
-            sources.append(trend_samples)
-            self._logger.info('trend: ' + str(trend_samples.shape))
-        if len(period_samples) > 0:
-            period_samples = np.concatenate(period_samples, axis=0)    # (num_samples,Td,N,F)
-            sources.append(period_samples)
-            self._logger.info('period: ' + str(period_samples.shape))
         if len(closeness_samples) > 0:
             closeness_samples = np.concatenate(closeness_samples, axis=0)  # (num_samples,Th,N,F)
             sources.append(closeness_samples)
             self._logger.info('closeness: ' + str(closeness_samples.shape))
+        if len(period_samples) > 0:
+            period_samples = np.concatenate(period_samples, axis=0)    # (num_samples,Td,N,F)
+            sources.append(period_samples)
+            self._logger.info('period: ' + str(period_samples.shape))
+        if len(trend_samples) > 0:
+            trend_samples = np.concatenate(trend_samples, axis=0)  # (num_samples,Tw,N,F)
+            sources.append(trend_samples)
+            self._logger.info('trend: ' + str(trend_samples.shape))
         sources = np.concatenate(sources, axis=1)  # (num_samples,Tw+Td+Th,N,F)
         targets = np.concatenate(targets, axis=0)  # (num_samples,Tp,N,F)
         return sources, targets

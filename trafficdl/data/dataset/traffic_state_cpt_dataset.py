@@ -73,7 +73,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
                 [e for r_t in rl_t for e in r_t]
             ]  # [[closeness], [period], [trend]]
         # 计算最大值，即最大的偏移距离
-        largest_interval = max([k[-1] if len(k) is not 0 else 0 for k in offset_mat])
+        largest_interval = max([k[-1] if len(k) != 0 else 0 for k in offset_mat])
         # print('offset_mat', offset_mat)
         # 从最大的偏移处开始算，因为要向前偏移这么多
         x, y, ts_x, ts_y = [], [], [], []
