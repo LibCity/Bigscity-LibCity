@@ -11,21 +11,26 @@ from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Sc
 
 
 class TrafficStateDataset(AbstractDataset):
+    """
+    交通状态预测数据集的基类
+    默认使用`input_window`的数据预测`output_window`对应的数据，即一个X，一个y。
+    一般将外部数据融合到X中共同进行预测，因此数据为[X, y]。
+    默认使用`train_rate`和`eval_rate`在样本数量(num_samples)维度上直接切分训练集、测试集、验证集。
+    """
 
     def __init__(self, config):
         self.config = config
         self.dataset = self.config.get('dataset', '')
-        self.points_per_hour = self.config.get('points_per_hour', 12)
-        self.offset_frame = np.timedelta64(60 // int(self.points_per_hour), 'm')
         self.input_window = self.config.get('input_window', 12)
         self.output_window = self.config.get('output_window', 12)
         self.output_dim = self.config.get('output_dim', 0)
         self.batch_size = self.config.get('batch_size', 64)
-        self.num_workers = self.config.get('num_workers', 1)
+        self.num_workers = self.config.get('num_workers', 0)
         self.add_time_in_day = self.config.get('add_time_in_day', False)
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.pad_with_last_sample = self.config.get('pad_with_last_sample', True)
-        self.load_external = self.config.get('load_external', True)
+        self.load_external = self.config.get('load_external', False)
+        self.normal_external = self.config.get('normal_external', False)
         self.calculate_weight = self.config.get('calculate_weight', False)
         self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
@@ -167,6 +172,13 @@ class TrafficStateDataset(AbstractDataset):
         self.adj_mx[self.adj_mx < self.adj_epsilon] = 0
 
     def _load_dyna(self, filename):
+        """
+        加载数据文件(.dyna/.grid/.od/.gridod)，子类必须实现这个方法来指定如何加载数据文件，返回对应的多维数据
+        提供5个实现好的方法加载上述几类文件，并转换成不同形状的数组
+        `_load_dyna_3d`/`_load_grid_3d`/`_load_grid_4d`/`_load_grid_od_4d`/`_load_grid_od_6d`
+        :param filename: 数据文件名，不包含后缀
+        :return:
+        """
         raise NotImplementedError('Please implement the function `_load_dyna()`.')
 
     def _load_dyna_3d(self, filename):
@@ -190,15 +202,16 @@ class TrafficStateDataset(AbstractDataset):
             dynafile = dynafile[dynafile.columns[2:]]  # 从time列开始所有列
         # 求时间序列
         self.timesolts = list(dynafile['time'][:int(dynafile.shape[0] / len(self.geo_ids))])
-        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
-        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
         self.idx_of_timesolts = dict()
-        for idx, _ts in enumerate(self.timesolts):
-            self.idx_of_timesolts[_ts] = idx
+        if not dynafile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
         # 转3-d数组
         feature_dim = len(dynafile.columns) - 2
         df = dynafile[dynafile.columns[-feature_dim:]]
-        len_time = self.timesolts.shape[0]
+        len_time = len(self.timesolts)
         data = []
         for i in range(0, df.shape[0], len_time):
             data.append(df[i:i+len_time].values)
@@ -229,15 +242,16 @@ class TrafficStateDataset(AbstractDataset):
             gridfile = gridfile[gridfile.columns[2:]]  # 从time列开始所有列
         # 求时间序列
         self.timesolts = list(gridfile['time'][:int(gridfile.shape[0] / len(self.geo_ids))])
-        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
-        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
         self.idx_of_timesolts = dict()
-        for idx, _ts in enumerate(self.timesolts):
-            self.idx_of_timesolts[_ts] = idx
+        if not gridfile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
         # 转3-d数组
         feature_dim = len(gridfile.columns) - 3
         df = gridfile[gridfile.columns[-feature_dim:]]
-        len_time = self.timesolts.shape[0]
+        len_time = len(self.timesolts)
         data = []
         for i in range(0, df.shape[0], len_time):
             data.append(df[i:i + len_time].values)
@@ -268,15 +282,16 @@ class TrafficStateDataset(AbstractDataset):
             gridfile = gridfile[gridfile.columns[2:]]  # 从time列开始所有列
         # 求时间序列
         self.timesolts = list(gridfile['time'][:int(gridfile.shape[0] / len(self.geo_ids))])
-        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
-        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
         self.idx_of_timesolts = dict()
-        for idx, _ts in enumerate(self.timesolts):
-            self.idx_of_timesolts[_ts] = idx
+        if not gridfile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
         # 转4-d数组
         feature_dim = len(gridfile.columns) - 3
         df = gridfile[gridfile.columns[-feature_dim:]]
-        len_time = self.timesolts.shape[0]
+        len_time = len(self.timesolts)
         data = []
         for i in range(self.len_row):
             tmp = []
@@ -314,15 +329,16 @@ class TrafficStateDataset(AbstractDataset):
             gridodfile = gridodfile[gridodfile.columns[2:]]  # 从time列开始所有列
         # 求时间序列
         self.timesolts = list(gridodfile['time'][:int(gridodfile.shape[0] / len(self.geo_ids) / len(self.geo_ids))])
-        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
-        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
         self.idx_of_timesolts = dict()
-        for idx, _ts in enumerate(self.timesolts):
-            self.idx_of_timesolts[_ts] = idx
+        if not gridodfile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
         # 转4-d数组
         feature_dim = len(gridodfile.columns) - 5
         df = gridodfile[gridodfile.columns[-feature_dim:]]
-        len_time = self.timesolts.shape[0]
+        len_time = len(self.timesolts)
         data = np.zeros((len(self.geo_ids), len(self.geo_ids), len_time, feature_dim))
         for oi in range(self.len_row):
             for oj in range(self.len_column):
@@ -364,15 +380,16 @@ class TrafficStateDataset(AbstractDataset):
             gridodfile = gridodfile[gridodfile.columns[2:]]  # 从time列开始所有列
         # 求时间序列
         self.timesolts = list(gridodfile['time'][:int(gridodfile.shape[0] / len(self.geo_ids) / len(self.geo_ids))])
-        self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
-        self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
         self.idx_of_timesolts = dict()
-        for idx, _ts in enumerate(self.timesolts):
-            self.idx_of_timesolts[_ts] = idx
+        if not gridodfile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
         # 转6-d数组
         feature_dim = len(gridodfile.columns) - 5
         df = gridodfile[gridodfile.columns[-feature_dim:]]
-        len_time = self.timesolts.shape[0]
+        len_time = len(self.timesolts)
         data = np.zeros((self.len_row, self.len_column, self.len_row, self.len_column, len_time, feature_dim))
         for oi in range(self.len_row):
             for oj in range(self.len_column):
@@ -406,11 +423,12 @@ class TrafficStateDataset(AbstractDataset):
             extfile = extfile[extfile.columns[1:]]  # 从time列开始所有列
         # 求时间序列
         self.ext_timesolts = extfile['time']
-        self.ext_timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.ext_timesolts))
-        self.ext_timesolts = np.array(self.ext_timesolts, dtype='datetime64[ns]')
         self.idx_of_ext_timesolts = dict()
-        for idx, _ts in enumerate(self.ext_timesolts):
-            self.idx_of_ext_timesolts[_ts] = idx
+        if not extfile['time'].isna().any():  # 时间没有空值
+            self.ext_timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.ext_timesolts))
+            self.ext_timesolts = np.array(self.ext_timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.ext_timesolts):
+                self.idx_of_ext_timesolts[_ts] = idx
         # 求外部特征数组
         feature_dim = len(extfile.columns) - 1
         df = extfile[extfile.columns[-feature_dim:]].values
@@ -418,7 +436,16 @@ class TrafficStateDataset(AbstractDataset):
         return df
 
     def _add_external_information(self, df, ext_data=None):
-        raise NotImplementedError('Please implement the function `_add_time_meta_information()`.')
+        """
+        将外部数据和原始交通状态数据结合到高维数组中，子类必须实现这个方法来指定如何融合外部数据和交通状态数据
+        如果不想加外部数据，可以把交通状态数据`df`直接返回。
+        提供3个实现好的方法适用于不同形状的交通状态数据跟外部数据结合。
+        `_add_external_information_3d`/`_add_external_information_4d`/`_add_external_information_6d`
+        :param df: 交通状态数据多维数组
+        :param ext_data: 外部数据
+        :return: 融合后的外部数据和交通状态数据
+        """
+        raise NotImplementedError('Please implement the function `_add_external_information()`.')
 
     def _add_external_information_3d(self, df, ext_data=None):
         """
@@ -427,12 +454,13 @@ class TrafficStateDataset(AbstractDataset):
         :return: data: ndarray (len_time, num_nodes, feature_dim_plus)
         """
         num_samples, num_nodes, feature_dim = df.shape
+        is_time_nan = np.isnan(self.timesolts).any()
         data_list = [df]
-        if self.add_time_in_day:
+        if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
             time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
             data_list.append(time_in_day)
-        if self.add_day_in_week:
+        if self.add_day_in_week and not is_time_nan:
             dayofweek = []
             for day in self.timesolts.astype("datetime64[D]"):
                 dayofweek.append(datetime.datetime.strptime(str(day), '%Y-%m-%d').weekday())
@@ -441,15 +469,23 @@ class TrafficStateDataset(AbstractDataset):
             data_list.append(day_in_week)
         # 外部数据集
         if ext_data is not None:
-            indexs = []
-            for ts in self.timesolts:
-                ts_index = self.idx_of_ext_timesolts[ts]
-                indexs.append(ts_index)
-            select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
-            for i in range(select_data.shape[1]):
-                data_ind = select_data[:, i]
-                data_ind = np.tile(data_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
-                data_list.append(data_ind)
+            if not is_time_nan:
+                indexs = []
+                for ts in self.timesolts:
+                    ts_index = self.idx_of_ext_timesolts[ts]
+                    indexs.append(ts_index)
+                select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
+                for i in range(select_data.shape[1]):
+                    data_ind = select_data[:, i]
+                    data_ind = np.tile(data_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+                    data_list.append(data_ind)
+            else:  # 没有给出具体的时间戳，只有外部数据跟原数据等长才能默认对接到一起
+                if ext_data.shape[0] == df.shape[0]:
+                    select_data = ext_data  # T * ext_dim
+                    for i in range(select_data.shape[1]):
+                        data_ind = select_data[:, i]
+                        data_ind = np.tile(data_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+                        data_list.append(data_ind)
         data = np.concatenate(data_list, axis=-1)
         return data
 
@@ -460,12 +496,13 @@ class TrafficStateDataset(AbstractDataset):
         :return: data: ndarray (len_time, len_row, len_column, feature_dim_plus)
         """
         num_samples, len_row, len_column, feature_dim = df.shape
+        is_time_nan = np.isnan(self.timesolts).any()
         data_list = [df]
-        if self.add_time_in_day:
+        if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
             time_in_day = np.tile(time_ind, [1, len_row, len_column, 1]).transpose((3, 1, 2, 0))
             data_list.append(time_in_day)
-        if self.add_day_in_week:
+        if self.add_day_in_week and not is_time_nan:
             dayofweek = []
             for day in self.timesolts.astype("datetime64[D]"):
                 dayofweek.append(datetime.datetime.strptime(str(day), '%Y-%m-%d').weekday())
@@ -474,15 +511,23 @@ class TrafficStateDataset(AbstractDataset):
             data_list.append(day_in_week)
         # 外部数据集
         if ext_data is not None:
-            indexs = []
-            for ts in self.timesolts:
-                ts_index = self.idx_of_ext_timesolts[ts]
-                indexs.append(ts_index)
-            select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
-            for i in range(select_data.shape[1]):
-                data_ind = select_data[:, i]
-                data_ind = np.tile(data_ind, [1, len_row, len_column, 1]).transpose((3, 1, 2, 0))
-                data_list.append(data_ind)
+            if not is_time_nan:
+                indexs = []
+                for ts in self.timesolts:
+                    ts_index = self.idx_of_ext_timesolts[ts]
+                    indexs.append(ts_index)
+                select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
+                for i in range(select_data.shape[1]):
+                    data_ind = select_data[:, i]
+                    data_ind = np.tile(data_ind, [1, len_row, len_column, 1]).transpose((3, 1, 2, 0))
+                    data_list.append(data_ind)
+            else:  # 没有给出具体的时间戳，只有外部数据跟原数据等长才能默认对接到一起
+                if ext_data.shape[0] == df.shape[0]:
+                    select_data = ext_data  # T * ext_dim
+                    for i in range(select_data.shape[1]):
+                        data_ind = select_data[:, i]
+                        data_ind = np.tile(data_ind, [1, len_row, len_column, 1]).transpose((3, 1, 2, 0))
+                        data_list.append(data_ind)
         data = np.concatenate(data_list, axis=-1)
         return data
 
@@ -493,13 +538,14 @@ class TrafficStateDataset(AbstractDataset):
         :return: data: ndarray (len_time, len_row, len_column, len_row, len_column, feature_dim_plus)
         """
         num_samples, len_row, len_column, _, _, feature_dim = df.shape
+        is_time_nan = np.isnan(self.timesolts).any()
         data_list = [df]
-        if self.add_time_in_day:
+        if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
             time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]).\
                 transpose((5, 1, 2, 3, 4, 0))
             data_list.append(time_in_day)
-        if self.add_day_in_week:
+        if self.add_day_in_week and not is_time_nan:
             dayofweek = []
             for day in self.timesolts.astype("datetime64[D]"):
                 dayofweek.append(datetime.datetime.strptime(str(day), '%Y-%m-%d').weekday())
@@ -508,23 +554,32 @@ class TrafficStateDataset(AbstractDataset):
             data_list.append(day_in_week)
         # 外部数据集
         if ext_data is not None:
-            indexs = []
-            for ts in self.timesolts:
-                ts_index = self.idx_of_ext_timesolts[ts]
-                indexs.append(ts_index)
-            select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
-            for i in range(select_data.shape[1]):
-                data_ind = select_data[:, i]
-                data_ind = np.tile(data_ind, [1, len_row, len_column, len_row, len_column, 1]).\
-                    transpose((5, 1, 2, 3, 4, 0))
-                data_list.append(data_ind)
+            if not is_time_nan:
+                indexs = []
+                for ts in self.timesolts:
+                    ts_index = self.idx_of_ext_timesolts[ts]
+                    indexs.append(ts_index)
+                select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
+                for i in range(select_data.shape[1]):
+                    data_ind = select_data[:, i]
+                    data_ind = np.tile(data_ind, [1, len_row, len_column, len_row, len_column, 1]). \
+                        transpose((5, 1, 2, 3, 4, 0))
+                    data_list.append(data_ind)
+            else:  # 没有给出具体的时间戳，只有外部数据跟原数据等长才能默认对接到一起
+                if ext_data.shape[0] == df.shape[0]:
+                    select_data = ext_data  # T * ext_dim
+                    for i in range(select_data.shape[1]):
+                        data_ind = select_data[:, i]
+                        data_ind = np.tile(data_ind, [1, len_row, len_column, len_row, len_column, 1]). \
+                            transpose((5, 1, 2, 3, 4, 0))
+                        data_list.append(data_ind)
         data = np.concatenate(data_list, axis=-1)
         return data
 
     def _generate_input_data(self, df):
         """
         根据全局参数`input_window`和`output_window`切分输入，产生模型需要的张量输入
-        模型使用过去`input_window`长度的时间序列去预测未来`output_window`长度的时间序列
+        即使用过去`input_window`长度的时间序列去预测未来`output_window`长度的时间序列
         :param df: ndarray (len_time, ..., feature_dim)
         :return:
         # x: (epoch_size, input_length, ..., feature_dim)
@@ -683,14 +738,14 @@ class TrafficStateDataset(AbstractDataset):
         return scaler
 
     def get_data(self):
-        '''
+        """
         获取数据，数据归一化，之后返回训练集、测试集、验证集对应的DataLoader
-        return:
+        :return:
             train_dataloader (pytorch.DataLoader)
             eval_dataloader (pytorch.DataLoader)
             test_dataloader (pytorch.DataLoader)
             all the dataloaders are composed of Batch (class)
-        '''
+        """
         # 加载数据集
         x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
         if self.data is None:
@@ -708,6 +763,13 @@ class TrafficStateDataset(AbstractDataset):
         y_val[..., :self.output_dim] = self.scaler.transform(y_val[..., :self.output_dim])
         x_test[..., :self.output_dim] = self.scaler.transform(x_test[..., :self.output_dim])
         y_test[..., :self.output_dim] = self.scaler.transform(y_test[..., :self.output_dim])
+        if self.normal_external:
+            x_train[..., self.output_dim:] = self.scaler.transform(x_train[..., self.output_dim:])
+            y_train[..., self.output_dim:] = self.scaler.transform(y_train[..., self.output_dim:])
+            x_val[..., self.output_dim:] = self.scaler.transform(x_val[..., self.output_dim:])
+            y_val[..., self.output_dim:] = self.scaler.transform(y_val[..., self.output_dim:])
+            x_test[..., self.output_dim:] = self.scaler.transform(x_test[..., self.output_dim:])
+            y_test[..., self.output_dim:] = self.scaler.transform(y_test[..., self.output_dim:])
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
@@ -721,9 +783,8 @@ class TrafficStateDataset(AbstractDataset):
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
 
     def get_data_feature(self):
-        '''
-        返回数据集特征
-        return:
-            data_feature (dict)
-        '''
+        """
+        返回数据集特征，子类必须实现这个函数，返回必要的特征
+        :return: data_feature (dict)
+        """
         raise NotImplementedError('Please implement the function `get_data_feature()`.')

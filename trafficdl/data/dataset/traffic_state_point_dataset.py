@@ -48,7 +48,7 @@ class TrafficStatePointDataset(TrafficStateDataset):
     def get_data_feature(self):
         '''
         返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是点的个数，
-                     feature_dim是输入数据的维度，output_dim是模型输出的维度(可以根据参数指定，不指定则是原始交通状况数据的维度)
+                     feature_dim是输入数据的维度，output_dim是模型输出的维度
         return:
             data_feature (dict)
         '''
