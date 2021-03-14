@@ -58,16 +58,17 @@ class ConfigParser(object):
             if self.config['task'] not in task_config:
                 raise ValueError('task {} is not supported.'.format(self.config['task']))
             task_config = task_config[self.config['task']]
-            # 加载 dataset、executor、evaluator 的模块
-            if 'dataset_class' not in self.config:
-                self.config['dataset_class'] = task_config['dataset_class']
-            if 'executor' not in self.config:
-                self.config['executor'] = task_config['executor']
-            if 'evaluator' not in self.config:
-                self.config['evaluator'] = task_config['evaluator']
             # check model and dataset
             if self.config['model'] not in task_config['allowed_model']:
                 raise ValueError('task {} do not support model {}'.format(self.config['task'], self.config['model']))
+            model = self.config['model']
+            # 加载 dataset、executor、evaluator 的模块
+            if 'dataset_class' not in self.config:
+                self.config['dataset_class'] = task_config[model]['dataset_class']
+            if 'executor' not in self.config:
+                self.config['executor'] = task_config[model]['executor']
+            if 'evaluator' not in self.config:
+                self.config['evaluator'] = task_config[model]['evaluator']
             # 对于 LSTM RNN GRU 使用的都是同一个类，只是 RNN 模块不一样而已，这里做一下修改
             if self.config['model'] == 'LSTM' or self.config['model'] == 'GRU' or self.config['model'] == 'RNN':
                 self.config['model'] = 'RNN'

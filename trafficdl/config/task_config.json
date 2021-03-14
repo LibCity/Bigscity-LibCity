@@ -1,9 +1,46 @@
 {
     "traj_loc_pred": {
-        "dataset_class": "TrajectoryDataset",
-        "executor": "TrajLocPredExecutor",
-        "evaluator": "TrajLocPredEvaluator",
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN"],
-        "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla"]
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "TemplateTLP"],
+        "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla"],
+        "DeepMove": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "RNN": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "LSTM": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "GRU": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "FPMC": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "LSTPM": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "STRNN": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        },
+        "TemplateTLP": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator"
+        }
     }
 }

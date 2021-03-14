@@ -3,3 +3,4 @@ from trafficdl.model.trajectory_loc_prediction.RNN  import RNN
 from trafficdl.model.trajectory_loc_prediction.FPMC import FPMC
 from trafficdl.model.trajectory_loc_prediction.LSTPM import LSTPM
 from trafficdl.model.trajectory_loc_prediction.STRNN import STRNN
+from trafficdl.model.trajectory_loc_prediction.TemplateTLP import TemplateTLP
