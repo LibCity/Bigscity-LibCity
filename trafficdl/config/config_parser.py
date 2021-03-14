@@ -2,7 +2,6 @@ import os
 import json
 import torch
 
-from trafficdl.utils import trans_naming_rule
 class ConfigParser(object):
     '''
     use to parse the user defined parameters and use these to modify the pipeline's parameter setting.
@@ -77,14 +76,11 @@ class ConfigParser(object):
                 raise ValueError('task {} do not support dataset {}'.format(self.config['task'], self.config['dataset']))
         # 接着加载每个阶段的 default config
         default_file_list = []
-        trans_dataset_class = trans_naming_rule(self.config['dataset_class'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('data/{}.json'.format(trans_dataset_class))
+        default_file_list.append('data/{}.json'.format(self.config['dataset_class']))
         # executor
-        trans_executor = trans_naming_rule(self.config['executor'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('executor/{}.json'.format(trans_executor))
+        default_file_list.append('executor/{}.json'.format(self.config['executor']))
         # evaluator
-        trans_evaluator = trans_naming_rule(self.config['evaluator'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('evaluator/{}.json'.format(trans_evaluator))
+        default_file_list.append('evaluator/{}.json'.format(self.config['evaluator']))
         # model
         default_file_list.append('model/{}.json'.format(self.config['model']))
         # 加载所有默认配置
