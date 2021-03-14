@@ -2,7 +2,6 @@ import os
 import json
 import torch
 
-from trafficdl.utils import trans_naming_rule
 class ConfigParser(object):
     '''
     use to parse the user defined parameters and use these to modify the pipeline's parameter setting.
@@ -58,16 +57,17 @@ class ConfigParser(object):
             if self.config['task'] not in task_config:
                 raise ValueError('task {} is not supported.'.format(self.config['task']))
             task_config = task_config[self.config['task']]
-            # 加载 dataset、executor、evaluator 的模块
-            if 'dataset_class' not in self.config:
-                self.config['dataset_class'] = task_config['dataset_class']
-            if 'executor' not in self.config:
-                self.config['executor'] = task_config['executor']
-            if 'evaluator' not in self.config:
-                self.config['evaluator'] = task_config['evaluator']
             # check model and dataset
             if self.config['model'] not in task_config['allowed_model']:
                 raise ValueError('task {} do not support model {}'.format(self.config['task'], self.config['model']))
+            model = self.config['model']
+            # 加载 dataset、executor、evaluator 的模块
+            if 'dataset_class' not in self.config:
+                self.config['dataset_class'] = task_config[model]['dataset_class']
+            if 'executor' not in self.config:
+                self.config['executor'] = task_config[model]['executor']
+            if 'evaluator' not in self.config:
+                self.config['evaluator'] = task_config[model]['evaluator']
             # 对于 LSTM RNN GRU 使用的都是同一个类，只是 RNN 模块不一样而已，这里做一下修改
             if self.config['model'] == 'LSTM' or self.config['model'] == 'GRU' or self.config['model'] == 'RNN':
                 self.config['model'] = 'RNN'
@@ -76,14 +76,11 @@ class ConfigParser(object):
                 raise ValueError('task {} do not support dataset {}'.format(self.config['task'], self.config['dataset']))
         # 接着加载每个阶段的 default config
         default_file_list = []
-        trans_dataset_class = trans_naming_rule(self.config['dataset_class'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('data/{}.json'.format(trans_dataset_class))
+        default_file_list.append('data/{}.json'.format(self.config['dataset_class']))
         # executor
-        trans_executor = trans_naming_rule(self.config['executor'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('executor/{}.json'.format(trans_executor))
+        default_file_list.append('executor/{}.json'.format(self.config['executor']))
         # evaluator
-        trans_evaluator = trans_naming_rule(self.config['evaluator'], 'upper_camel_case', 'under_score_rule')
-        default_file_list.append('evaluator/{}.json'.format(trans_evaluator))
+        default_file_list.append('evaluator/{}.json'.format(self.config['evaluator']))
         # model
         default_file_list.append('model/{}.json'.format(self.config['model']))
         # 加载所有默认配置
