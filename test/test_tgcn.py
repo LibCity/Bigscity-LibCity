@@ -37,7 +37,7 @@ config = {
     'learner': 'adam',
     'dropout': 0,
     'epoch': 0,
-    'epochs': 5000,
+    'max_epoch': 5000,
     'lr_decay': False,
     'lr_decay_ratio': 0.1,
     'max_grad_norm': 5,

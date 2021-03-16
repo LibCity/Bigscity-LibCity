@@ -118,6 +118,10 @@ class TrafficStateDataset(AbstractDataset):
         """
         relfile = pd.read_csv(self.data_path + self.rel_file + '.rel')
         if self.weight_col != '':  # 根据weight_col确认权重列
+            if isinstance(self.weight_col, list):
+                if len(self.weight_col) != 1:
+                    raise ValueError('`weight_col` parameter must be only one column!')
+                self.weight_col = self.weight_col[0]
             self.distance_df = relfile[~relfile[self.weight_col].isna()][[
                 'origin_id', 'destination_id', self.weight_col]]
         else:

@@ -48,7 +48,7 @@ config = {
     'steps': [5, 20, 40, 70],
     'lr_scheduler': 'multisteplr',
     'epoch': 0,
-    'epochs': 100,
+    'max_epoch': 100,
     'clip_grad_norm': False,
     'use_early_stop': True,
     'max_grad_norm': 5,
