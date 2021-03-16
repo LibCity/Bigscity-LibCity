@@ -147,6 +147,9 @@ class TrafficStateEvaluator(AbstractEvaluator):
             for metric in self.metrics:
                 dataframe[metric].append(self.result[metric+'@'+str(i)])
         dataframe = pd.DataFrame(dataframe)
+        dataframe.to_csv(os.path.join(save_path, '{}.csv'.format(filename)), index=False)
+        self._logger.info('Evaluate result is saved at ' +
+                          os.path.join(save_path, '{}.csv'.format(filename)))
         self._logger.info(str(dataframe))
 
     def clear(self):
