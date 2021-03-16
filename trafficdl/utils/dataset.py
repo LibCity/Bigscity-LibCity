@@ -1,45 +1,53 @@
-'''
+"""
 数据预处理阶段相关的工具函数
-'''
+"""
 import numpy as np
 import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 
-def parseTime(time_in, timezone_offset_in_minute):
-    '''
+def parse_time(time_in, timezone_offset_in_minute):
+    """
     将 json 中 time_format 格式的 time 转化为 local datatime
-    '''
+    """
     date = datetime.strptime(time_in, '%Y-%m-%dT%H:%M:%SZ')  # 这是 UTC 时间
     return date + timedelta(minutes=timezone_offset_in_minute)
 
 
-def calculateBaseTime(start_time, base_zero):
-    '''
+def cal_basetime(start_time, base_zero):
+    """
     用于切分轨迹成一个 session
-    思路为：给定一个 start_time 找到一个基准时间 base_time，在该 base_time 到 base_time + time_length 区间的点划分到一个 session 内
+    思路为：给定一个 start_time 找到一个基准时间 base_time
+    在该 base_time 到 base_time + time_length 区间的点划分到一个 session 内
     选取 base_time 来做的理由是：这样可以保证同一个小时段总是被 encode 成同一个数
-    '''
+    """
     if base_zero:
-        return start_time - timedelta(hours=start_time.hour, minutes=start_time.minute,
-                                      seconds=start_time.second, microseconds=start_time.microsecond)
+        return start_time - timedelta(hours=start_time.hour,
+                                      minutes=start_time.minute,
+                                      seconds=start_time.second,
+                                      microseconds=start_time.microsecond)
     else:
         # time length = 12
         if start_time.hour < 12:
-            return start_time - timedelta(hours=start_time.hour, minutes=start_time.minute,
-                                          seconds=start_time.second, microseconds=start_time.microsecond)
+            return start_time - timedelta(hours=start_time.hour,
+                                          minutes=start_time.minute,
+                                          seconds=start_time.second,
+                                          microseconds=start_time.microsecond)
         else:
-            return start_time - timedelta(hours=start_time.hour - 12, minutes=start_time.minute,
-                                          seconds=start_time.second, microseconds=start_time.microsecond)
+            return start_time - timedelta(hours=start_time.hour - 12,
+                                          minutes=start_time.minute,
+                                          seconds=start_time.second,
+                                          microseconds=start_time.microsecond)
 
 
-def calculateTimeOff(now_time, base_time):
-    '''
+def cal_timeoff(now_time, base_time):
+    """
     计算两个时间之间的差值，返回值以小时为单位
-    '''
+    """
     # 先将 now 按小时对齐
-    now_time = now_time - timedelta(minutes=now_time.minute, seconds=now_time.second)
+    now_time = now_time - \
+        timedelta(minutes=now_time.minute, seconds=now_time.second)
     delta = now_time - base_time
     return delta.days * 24 + delta.seconds / 3600
 
@@ -63,12 +71,12 @@ def caculate_time_sim(data):
             set_i = time_checkin_set[i]
             set_j = time_checkin_set[j]
             if len(set_i | set_j) != 0:
-                jaccard_ij = len(set_i & set_j)/len(set_i | set_j)
+                jaccard_ij = len(set_i & set_j) / len(set_i | set_j)
                 sim_matrix[i][j] = jaccard_ij
     return sim_matrix
 
 
-def parseCoordinate(coordinate):
+def parse_coordinate(coordinate):
     items = coordinate[1:-1].split(',')
     return float(items[0]), float(items[1])
 
@@ -82,7 +90,7 @@ def string2timestamp(strings, offset_frame):
     return ts  # [numpy.datetime64('2014-01-01T00:00'), ...]
 
 
-def timestamp2array(timestamps, T):
+def timestamp2array(timestamps, t):
     """
     把时间戳的序列中的每一个时间戳转成特征数组，考虑了星期和小时
     时间戳: numpy.datetime64('2013-07-01T00:00:00.000000000')
@@ -90,7 +98,8 @@ def timestamp2array(timestamps, T):
     :param T: 一天有多少个时间步
     :return: len(timestamps) * ext_dim
     """
-    vec_wday = [time.strptime(str(t)[:10], '%Y-%m-%d').tm_wday for t in timestamps]
+    vec_wday = [time.strptime(
+        str(t)[:10], '%Y-%m-%d').tm_wday for t in timestamps]
     vec_hour = [time.strptime(str(t)[11:13], '%H').tm_hour for t in timestamps]
     vec_minu = [time.strptime(str(t)[14:16], '%M').tm_min for t in timestamps]
     ret = []
@@ -103,13 +112,13 @@ def timestamp2array(timestamps, T):
         else:
             v.append(1)  # weekday len(v)=8
         # hour
-        v += [0 for _ in range(T)]  # len(v)=8+T
+        v += [0 for _ in range(t)]  # len(v)=8+T
         hour = vec_hour[idx]
         minu = vec_minu[idx]
         # 24*60/T 表示一个时间步是多少分钟
         # hour * 60 + minu 是从0:0开始到现在是多少分钟，相除计算是第几个时间步
         # print(hour, minu, T, (hour * 60 + minu) / (24 * 60 / T))
-        v[int((hour * 60 + minu) / (24 * 60 / T))] = 1
+        v[int((hour * 60 + minu) / (24 * 60 / t))] = 1
         # +8是因为v前边有表示星期的8位
         if hour >= 18 or hour < 6:
             v.append(0)  # night

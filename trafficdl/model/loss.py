@@ -8,7 +8,8 @@ def masked_mae_loss(y_pred, y_true):
     mask /= mask.mean()
     loss = torch.abs(y_pred - y_true)
     loss = loss * mask
-    # trick for nans: https://discuss.pytorch.org/t/how-to-set-nan-in-tensor-to-0/3918/3
+    # trick for nans:
+    # https://discuss.pytorch.org/t/how-to-set-nan-in-tensor-to-0/3918/3
     loss[loss != loss] = 0
     return loss.mean()
 
@@ -22,7 +23,7 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
-    loss = torch.abs(torch.sub(preds,labels))
+    loss = torch.abs(torch.sub(preds, labels))
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
@@ -37,7 +38,7 @@ def masked_mape_torch(preds, labels, null_val=np.nan):
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
-    loss = torch.abs((preds-labels)/labels)
+    loss = torch.abs((preds - labels) / labels)
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
@@ -60,7 +61,8 @@ def masked_mse_torch(preds, labels, null_val=np.nan):
 
 def masked_rmse_torch(preds, labels, null_val=np.nan):
     labels[labels < 1e-4] = 0
-    return torch.sqrt(masked_mse_torch(preds=preds, labels=labels, null_val=null_val))
+    return torch.sqrt(masked_mse_torch(preds=preds, labels=labels,
+                                       null_val=null_val))
 
 
 def r2_score_torch(preds, labels):
@@ -76,7 +78,8 @@ def explained_variance_score_torch(preds, labels):
 
 
 def masked_rmse_np(preds, labels, null_val=np.nan):
-    return np.sqrt(masked_mse_np(preds=preds, labels=labels, null_val=null_val))
+    return np.sqrt(masked_mse_np(preds=preds, labels=labels,
+                   null_val=null_val))
 
 
 def masked_mse_np(preds, labels, null_val=np.nan):
@@ -113,7 +116,8 @@ def masked_mape_np(preds, labels, null_val=np.nan):
             mask = np.not_equal(labels, null_val)
         mask = mask.astype('float32')
         mask /= np.mean(mask)
-        mape = np.abs(np.divide(np.subtract(preds, labels).astype('float32'), labels))
+        mape = np.abs(np.divide(np.subtract(
+            preds, labels).astype('float32'), labels))
         mape = np.nan_to_num(mask * mape)
         return np.mean(mape)
 

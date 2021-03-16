@@ -1,13 +1,14 @@
-import os
-import torch
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from trafficdl.utils import get_model
 
 # 加载配置文件
-config = ConfigParser(task='traj_loc_pred', model='TemplateTLP', dataset='foursquare_tky', config_file=None, other_args={'batch_size': 2})
+config = ConfigParser(task='traj_loc_pred', model='TemplateTLP',
+                      dataset='foursquare_tky', config_file=None,
+                      other_args={'batch_size': 2})
 # 如果是交通流量\速度预测任务，请使用下面的加载配置文件语句
-# config = ConfigParser(task='traffic_state_pred', model='TemplateTSP', dataset='metr_la', config_file=None, other_args={'batch_size': 2})
+# config = ConfigParser(task='traffic_state_pred', model='TemplateTSP',
+#       dataset='metr_la', config_file=None, other_args={'batch_size': 2})
 # 加载数据模块
 dataset = get_dataset(config)
 # 数据预处理，划分数据集
