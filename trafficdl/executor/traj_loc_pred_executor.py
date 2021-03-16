@@ -1,12 +1,12 @@
 import json
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import os
 
 from trafficdl.executor.abstract_executor import AbstractExecutor
-from trafficdl.utils import get_model, get_evaluator
+from trafficdl.utils import get_evaluator
+
 
 class TrajLocPredExecutor(AbstractExecutor):
 
@@ -18,27 +18,38 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
-        self.loss_func = None # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
-    
+        self.loss_func = None  # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
+
     def train(self, train_dataloader, eval_dataloader):
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.config['learning_rate'],
-                            weight_decay=self.config['L2'])
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=self.config['lr_step'],
-                                                 factor=self.config['lr_decay'], threshold= self.config['schedule_threshold'])
-        
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad,
+                                      self.model.parameters()),
+                               lr=self.config['learning_rate'],
+                               weight_decay=self.config['L2'])
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, 'max', patience=self.config['lr_step'],
+            factor=self.config['lr_decay'],
+            threshold=self.config['schedule_threshold'])
+
         if not os.path.exists(self.tmp_path):
             os.makedirs(self.tmp_path)
         metrics = {}
         metrics['accuracy'] = []
-        train_total_batch = len(train_dataloader.dataset) / train_dataloader.batch_size
-        eval_total_batch = len(eval_dataloader.dataset) / eval_dataloader.batch_size
+        train_total_batch = len(train_dataloader.dataset) / \
+            train_dataloader.batch_size
+        eval_total_batch = len(eval_dataloader.dataset) / \
+            eval_dataloader.batch_size
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
-            self.model, avg_loss = self.run(train_dataloader, self.model, optimizer, 
-                                        self.config['learning_rate'], self.config['clip'], train_total_batch, self.config['verbose'])
-            print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(epoch, avg_loss, lr))
+            self.model, avg_loss = self.run(
+                train_dataloader, self.model, optimizer,
+                self.config['learning_rate'], self.config['clip'],
+                train_total_batch, self.config['verbose'])
+            print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(
+                epoch, avg_loss, lr))
             # eval stage
-            avg_acc = self._valid_epoch(eval_dataloader, self.model, eval_total_batch, self.config['verbose'])
+            avg_acc = self._valid_epoch(
+                eval_dataloader, self.model, eval_total_batch,
+                self.config['verbose'])
             print('==>Eval Acc:{:.4f}'.format(avg_acc))
             metrics['accuracy'].append(avg_acc)
             save_name_tmp = 'ep_' + str(epoch) + '.m'
@@ -49,7 +60,8 @@ class TrajLocPredExecutor(AbstractExecutor):
             if lr_last > lr:
                 load_epoch = np.argmax(metrics['accuracy'])
                 load_name_tmp = 'ep_' + str(load_epoch) + '.m'
-                self.model.load_state_dict(torch.load(self.tmp_path + load_name_tmp))
+                self.model.load_state_dict(
+                    torch.load(self.tmp_path + load_name_tmp))
                 print('load epoch={} model state'.format(load_epoch))
             if lr <= 0.9 * 1e-5:
                 break
@@ -69,7 +81,7 @@ class TrajLocPredExecutor(AbstractExecutor):
 
     def load_model(self, cache_name):
         self.model.load_state_dict(torch.load(cache_name))
-    
+
     def save_model(self, cache_name):
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -78,7 +90,8 @@ class TrajLocPredExecutor(AbstractExecutor):
     def evaluate(self, test_dataloader):
         self.model.train(False)
         self.evaluator.clear()
-        test_total_batch = len(test_dataloader.dataset) / test_dataloader.batch_size
+        test_total_batch = len(test_dataloader.dataset) / \
+            test_dataloader.batch_size
         cnt = 0
         for batch in test_dataloader:
             batch.to_tensor(device=self.config['device'])
@@ -94,11 +107,11 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def run(self, data_loader, model, optimizer, lr, clip, total_batch, verbose):
+    def run(self, data_loader, model, optimizer, lr, clip, total_batch,
+            verbose):
         model.train(True)
         total_loss = []
         cnt = 0
-        loc_size = model.loc_size
         loss_func = self.loss_func or model.calculate_loss
         for batch in data_loader:
             # one batch, one step
@@ -139,5 +152,5 @@ class TrajLocPredExecutor(AbstractExecutor):
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
-        avg_acc = self.evaluator.evaluate()[self.metrics] # 随便选一个就行
+        avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
         return avg_acc

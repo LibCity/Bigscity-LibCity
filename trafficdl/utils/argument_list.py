@@ -1,6 +1,6 @@
-'''
+"""
 store the arguments can be modified by the user
-'''
+"""
 import argparse
 
 general_arguments = {
@@ -13,15 +13,17 @@ general_arguments = {
     "gpu_id": "int"
 }
 
+
 def str2bool(s):
     if isinstance(s, bool):
-       return s
+        return s
     if s.lower() in ('yes', 'true'):
         return True
     elif s.lower() in ('no', 'false'):
         return False
     else:
         raise argparse.ArgumentTypeError('bool value expected.')
+
 
 def str2float(s):
     if isinstance(s, float):

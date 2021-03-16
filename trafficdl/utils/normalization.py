@@ -27,6 +27,7 @@ class NormalScaler(Scaler):
     除以最大值归一化
     x = x / x.max
     """
+
     def __init__(self, max):
         self.max = max
 
@@ -42,6 +43,7 @@ class StandardScaler(Scaler):
     Z-score归一化
     x = (x - x.mean) / x.std
     """
+
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
@@ -58,6 +60,7 @@ class MinMax01Scaler(Scaler):
     MinMax归一化 结果区间[0, 1]
     x = (x - min) / (max - min)
     """
+
     def __init__(self, min, max):
         self.min = min
         self.max = max
@@ -75,6 +78,7 @@ class MinMax11Scaler(Scaler):
     x = (x - min) / (max - min)
     x = x * 2 - 1
     """
+
     def __init__(self, min, max):
         self.min = min
         self.max = max

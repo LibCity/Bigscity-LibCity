@@ -6,6 +6,7 @@ from torch.nn.utils.rnn import pad_packed_sequence
 
 from trafficdl.model.abstract_model import AbstractModel
 
+
 class RNN(AbstractModel):
 
     def __init__(self, config, data_feature):
@@ -18,8 +19,12 @@ class RNN(AbstractModel):
         self.device = config['device']
         self.rnn_type = config['rnn_type']
 
-        self.emb_loc = nn.Embedding(self.loc_size, self.loc_emb_size, padding_idx=data_feature['loc_pad'])
-        self.emb_tim = nn.Embedding(self.tim_size, self.tim_emb_size, padding_idx=data_feature['tim_pad'])
+        self.emb_loc = nn.Embedding(
+            self.loc_size, self.loc_emb_size,
+            padding_idx=data_feature['loc_pad'])
+        self.emb_tim = nn.Embedding(
+            self.tim_size, self.tim_emb_size,
+            padding_idx=data_feature['tim_pad'])
         input_size = self.loc_emb_size + self.tim_emb_size
 
         if self.rnn_type == 'GRU':
@@ -28,18 +33,22 @@ class RNN(AbstractModel):
             self.rnn = nn.LSTM(input_size, self.hidden_size, 1)
         elif self.rnn_type == 'RNN':
             self.rnn = nn.RNN(input_size, self.hidden_size, 1)
-        
+
         self.init_weights()
         self.fc = nn.Linear(self.hidden_size, self.loc_size)
         self.dropout = nn.Dropout(p=config['dropout_p'])
 
     def init_weights(self):
         """
-        Here we reproduce Keras default initialization weights for consistency with Keras version
+        Here we reproduce Keras default initialization weights for
+        consistency with Keras version
         """
-        ih = (param.data for name, param in self.named_parameters() if 'weight_ih' in name)
-        hh = (param.data for name, param in self.named_parameters() if 'weight_hh' in name)
-        b = (param.data for name, param in self.named_parameters() if 'bias' in name)
+        ih = (param.data for name, param in self.named_parameters()
+              if 'weight_ih' in name)
+        hh = (param.data for name, param in self.named_parameters()
+              if 'weight_hh' in name)
+        b = (param.data for name, param in self.named_parameters()
+             if 'bias' in name)
 
         for t in ih:
             nn.init.xavier_uniform(t)
@@ -53,13 +62,14 @@ class RNN(AbstractModel):
         tim = batch['current_tim']
         loc_len = batch.get_origin_len('current_loc')
         batch_size = loc.shape[0]
-        
+
         h1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
         c1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
 
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
-        x = torch.cat((loc_emb, tim_emb), 2).permute(1, 0, 2) # change batch * seq * input_size to seq * batch * input_size
+        # change batch * seq * input_size to seq * batch * input_size
+        x = torch.cat((loc_emb, tim_emb), 2).permute(1, 0, 2)
         x = self.dropout(x)
 
         # pack x and history_x
@@ -82,12 +92,13 @@ class RNN(AbstractModel):
             if i == 0:
                 true_scores = score[i][loc_len[i] - 1].reshape(1, -1)
             else:
-                true_scores = torch.cat((true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
+                true_scores = torch.cat(
+                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
         return true_scores
 
     def predict(self, batch):
         return self.forward(batch)
-    
+
     def calculate_loss(self, batch):
         criterion = nn.NLLLoss().to(self.device)
         scores = self.forward(batch)

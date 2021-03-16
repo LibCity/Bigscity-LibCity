@@ -10,17 +10,20 @@ def output(method, value, field):
     """
     if method == 'ACC':
         if field == 'model':
-            print('---- 该模型在 {} 评估方法下 avg_acc={:.3f} ----'.format(method, value))
+            print('---- 该模型在 {} 评估方法下 avg_acc={:.3f} ----'.format(method,
+                                                                  value))
         else:
             print('{} avg_acc={:.3f}'.format(method, value))
     elif method in ['MSE', 'RMSE', 'MAE', 'MAPE', 'MARE', 'SMAPE']:
         if field == 'model':
-            print('---- 该模型在 {} 评估方法下 avg_loss={:.3f} ----'.format(method, value))
+            print('---- 该模型在 {} 评估方法下 avg_loss={:.3f} ----'.format(method,
+                                                                   value))
         else:
             print('{} avg_loss={:.3f}'.format(method, value))
     else:
         if field == 'model':
-            print('---- 该模型在 {} 评估方法下 avg_acc={:.3f} ----'.format(method, value))
+            print('---- 该模型在 {} 评估方法下 avg_acc={:.3f} ----'.format(method,
+                                                                  value))
         else:
             print('{} avg_acc={:.3f}'.format(method, value))
 
@@ -67,6 +70,6 @@ def sort_confidence_ids(confidence_list, threshold):
         if len(ids_list) == threshold:
             break
     return ids_list"""
-    # return list(map(lambda x: x[0], sorted(enumerate(confidence_list), key=lambda x: x[1], reverse=True)[:threshold]))
-    max_score_with_id = nlargest(threshold, enumerate(confidence_list), lambda x: x[1])
+    max_score_with_id = nlargest(
+        threshold, enumerate(confidence_list), lambda x: x[1])
     return list(map(lambda x: x[0], max_score_with_id))
