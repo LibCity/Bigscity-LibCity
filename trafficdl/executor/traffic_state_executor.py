@@ -145,8 +145,8 @@ class TrafficStateExecutor(AbstractExecutor):
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)  # concatenate on batch
             outputs = {'prediction': y_preds, 'truth': y_truths}
-            filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) \
-                       + '_' + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
+            filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
+                        + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
             self.evaluator.clear()
             self.evaluator.collect({'y_true': torch.tensor(y_truths), 'y_pred': torch.tensor(y_preds)})
@@ -224,4 +224,3 @@ class TrafficStateExecutor(AbstractExecutor):
             mean_loss = np.mean(losses)
             self._writer.add_scalar('eval loss', mean_loss, epoch_idx)
             return mean_loss
-

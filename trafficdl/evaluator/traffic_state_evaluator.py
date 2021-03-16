@@ -16,6 +16,7 @@ class TrafficStateEvaluator(AbstractEvaluator):
                                 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR']
         self.mode = config.get('evaluator_mode', 'average')  # or single
         self.config = config
+        self.len_timeslots = 0
         self.result = {}  # 每一种指标的结果
         self.intermediate_result = {}  # 每一种指标每一个batch的结果
         self._check_config()
@@ -117,9 +118,10 @@ class TrafficStateEvaluator(AbstractEvaluator):
             raise ValueError('Error parameter evaluator_mode={}, please set `single` or `average`.'.format(self.mode))
 
     def evaluate(self):
-        '''
+        """
         返回之前收集到的所有 batch 的评估结果
-        '''
+        :return:
+        """
         for i in range(1, self.len_timeslots + 1):
             for metric in self.metrics:
                 self.result[metric+'@'+str(i)] = sum(self.intermediate_result[metric+'@'+str(i)]) / \
@@ -127,9 +129,12 @@ class TrafficStateEvaluator(AbstractEvaluator):
         return self.result
 
     def save_result(self, save_path, filename=None):
-        '''
+        """
         将评估结果保存到 save_path 文件夹下的 filename 文件中
-        '''
+        :param save_path: 保存路径
+        :param filename: 保存文件名
+        :return:
+        """
         self.evaluate()
         ensure_dir(save_path)
         if filename is None:  # 使用时间戳
@@ -153,8 +158,9 @@ class TrafficStateEvaluator(AbstractEvaluator):
         self._logger.info(str(dataframe))
 
     def clear(self):
-        '''
+        """
         清除之前收集到的 batch 的评估信息，适用于每次评估开始时进行一次清空，排除之前的评估输入的影响。
-        '''
+        :return:
+        """
         self.result = {}
         self.intermediate_result = {}

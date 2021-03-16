@@ -1,4 +1,3 @@
-
 class AbstractEvaluator(object):
 
     def __init__(self, config):
