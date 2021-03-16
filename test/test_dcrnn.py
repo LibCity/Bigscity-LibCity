@@ -42,7 +42,7 @@ config = {
     'weight_decay': 0,
     'dropout': 0,
     'epoch': 0,
-    'epochs': 100,
+    'max_epoch': 100,
     'epsilon': 1.0e-3,
     'lr_decay': True,
     'lr_decay_ratio': 0.1,

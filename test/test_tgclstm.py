@@ -38,7 +38,7 @@ config = {
     'lr_decay_ratio': 0.5,
     'step_size': 25,
     'lr_scheduler': 'steplr',
-    'epochs': 100,
+    'max_epoch': 100,
     'use_early_stop': False,
     'patience': 50,
 }

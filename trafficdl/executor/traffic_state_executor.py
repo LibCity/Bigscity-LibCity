@@ -15,11 +15,9 @@ class TrafficStateExecutor(AbstractExecutor):
         self.model = model.to(self.config['device'])
         self.metrics = self.config.get('metrics', 'MAE')
 
-        self.tmp_path = './trafficdl/tmp/checkpoint'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
         self.summary_writer_dir = './trafficdl/log/runs'
-        ensure_dir(self.tmp_path)
         ensure_dir(self.cache_dir)
         ensure_dir(self.evaluate_res_dir)
         ensure_dir(self.summary_writer_dir)
@@ -33,7 +31,7 @@ class TrafficStateExecutor(AbstractExecutor):
         total_num = sum([param.nelement() for param in self.model.parameters()])
         self._logger.info('Total parameter numbers: {}'.format(total_num))
 
-        self.epochs = self.config.get('epochs', 100)
+        self.epochs = self.config.get('max_epoch', 100)
         self.learning_rate = self.config.get('learning_rate', 0.01)
         self.weight_decay = self.config.get('weight_decay', 0)
         self.learner = self.config.get('learner', 'adam')
@@ -49,7 +47,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self.max_grad_norm = self.config.get('max_grad_norm', 1.)
         self.clip_grad_norm = self.config.get('clip_grad_norm', False)
         self.log_every = self.config.get('log_every', 1)
-        self.saved = self.config.get('save_model', True)
+        self.saved = self.config.get('saved_model', True)
         self.use_early_stop = self.config.get('use_early_stop', True)
         self.patience = self.config.get('patience', 50)
         self.device = self.config.get('device', torch.device('cpu'))
@@ -131,7 +129,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self._logger.info('Start evaluating ...')
         with torch.no_grad():
             self.model.eval()
-            self.evaluator.clear()
+            # self.evaluator.clear()
             y_truths = []
             y_preds = []
             for batch in test_dataloader:
@@ -141,14 +139,14 @@ class TrafficStateExecutor(AbstractExecutor):
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
                 y_truths.append(y_true.cpu().numpy())
                 y_preds.append(y_pred.cpu().numpy())
-                evaluate_input = {'y_true': y_true, 'y_pred': y_pred}
-                self.evaluator.collect(evaluate_input)
-            self.evaluator.save_result(self.evaluate_res_dir)
+                # evaluate_input = {'y_true': y_true, 'y_pred': y_pred}
+                # self.evaluator.collect(evaluate_input)
+            # self.evaluator.save_result(self.evaluate_res_dir)
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)  # concatenate on batch
             outputs = {'prediction': y_preds, 'truth': y_truths}
             filename = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) \
-                       + '_' + self.config['model'] + '_predictions.npz'
+                       + '_' + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
             self.evaluator.clear()
             self.evaluator.collect({'y_true': torch.tensor(y_truths), 'y_pred': torch.tensor(y_preds)})

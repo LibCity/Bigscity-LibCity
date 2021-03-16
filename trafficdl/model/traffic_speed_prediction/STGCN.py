@@ -52,6 +52,7 @@ def calculate_first_approx(W):
     :param W: weighted adjacency matrix of G. Not laplacian matrix.
     :return: np.ndarray
     '''
+    # TODO: 如果W对角线本来就是全1？
     n = W.shape[0]
     A = W + np.identity(n)
     d = np.sum(A, axis=1)

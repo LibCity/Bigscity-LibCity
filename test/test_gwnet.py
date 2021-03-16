@@ -22,7 +22,7 @@ if __name__ == '__main__':
         'lr_decay': False,
         'weight_decay': 0.0001,
         'dropout': 0.3,
-        'epochs': 100,
+        'max_epoch': 100,
         'epoch': 0,
         'max_grad_norm': 5,
         'clip_grad_norm': True,

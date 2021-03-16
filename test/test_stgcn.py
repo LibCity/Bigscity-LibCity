@@ -15,7 +15,7 @@ if __name__ == '__main__':
         'Kt': 3,
         'blocks': [[1, 32, 64], [64, 32, 128]],  # blocks[0][0]是输入特征的维度
         'dropout': 0,
-        'epochs': 50,
+        'max_epoch': 50,
         'epoch': 0,
         'evaluator': 'TrafficStateEvaluator',
         'dataset_class': 'TrafficStatePointDataset',
