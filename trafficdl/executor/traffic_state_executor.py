@@ -12,8 +12,8 @@ class TrafficStateExecutor(AbstractExecutor):
     def __init__(self, config, model):
         self.evaluator = get_evaluator(config)
         self.config = config
-        self.model = model.to(self.config['device'])
-        self.metrics = self.config.get('metrics', 'MAE')
+        self.device = self.config.get('device', torch.device('cpu'))
+        self.model = model.to(self.device)
 
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
@@ -32,26 +32,26 @@ class TrafficStateExecutor(AbstractExecutor):
         self._logger.info('Total parameter numbers: {}'.format(total_num))
 
         self.epochs = self.config.get('max_epoch', 100)
+        self.learner = self.config.get('learner', 'adam')
         self.learning_rate = self.config.get('learning_rate', 0.01)
         self.weight_decay = self.config.get('weight_decay', 0)
-        self.learner = self.config.get('learner', 'adam')
-        self.epsilon = self.config.get('epsilon', 1e-8)
-        self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
+        self.lr_epsilon = self.config.get('lr_epsilon', 1e-8)
         self.lr_decay = self.config.get('lr_decay', False)
+        self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
         self.lr_decay_ratio = self.config.get('lr_decay_ratio', 0.1)
         self.milestones = self.config.get('steps', [])
         self.step_size = self.config.get('step_size', 10)
         self.lr_lambda = self.config.get('lr_lambda', lambda x: x)
-        self.T_max = self.config.get('lr_T_max', 30)
-        self.eta_min = self.config.get('lr_eta_min', 0)
-        self.max_grad_norm = self.config.get('max_grad_norm', 1.)
+        self.lr_T_max = self.config.get('lr_T_max', 30)
+        self.lr_eta_min = self.config.get('lr_eta_min', 0)
         self.clip_grad_norm = self.config.get('clip_grad_norm', False)
+        self.max_grad_norm = self.config.get('max_grad_norm', 1.)
+        self.use_early_stop = self.config.get('use_early_stop', False)
+        self.patience = self.config.get('patience', 50)
         self.log_every = self.config.get('log_every', 1)
         self.saved = self.config.get('saved_model', True)
-        self.use_early_stop = self.config.get('use_early_stop', True)
-        self.patience = self.config.get('patience', 50)
-        self.device = self.config.get('device', torch.device('cpu'))
-        self.output_dim = config.get('output_dim', 1)
+
+        self.output_dim = self.config.get('output_dim', 1)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
@@ -88,7 +88,7 @@ class TrafficStateExecutor(AbstractExecutor):
     def _build_optimizer(self):
         if self.learner.lower() == 'adam':
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
-                                         eps=self.epsilon, weight_decay=self.weight_decay)
+                                         eps=self.lr_epsilon, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sgd':
             optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         elif self.learner.lower() == 'adagrad':
@@ -99,7 +99,8 @@ class TrafficStateExecutor(AbstractExecutor):
             optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate)
         else:
             self._logger.warning('Received unrecognized optimizer, set default Adam optimizer')
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=self.epsilon)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
+                                         eps=self.lr_epsilon, weight_decay=self.weight_decay)
         return optimizer
 
     def _build_lr_scheduler(self):
@@ -115,7 +116,7 @@ class TrafficStateExecutor(AbstractExecutor):
                     self.optimizer, gamma=self.lr_decay_ratio)
             elif self.lr_scheduler_type.lower() == 'cosineannealinglr':
                 lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                    self.optimizer, T_max=self.T_max, eta_min=self.eta_min)
+                    self.optimizer, T_max=self.lr_T_max, eta_min=self.lr_eta_min)
             elif self.lr_scheduler_type.lower() == 'lambdalr':
                 lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
                     self.optimizer, lr_lambda=self.lr_lambda)

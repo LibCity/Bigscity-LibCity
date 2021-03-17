@@ -11,7 +11,6 @@ class TrafficStateGridDataset(TrafficStateDataset):
         self.parameters_str = self.parameters_str + '_' + str(self.use_row_column)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
                                             'grid_based_{}.npz'.format(self.parameters_str))
-        self.use_row_column = self.config.get('use_row_column', True)
         self._load_rel()  # don't care whether there is a .rel file
 
     def _load_geo(self):

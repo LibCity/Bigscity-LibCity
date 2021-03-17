@@ -24,7 +24,7 @@ class AbstractTrafficStateModel(AbstractModel):
 
     def get_data_feature(self):
         """
-        此接口返回构造函数中得到的`data_feature`，供Executor类使用
+        此接口返回构造函数中得到的`data_feature`，供Executor类使用，一般不需要继承，不需要修改
         :return:
         """
         return self.data_feature

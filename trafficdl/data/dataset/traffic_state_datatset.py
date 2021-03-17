@@ -21,21 +21,22 @@ class TrafficStateDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         self.dataset = self.config.get('dataset', '')
-        self.input_window = self.config.get('input_window', 12)
-        self.output_window = self.config.get('output_window', 12)
-        self.output_dim = self.config.get('output_dim', 0)
         self.batch_size = self.config.get('batch_size', 64)
+        self.cache_dataset = self.config.get('cache_dataset', True)
         self.num_workers = self.config.get('num_workers', 0)
-        self.add_time_in_day = self.config.get('add_time_in_day', False)
-        self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.pad_with_last_sample = self.config.get('pad_with_last_sample', True)
-        self.load_external = self.config.get('load_external', False)
-        self.normal_external = self.config.get('normal_external', False)
-        self.calculate_weight = self.config.get('calculate_weight', False)
-        self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
         self.eval_rate = self.config.get('eval_rate', 0.1)
         self.scaler_type = self.config.get('scaler', 'none')
+        self.load_external = self.config.get('load_external', False)
+        self.normal_external = self.config.get('normal_external', False)
+        self.input_window = self.config.get('input_window', 12)
+        self.output_window = self.config.get('output_window', 12)
+        self.output_dim = self.config.get('output_dim', 0)
+        self.add_time_in_day = self.config.get('add_time_in_day', False)
+        self.add_day_in_week = self.config.get('add_day_in_week', False)
+        self.calculate_weight = self.config.get('calculate_weight', False)
+        self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.parameters_str = str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
                          + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
                          + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
@@ -44,7 +45,6 @@ class TrafficStateDataset(AbstractDataset):
                                             'traffic_state_{}.npz'.format(self.parameters_str))
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         ensure_dir(self.cache_file_folder)
-        self.cache_dataset = self.config.get('cache_dataset', True)
         self.data_path = './raw_data/' + self.dataset + '/'
         if not os.path.exists(self.data_path):
             raise ValueError("Dataset {} not exist! Please ensure the path "

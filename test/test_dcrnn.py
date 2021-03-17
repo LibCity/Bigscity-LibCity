@@ -43,7 +43,7 @@ config = {
     'dropout': 0,
     'epoch': 0,
     'max_epoch': 100,
-    'epsilon': 1.0e-3,
+    'lr_epsilon': 1.0e-3,
     'lr_decay': True,
     'lr_decay_ratio': 0.1,
     'max_grad_norm': 5,
