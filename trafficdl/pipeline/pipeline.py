@@ -25,6 +25,8 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
                           config_file, other_args)
     # logger
     logger = get_logger(config)
+    logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}'.
+                format(str(task), str(model_name), str(dataset_name)))
     # 加载数据集
     dataset = get_dataset(config)
     # 转换数据，并划分数据集

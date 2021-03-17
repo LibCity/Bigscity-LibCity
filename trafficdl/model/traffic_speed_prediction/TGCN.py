@@ -63,13 +63,13 @@ class TGCNCell(nn.Module):
         self.biases = {bias_0.shape: bias_0, bias_1.shape: bias_1}
 
     @staticmethod
-    def _build_sparse_matrix(L, device):
-        L = L.tocoo()
-        indices = np.column_stack((L.row, L.col))
+    def _build_sparse_matrix(lap, device):
+        lap = lap.tocoo()
+        indices = np.column_stack((lap.row, lap.col))
         # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
         indices = indices[np.lexsort((indices[:, 0], indices[:, 1]))]
-        L = torch.sparse_coo_tensor(indices.T, L.data, L.shape, device=device)
-        return L
+        lap = torch.sparse_coo_tensor(indices.T, lap.data, lap.shape, device=device)
+        return lap
 
     def forward(self, inputs, state):
         """ Gated recurrent unit (GRU) with Graph Convolution.
@@ -154,7 +154,7 @@ class TGCN(AbstractTrafficStateModel):
         :return: output: (batch_size, self.output_window, self.num_nodes, self.output_dim)
         """
         inputs = batch['X']
-        labels = batch['y']
+        # labels = batch['y']
 
         batch_size, input_window, num_nodes, input_dim = inputs.shape
         inputs = inputs.permute(1, 0, 2, 3)  # (input_window, batch_size, num_nodes, input_dim)
@@ -172,7 +172,7 @@ class TGCN(AbstractTrafficStateModel):
 
     def calculate_loss(self, batch):
         lam = self.lam
-        Lreg = sum((torch.norm(param) ** 2 / 2) for param in self.parameters())
+        lreg = sum((torch.norm(param) ** 2 / 2) for param in self.parameters())
 
         labels = batch['y']
         y_predicted = self.predict(batch)
@@ -180,7 +180,7 @@ class TGCN(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(labels[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
 
-        loss = torch.mean(torch.norm(y_true - y_predicted) ** 2 / 2) + lam * Lreg
+        loss = torch.mean(torch.norm(y_true - y_predicted) ** 2 / 2) + lam * lreg
         loss /= y_predicted.numel()
         # return loss.masked_mae_torch(y_predicted, y_true, 0)
         return loss

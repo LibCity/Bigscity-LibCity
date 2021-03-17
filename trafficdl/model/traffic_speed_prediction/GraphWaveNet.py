@@ -24,7 +24,7 @@ def asym_adj(adj):
     rowsum = np.array(adj.sum(1)).flatten()
     d_inv = np.power(rowsum, -1).flatten()
     d_inv[np.isinf(d_inv)] = 0.
-    d_mat= sp.diags(d_inv)
+    d_mat = sp.diags(d_inv)
     return d_mat.dot(adj).astype(np.float32).todense()
 
 
@@ -47,41 +47,41 @@ def calculate_normalized_laplacian(adj):
 def calculate_scaled_laplacian(adj_mx, lambda_max=2, undirected=True):
     if undirected:
         adj_mx = np.maximum.reduce([adj_mx, adj_mx.T])
-    L = calculate_normalized_laplacian(adj_mx)
+    lap = calculate_normalized_laplacian(adj_mx)
     if lambda_max is None:
-        lambda_max, _ = linalg.eigsh(L, 1, which='LM')
+        lambda_max, _ = linalg.eigsh(lap, 1, which='LM')
         lambda_max = lambda_max[0]
-    L = sp.csr_matrix(L)
-    M, _ = L.shape
-    I = sp.identity(M, format='csr', dtype=L.dtype)
-    L = (2 / lambda_max * L) - I
-    return L.astype(np.float32).todense()
+    lap = sp.csr_matrix(lap)
+    m, _ = lap.shape
+    identity = sp.identity(m, format='csr', dtype=lap.dtype)
+    lap = (2 / lambda_max * lap) - identity
+    return lap.astype(np.float32).todense()
 
 
-class nconv(nn.Module):
+class NConv(nn.Module):
     def __init__(self):
-        super(nconv, self).__init__()
+        super(NConv, self).__init__()
 
-    def forward(self, x, A):
-        x = torch.einsum('ncvl,vw->ncwl', (x, A))
+    def forward(self, x, adj):
+        x = torch.einsum('ncvl,vw->ncwl', (x, adj))
         return x.contiguous()
 
 
-class linear(nn.Module):
+class Linear(nn.Module):
     def __init__(self, c_in, c_out):
-        super(linear, self).__init__()
+        super(Linear, self).__init__()
         self.mlp = torch.nn.Conv2d(c_in, c_out, kernel_size=(1, 1), padding=(0, 0), stride=(1, 1), bias=True)
 
     def forward(self, x):
         return self.mlp(x)
 
 
-class gcn(nn.Module):
+class GCN(nn.Module):
     def __init__(self, c_in, c_out, dropout, support_len=3, order=2):
-        super(gcn, self).__init__()
-        self.nconv = nconv()
+        super(GCN, self).__init__()
+        self.nconv = NConv()
         c_in = (order*support_len+1)*c_in
-        self.mlp = linear(c_in, c_out)
+        self.mlp = Linear(c_in, c_out)
         self.dropout = dropout
         self.order = order
 
@@ -199,7 +199,7 @@ class GWNET(AbstractTrafficStateModel):
                 receptive_field += additional_scope
                 additional_scope *= 2
                 if self.gcn_bool:
-                    self.gconv.append(gcn(self.dilation_channels, self.residual_channels,
+                    self.gconv.append(GCN(self.dilation_channels, self.residual_channels,
                                           self.dropout, support_len=self.supports_len))
 
         self.end_conv_1 = nn.Conv2d(in_channels=self.skip_channels,

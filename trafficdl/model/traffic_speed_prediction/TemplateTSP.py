@@ -46,7 +46,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         # 1.取数据，假设字典中有4类数据，X,y,X_ext,y_ext
         # 当然一般只需要取输入数据，例如X,X_ext，因为这个函数是用来计算输出的
         # 模型输入的数据的特征维度应该等于self.feature_dim
-        x = batch['X']  # shape = (batch_size, input_length, ..., feature_dim)
+        # x = batch['X']  # shape = (batch_size, input_length, ..., feature_dim)
         # 例如: y = batch['y'] / X_ext = batch['X_ext'] / y_ext = batch['y_ext']]
         # 2.根据输入数据计算模型的输出结果
         # 模型输出的结果的特征维度应该等于self.output_dim

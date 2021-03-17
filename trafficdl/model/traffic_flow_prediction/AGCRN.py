@@ -67,9 +67,11 @@ class AVWDCRNN(nn.Module):
         assert self.num_layers >= 1, 'At least one DCRNN layer in the Encoder.'
 
         self.dcrnn_cells = nn.ModuleList()
-        self.dcrnn_cells.append(AGCRNCell(self.num_nodes, self.feature_dim, self.hidden_dim, self.cheb_k, self.embed_dim))
+        self.dcrnn_cells.append(AGCRNCell(self.num_nodes, self.feature_dim,
+                                          self.hidden_dim, self.cheb_k, self.embed_dim))
         for _ in range(1, self.num_layers):
-            self.dcrnn_cells.append(AGCRNCell(self.num_nodes, self.hidden_dim, self.hidden_dim, self.cheb_k, self.embed_dim))
+            self.dcrnn_cells.append(AGCRNCell(self.num_nodes, self.hidden_dim,
+                                              self.hidden_dim, self.cheb_k, self.embed_dim))
 
     def forward(self, x, init_state, node_embeddings):
         # shape of x: (B, T, N, D)
