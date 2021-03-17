@@ -1,6 +1,6 @@
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_model
+from trafficdl.utils import get_model, get_executor
 
 # 加载配置文件
 config = ConfigParser(task='traj_loc_pred', model='TemplateTLP',
@@ -23,3 +23,5 @@ self = model.to(config['device'])
 batch.to_tensor(config['device'])
 res = model.predict(batch)
 # 请自行确认 res 的 shape 是否符合赛道的约束
+# 如果要加载执行器的话
+executor = get_executor(config, model)
