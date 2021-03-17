@@ -101,8 +101,9 @@ class ConfigParser(object):
             with open('./trafficdl/config/{}'.format(file_name), 'r') as f:
                 x = json.load(f)
                 for key in x:
-                    if key not in self.config:
-                        self.config[key] = x[key]
+                    self.config[key] = x[key]
+                    # if key not in self.config:
+                    #     self.config[key] = x[key]
 
     def _init_device(self):
         use_gpu = self.config.get('gpu', True)

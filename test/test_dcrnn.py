@@ -40,7 +40,6 @@ config = {
     'learning_rate': 0.01,
     'learner': 'adam',
     'weight_decay': 0,
-    'dropout': 0,
     'epoch': 0,
     'max_epoch': 100,
     'lr_epsilon': 1.0e-3,

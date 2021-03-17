@@ -1,0 +1,22 @@
+{
+  "embed_dim": 10,
+  "rnn_units": 64,
+  "num_layers": 2,
+  "cheb_order": 2,
+
+  "scaler": "standard",
+  "pad_with_last_sample": false,
+  "calculate_weight": true,
+  "load_external": false,
+  "normal_external": false,
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.003,
+  "lr_decay": false,
+  "clip_grad_norm": false,
+  "use_early_stop": true,
+  "patience": 50
+}

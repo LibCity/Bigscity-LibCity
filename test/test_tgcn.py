@@ -35,7 +35,6 @@ config = {
 
     'learning_rate': 0.001,
     'learner': 'adam',
-    'dropout': 0,
     'epoch': 0,
     'max_epoch': 5000,
     'lr_decay': False,

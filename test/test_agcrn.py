@@ -38,7 +38,6 @@ config = {
     'num_layers': 2,
     'cheb_order': 2,
 
-    'seed': 10,
     'train_rate': 0.7,
     'eval_rate': 0.1,
     'learning_rate': 0.003,
