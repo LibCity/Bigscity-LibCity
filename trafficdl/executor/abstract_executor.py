@@ -1,4 +1,3 @@
-
 class AbstractExecutor(object):
 
     def __init__(self, config, model):

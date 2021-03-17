@@ -72,13 +72,12 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         return ext_x, ext_y
 
     def get_data_feature(self):
-        '''
+        """
         返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是网格的个数，
                       len_row是网格的行数，len_column是网格的列数，
                      feature_dim是输入数据的维度，output_dim是模型输出的维度
-        return:
-            data_feature (dict)
-        '''
+        :return: data_feature (dict)
+        """
         lp = self.len_period * (self.pad_forward_period + self.pad_back_period + 1)
         lt = self.len_trend * (self.pad_forward_trend + self.pad_back_trend + 1)
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,

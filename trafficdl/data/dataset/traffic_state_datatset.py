@@ -21,21 +21,22 @@ class TrafficStateDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         self.dataset = self.config.get('dataset', '')
-        self.input_window = self.config.get('input_window', 12)
-        self.output_window = self.config.get('output_window', 12)
-        self.output_dim = self.config.get('output_dim', 0)
         self.batch_size = self.config.get('batch_size', 64)
+        self.cache_dataset = self.config.get('cache_dataset', True)
         self.num_workers = self.config.get('num_workers', 0)
-        self.add_time_in_day = self.config.get('add_time_in_day', False)
-        self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.pad_with_last_sample = self.config.get('pad_with_last_sample', True)
-        self.load_external = self.config.get('load_external', False)
-        self.normal_external = self.config.get('normal_external', False)
-        self.calculate_weight = self.config.get('calculate_weight', False)
-        self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.train_rate = self.config.get('train_rate', 0.7)
         self.eval_rate = self.config.get('eval_rate', 0.1)
         self.scaler_type = self.config.get('scaler', 'none')
+        self.load_external = self.config.get('load_external', False)
+        self.normal_external = self.config.get('normal_external', False)
+        self.input_window = self.config.get('input_window', 12)
+        self.output_window = self.config.get('output_window', 12)
+        self.output_dim = self.config.get('output_dim', 0)
+        self.add_time_in_day = self.config.get('add_time_in_day', False)
+        self.add_day_in_week = self.config.get('add_day_in_week', False)
+        self.calculate_weight = self.config.get('calculate_weight', False)
+        self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
         self.parameters_str = str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
                          + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
                          + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
@@ -44,7 +45,6 @@ class TrafficStateDataset(AbstractDataset):
                                             'traffic_state_{}.npz'.format(self.parameters_str))
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         ensure_dir(self.cache_file_folder)
-        self.cache_dataset = self.config.get('cache_dataset', True)
         self.data_path = './raw_data/' + self.dataset + '/'
         if not os.path.exists(self.data_path):
             raise ValueError("Dataset {} not exist! Please ensure the path "
@@ -84,8 +84,8 @@ class TrafficStateDataset(AbstractDataset):
         self.geo_ids = list(geofile['geo_id'])
         self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
-        for index, id in enumerate(self.geo_ids):
-            self.geo_to_ind[id] = index
+        for index, idx in enumerate(self.geo_ids):
+            self.geo_to_ind[idx] = index
         self._logger.info("Loaded file " + self.geo_file + '.geo' + ', num_nodes=' + str(len(self.geo_ids)))
 
     def _load_grid_geo(self):
@@ -98,8 +98,8 @@ class TrafficStateDataset(AbstractDataset):
         self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
         self.geo_to_rc = {}
-        for index, id in enumerate(self.geo_ids):
-            self.geo_to_ind[id] = index
+        for index, idx in enumerate(self.geo_ids):
+            self.geo_to_ind[idx] = index
         for i in range(geofile.shape[0]):
             self.geo_to_rc[geofile['geo_id'][i]] = [geofile['row_id'][i], geofile['column_id'][i]]
         self.len_row = max(list(geofile['row_id'])) + 1
@@ -149,11 +149,11 @@ class TrafficStateDataset(AbstractDataset):
         :return: N*N的邻接矩阵 self.adj_mx
         """
         self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
-        dir = [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
+        dirs = [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
         for i in range(self.len_row):
             for j in range(self.len_column):
                 index = i * self.len_column + j  # grid_id
-                for d in dir:
+                for d in dirs:
                     nei_i = i + d[0]
                     nei_j = j + d[1]
                     if nei_i >= 0 and nei_i < self.len_row and nei_j >= 0 and nei_j < self.len_column:
@@ -165,7 +165,7 @@ class TrafficStateDataset(AbstractDataset):
     def _calculate_adjacency_matrix(self):
         """
         使用带有阈值的高斯核计算邻接矩阵的权重，如果有其他的计算方法，可以覆盖这个函数
-        公式为：$  w_{ij} = \exp \left(- \frac{d_{ij}^{2}}{\sigma^{2}}\right) $, $\sigma$ 是方差
+        公式为：$ w_{ij} = \exp \left(- \frac{d_{ij}^{2}}{\sigma^{2}}\right) $, $\sigma$ 是方差
         小于阈值`adj_epsilon`的值设为0：$  w_{ij}[w_{ij}<\epsilon]=0 $
         :return:
         """
@@ -710,15 +710,11 @@ class TrafficStateDataset(AbstractDataset):
         根据全局参数`scaler_type`选择数据归一化方法
         :param x_train:
         :param y_train:
-        :param x_val:
-        :param y_val:
-        :param x_test:
-        :param y_test:
         :return: scaler
         """
         if self.scaler_type == "normal":
             scaler = NormalScaler(
-                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()))
+                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()))
             self._logger.info('NormalScaler max: ' + str(scaler.max))
         elif self.scaler_type == "standard":
             scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
@@ -726,13 +722,13 @@ class TrafficStateDataset(AbstractDataset):
             self._logger.info('StandardScaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
         elif self.scaler_type == "minmax01":
             scaler = MinMax01Scaler(
-                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
-                min=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
+                minn=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
             self._logger.info('MinMax01Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
         elif self.scaler_type == "minmax11":
             scaler = MinMax11Scaler(
-                max=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
-                min=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
+                minn=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
             self._logger.info('MinMax11Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
         elif self.scaler_type == "none":
             scaler = NoneScaler()

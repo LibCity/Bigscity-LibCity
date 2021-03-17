@@ -95,7 +95,7 @@ def timestamp2array(timestamps, t):
     把时间戳的序列中的每一个时间戳转成特征数组，考虑了星期和小时
     时间戳: numpy.datetime64('2013-07-01T00:00:00.000000000')
     :param timestamps: 时间戳序列
-    :param T: 一天有多少个时间步
+    :param t: 一天有多少个时间步
     :return: len(timestamps) * ext_dim
     """
     vec_wday = [time.strptime(

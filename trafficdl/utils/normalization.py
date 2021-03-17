@@ -28,8 +28,8 @@ class NormalScaler(Scaler):
     x = x / x.max
     """
 
-    def __init__(self, max):
-        self.max = max
+    def __init__(self, maxx):
+        self.max = maxx
 
     def transform(self, data):
         return data / self.max
@@ -61,9 +61,9 @@ class MinMax01Scaler(Scaler):
     x = (x - min) / (max - min)
     """
 
-    def __init__(self, min, max):
-        self.min = min
-        self.max = max
+    def __init__(self, minn, maxx):
+        self.min = minn
+        self.max = maxx
 
     def transform(self, x):
         return (x - self.min) / (self.max - self.min)
@@ -79,9 +79,9 @@ class MinMax11Scaler(Scaler):
     x = x * 2 - 1
     """
 
-    def __init__(self, min, max):
-        self.min = min
-        self.max = max
+    def __init__(self, minn, maxx):
+        self.min = minn
+        self.max = maxx
 
     def transform(self, x):
         return ((x - self.min) / (self.max - self.min)) * 2. - 1.

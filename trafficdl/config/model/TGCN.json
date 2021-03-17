@@ -1,0 +1,18 @@
+{
+  "rnn_units": 100,
+  "lambda": 0.0015,
+
+  "scaler": "normal",
+  "calculate_weight": false,
+  "load_external": false,
+  "normal_external": false,
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+
+  "max_epoch": 5000,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_decay": false,
+  "clip_grad_norm": false,
+  "use_early_stop": false
+}

@@ -11,7 +11,6 @@ class TrafficStateGridDataset(TrafficStateDataset):
         self.parameters_str = self.parameters_str + '_' + str(self.use_row_column)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
                                             'grid_based_{}.npz'.format(self.parameters_str))
-        self.use_row_column = self.config.get('use_row_column', True)
         self._load_rel()  # don't care whether there is a .rel file
 
     def _load_geo(self):
@@ -54,13 +53,12 @@ class TrafficStateGridDataset(TrafficStateDataset):
             return super()._add_external_information_3d(df, ext_data)
 
     def get_data_feature(self):
-        '''
+        """
         返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是网格的个数，
                       len_row是网格的行数，len_column是网格的列数，
                      feature_dim是输入数据的维度，output_dim是模型输出的维度
-        return:
-            data_feature (dict)
-        '''
+        :return: data_feature (dict)
+        """
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
                 "output_dim": self.output_dim, "len_row": self.len_row, "len_column": self.len_column}

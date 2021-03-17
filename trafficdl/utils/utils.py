@@ -38,15 +38,17 @@ def get_logger(config, name=None):
 
     logger = logging.getLogger(name)
 
-    if config['log_level'] is None or config['log_level'].lower() == 'info':
+    log_level = config.get('log_level', 'INFO')
+
+    if log_level.lower() == 'info':
         level = logging.INFO
-    elif config['log_level'].lower() == 'debug':
+    elif log_level.lower() == 'debug':
         level = logging.DEBUG
-    elif config['log_level'].lower() == 'error':
+    elif log_level.lower() == 'error':
         level = logging.ERROR
-    elif config['log_level'].lower() == 'warning':
+    elif log_level.lower() == 'warning':
         level = logging.WARNING
-    elif config['log_level'].lower() == 'critical':
+    elif log_level.lower() == 'critical':
         level = logging.CRITICAL
     else:
         level = logging.INFO

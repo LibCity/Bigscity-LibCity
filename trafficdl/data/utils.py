@@ -26,10 +26,11 @@ def generate_dataloader(train_data, eval_data, test_data, feature_name,
                         pad_with_last_sample=False):
     """
     Args:
-        train_data, eval_data, test_data (list of input):
+        train_data: (list of input)
+        eval_data: (list of input)
+        test_data: (list of input)
         data 中每个元素是模型单次的输入，input 是一个 list，里面存放单次输入和 target
-        feature_name (dict): 描述上面 input 每个元素对应的特征名, 应保证
-        len(feature_name) = len(input)
+        feature_name (dict): 描述上面 input 每个元素对应的特征名, 应保证len(feature_name) = len(input)
         batch_size (int)
         num_workers (int)
         pad_item (dict): 用于将不定长的特征补齐到一样的长度，每个特征名作为 key，若某特征名不在该 dict 内则不进行补齐。

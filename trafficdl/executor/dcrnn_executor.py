@@ -35,7 +35,8 @@ class DCRNNExecutor(TrafficStateExecutor):
                 else:
                     log_lr = self.learning_rate
                 message = 'Epoch [{}/{}] ({}) train_mae: {:.4f}, val_mae: {:.4f}, lr: {:.6f}, {:.1f}s'. \
-                    format(epoch_idx, self.epochs, batches_seen, np.mean(losses), val_loss, log_lr, (end_time - start_time))
+                    format(epoch_idx, self.epochs, batches_seen, np.mean(losses), val_loss,
+                           log_lr, (end_time - start_time))
                 self._logger.info(message)
 
             if val_loss < min_val_loss:

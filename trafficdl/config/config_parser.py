@@ -86,16 +86,13 @@ class ConfigParser(object):
                     self.config['task'], self.config['dataset']))
         # 接着加载每个阶段的 default config
         default_file_list = []
-        default_file_list.append(
-            'data/{}.json'.format(self.config['dataset_class']))
-        # executor
-        default_file_list.append(
-            'executor/{}.json'.format(self.config['executor']))
-        # evaluator
-        default_file_list.append(
-            'evaluator/{}.json'.format(self.config['evaluator']))
         # model
         default_file_list.append('model/{}.json'.format(self.config['model']))
+        default_file_list.append('data/{}.json'.format(self.config['dataset_class']))
+        # executor
+        default_file_list.append('executor/{}.json'.format(self.config['executor']))
+        # evaluator
+        default_file_list.append('evaluator/{}.json'.format(self.config['evaluator']))
         # 加载所有默认配置
         for file_name in default_file_list:
             with open('./trafficdl/config/{}'.format(file_name), 'r') as f:
@@ -105,11 +102,15 @@ class ConfigParser(object):
                         self.config[key] = x[key]
 
     def _init_device(self):
-        use_gpu = self.config['gpu']
+        use_gpu = self.config.get('gpu', True)
+        gpu_id = self.config.get('gpu_id', 0)
         if use_gpu:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(self.config['gpu_id'])
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
         self.config['device'] = torch.device(
             "cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+
+    def get(self, key, default=None):
+        return self.config.get(key, default)
 
     def __getitem__(self, key):
         if key in self.config:
@@ -118,10 +119,7 @@ class ConfigParser(object):
             raise KeyError('{} is not in the config'.format(key))
 
     def __setitem__(self, key, value):
-        if key in self.config:
-            self.config[key] = value
-        else:
-            raise KeyError('{} is not in the config'.format(key))
+        self.config[key] = value
 
     def __contains__(self, key):
         return key in self.config

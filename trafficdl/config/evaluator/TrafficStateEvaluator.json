@@ -1,0 +1,4 @@
+{
+  "metrics": ["MAE", "MAPE", "MSE", "RMSE", "masked_MAE", "masked_MSE", "masked_RMSE", "masked_MAPE", "R2", "EVAR"],
+  "mode": "average"
+}
