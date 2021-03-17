@@ -41,15 +41,15 @@ def calculate_reverse_random_walk_matrix(adj_mx):
 def calculate_scaled_laplacian(adj_mx, lambda_max=2, undirected=True):
     if undirected:
         adj_mx = np.maximum.reduce([adj_mx, adj_mx.T])
-    L = calculate_normalized_laplacian(adj_mx)
+    lap = calculate_normalized_laplacian(adj_mx)
     if lambda_max is None:
-        lambda_max, _ = linalg.eigsh(L, 1, which='LM')
+        lambda_max, _ = linalg.eigsh(lap, 1, which='LM')
         lambda_max = lambda_max[0]
-    L = sp.csr_matrix(L)
-    M, _ = L.shape
-    I = sp.identity(M, format='csr', dtype=L.dtype)
-    L = (2 / lambda_max * L) - I
-    return L.astype(np.float32)
+    lap = sp.csr_matrix(lap)
+    m, _ = lap.shape
+    identity = sp.identity(m, format='csr', dtype=lap.dtype)
+    lap = (2 / lambda_max * lap) - identity
+    return lap.astype(np.float32)
 
 
 def count_parameters(model):
@@ -194,13 +194,13 @@ class DCGRUCell(nn.Module):
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0)
 
     @staticmethod
-    def _build_sparse_matrix(L, device):
-        L = L.tocoo()
-        indices = np.column_stack((L.row, L.col))
+    def _build_sparse_matrix(lap, device):
+        lap = lap.tocoo()
+        indices = np.column_stack((lap.row, lap.col))
         # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
         indices = indices[np.lexsort((indices[:, 0], indices[:, 1]))]
-        L = torch.sparse_coo_tensor(indices.T, L.data, L.shape, device=device)
-        return L
+        lap = torch.sparse_coo_tensor(indices.T, lap.data, lap.shape, device=device)
+        return lap
 
     def forward(self, inputs, hx):
         """Gated recurrent unit (GRU) with Graph Convolution.

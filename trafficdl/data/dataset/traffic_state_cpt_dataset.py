@@ -59,12 +59,14 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         # ts_y: (num_samples, )
         """
         # 求三段相对于预测位置（即y）的偏移距离
-        T = self.points_per_hour * 24  # 每天的时间片数
+        tday = self.points_per_hour * 24  # 每天的时间片数
         r_c = range(1, self.len_closeness + 1)
-        rl_p = [range(self.interval_period * T * i - self.pad_forward_period,
-                      self.interval_period * T * i + self.pad_back_period + 1) for i in range(1, self.len_period + 1)]
-        rl_t = [range(self.interval_trend * T * i - self.pad_forward_trend,
-                      self.interval_trend * T * i + self.pad_back_trend + 1) for i in range(1, self.len_trend + 1)]
+        rl_p = [range(self.interval_period * tday * i - self.pad_forward_period,
+                      self.interval_period * tday * i + self.pad_back_period + 1)
+                for i in range(1, self.len_period + 1)]
+        rl_t = [range(self.interval_trend * tday * i - self.pad_forward_trend,
+                      self.interval_trend * tday * i + self.pad_back_trend + 1)
+                for i in range(1, self.len_trend + 1)]
         # print('time index', r_c, rl_p, rl_t)
         offset_mat = \
             [
@@ -265,7 +267,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
             )
             self._logger.info('Saved at ' + self.cache_file_name)
         return x_train, y_train, x_val, y_val, x_test, y_test, \
-                ext_x_train, ext_y_train, ext_x_test, ext_y_test, ext_x_val, ext_y_val
+            ext_x_train, ext_y_train, ext_x_test, ext_y_test, ext_x_val, ext_y_val
 
     def _generate_train_val_test(self):
         """
@@ -302,7 +304,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         self._logger.info("test\t" + "x: " + str(x_test.shape) + ",y: " + str(y_test.shape)
                           + ",x_ext: " + str(ext_x_test.shape) + ",y_ext: " + str(ext_y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test, \
-               ext_x_train, ext_y_train, ext_x_test, ext_y_test, ext_x_val, ext_y_val
+            ext_x_train, ext_y_train, ext_x_test, ext_y_test, ext_x_val, ext_y_val
 
     def get_data(self):
         """

@@ -61,6 +61,7 @@ class TGCLSTM(AbstractTrafficStateModel):
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.out_features = self.output_dim * self.num_nodes
         self.K = config.get('K_hop_numbers', 3)
+        self.back_length = config.get('back_length', 3)
         self.dataset_class = config.get('dataset_class', 'TrafficSpeedDataset')
         self.scaler_type = config.get('scaler', 'standard')
         self.device = config.get('device', torch.device('cpu'))
@@ -71,18 +72,19 @@ class TGCLSTM(AbstractTrafficStateModel):
         adj_mx[adj_mx > 1e-4] = 1
         adj_mx[adj_mx <= 1e-4] = 0
 
-        A = torch.FloatTensor(adj_mx).to(self.device)
-        A_temp = torch.eye(self.num_nodes, self.num_nodes, device=self.device)
+        adj = torch.FloatTensor(adj_mx).to(self.device)
+        adj_temp = torch.eye(self.num_nodes, self.num_nodes, device=self.device)
         for i in range(self.K):
-            A_temp = torch.matmul(A_temp, A)
+            adj_temp = torch.matmul(adj_temp, adj)
             if config.get('Clamp_A', True):
                 # confine elements of A
-                A_temp = torch.clamp(A_temp, max=1.)
+                adj_temp = torch.clamp(adj_temp, max=1.)
             if self.dataset_class == "TGCLSTMDataset":
                 self.A_list.append(
-                    torch.mul(A_temp, torch.Tensor(data_feature['FFR'][config.get('back_length', 3)]).to(self.device)))
+                    torch.mul(adj_temp, torch.Tensor(data_feature['FFR'][self.back_length])
+                              .to(self.device)))
             else:
-                self.A_list.append(A_temp)
+                self.A_list.append(adj_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
         self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim, self.in_features,
@@ -102,30 +104,30 @@ class TGCLSTM(AbstractTrafficStateModel):
         stdv = 1. / math.sqrt(self.out_features)
         self.Neighbor_weight.data.uniform_(-stdv, stdv)
 
-    def step(self, input, Hidden_State, Cell_State):
+    def step(self, input, hidden_state, cell_state):
         x = input  # [batch_size, in_features]
 
         gc = self.gc_list[0](x)  # [batch_size, out_features]
         for i in range(1, self.K):
             gc = torch.cat((gc, self.gc_list[i](x)), 1)  # [batch_size, out_features * K]
 
-        combined = torch.cat((gc, Hidden_State), 1)  # [batch_size, out_features * (K+1)]
+        combined = torch.cat((gc, hidden_state), 1)  # [batch_size, out_features * (K+1)]
         # fl: nn.linear(out_features * (K+1), out_features)
         f = torch.sigmoid(self.fl(combined))
         i = torch.sigmoid(self.il(combined))
         o = torch.sigmoid(self.ol(combined))
-        C = torch.tanh(self.Cl(combined))
+        c_ = torch.tanh(self.Cl(combined))
 
-        NC = torch.matmul(Cell_State, torch.mul(
+        nc = torch.matmul(cell_state, torch.mul(
             Variable(self.A_list[-1].repeat(self.output_dim, self.output_dim), requires_grad=False).to(self.device),
             self.Neighbor_weight))
 
-        Cell_State = f * NC + i * C  # [batch_size, out_features]
-        Hidden_State = o * torch.tanh(Cell_State)  # [batch_size, out_features]
+        cell_state = f * nc + i * c_  # [batch_size, out_features]
+        hidden_state = o * torch.tanh(cell_state)  # [batch_size, out_features]
 
-        return Hidden_State, Cell_State, gc
+        return hidden_state, cell_state, gc
 
-    def Bi_torch(self, a):
+    def bi_torch(self, a):
         a[a < 0] = 0
         a[a > 0] = 1
         return a
@@ -134,18 +136,18 @@ class TGCLSTM(AbstractTrafficStateModel):
         inputs = batch['X']  # [batch_size,  input_window, num_nodes, input_dim]
         batch_size = inputs.size(0)
         time_step = inputs.size(1)
-        Hidden_State, Cell_State = self.initHidden(batch_size)  # [batch_size, out_features]
+        hidden_state, cell_state = self.init_hidden(batch_size)  # [batch_size, out_features]
 
         outputs = None
 
         for i in range(time_step):
             input = torch.squeeze(torch.transpose(inputs[:, i:i + 1, :, :], 2, 3)).reshape(batch_size, -1)
-            Hidden_State, Cell_State, gc = self.step(input, Hidden_State, Cell_State)
+            hidden_state, cell_state, gc = self.step(input, hidden_state, cell_state)
             # gc: [batch_size, out_features * K]
             if outputs is None:
-                outputs = Hidden_State.unsqueeze(1)  # [batch_size, 1, out_features]
+                outputs = hidden_state.unsqueeze(1)  # [batch_size, 1, out_features]
             else:
-                outputs = torch.cat((outputs, Hidden_State.unsqueeze(1)), 1)  # [batch_size, input_window, out_features]
+                outputs = torch.cat((outputs, hidden_state.unsqueeze(1)), 1)  # [batch_size, input_window, out_features]
         output = torch.transpose(torch.squeeze(outputs[:, -1, :]).reshape(batch_size, self.output_dim, self.num_nodes),
                                  1, 2).unsqueeze(1)
         return output  # [batch_size, 1, num_nodes, out_dim]
@@ -173,7 +175,7 @@ class TGCLSTM(AbstractTrafficStateModel):
         y_preds = torch.cat(y_preds, dim=1)  # [batch_size, output_window, batch_size, output_dim]
         return y_preds
 
-    def initHidden(self, batch_size):
-        Hidden_State = Variable(torch.zeros(batch_size, self.out_features).to(self.device))
-        Cell_State = Variable(torch.zeros(batch_size, self.out_features).to(self.device))
-        return Hidden_State, Cell_State
+    def init_hidden(self, batch_size):
+        hidden_state = Variable(torch.zeros(batch_size, self.out_features).to(self.device))
+        cell_state = Variable(torch.zeros(batch_size, self.out_features).to(self.device))
+        return hidden_state, cell_state

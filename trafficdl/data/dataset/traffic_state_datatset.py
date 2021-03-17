@@ -37,10 +37,11 @@ class TrafficStateDataset(AbstractDataset):
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.calculate_weight = self.config.get('calculate_weight', False)
         self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
-        self.parameters_str = str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
-                         + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
-                         + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
-                         + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
+        self.parameters_str = \
+            str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
+            + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
+            + str(self.batch_size) + '_' + str(self.add_time_in_day) + '_' \
+            + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
                                             'traffic_state_{}.npz'.format(self.parameters_str))
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'

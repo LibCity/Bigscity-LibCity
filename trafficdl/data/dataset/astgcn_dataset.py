@@ -17,13 +17,14 @@ class ASTGCNDataset(TrafficStatePointDataset):
         self.interval_period = self.config.get('interval_period', 1)  # period的长度/天
         self.interval_trend = self.config.get('interval_trend', 7)    # trend的长度/天
         self.feature_name = {'X': 'float', 'y': 'float'}
-        self.parameters_str = str(self.dataset) + '_' + str(self.len_closeness) \
-                              + '_' + str(self.len_period) + '_' + str(self.len_trend) \
-                              + '_' + str(self.interval_period) + '_' + str(self.interval_trend) \
-                              + '_' + str(self.output_window) + '_' + str(self.train_rate) \
-                              + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) \
-                              + '_' + str(self.batch_size) + '_' + str(self.add_time_in_day) \
-                              + '_' + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
+        self.parameters_str = \
+            str(self.dataset) + '_' + str(self.len_closeness) \
+            + '_' + str(self.len_period) + '_' + str(self.len_trend) \
+            + '_' + str(self.interval_period) + '_' + str(self.interval_trend) \
+            + '_' + str(self.output_window) + '_' + str(self.train_rate) \
+            + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) \
+            + '_' + str(self.batch_size) + '_' + str(self.add_time_in_day) \
+            + '_' + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
         self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 

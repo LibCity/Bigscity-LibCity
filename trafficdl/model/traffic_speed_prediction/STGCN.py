@@ -9,64 +9,64 @@ from trafficdl.model import loss
 from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
-def calculate_scaled_laplacian(A):
+def calculate_scaled_laplacian(adj):
     """
-    :param A: adj matrix
+    :param adj: adj matrix
     L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
     L' = 2L/lambda - I
     :return: L'
     """
-    n = A.shape[0]
-    d = np.sum(A, axis=1)  # D
-    L = np.diag(d) - A     # L=D-A
+    n = adj.shape[0]
+    d = np.sum(adj, axis=1)  # D
+    lap = np.diag(d) - adj     # L=D-A
     for i in range(n):
         for j in range(n):
             if d[i] > 0 and d[j] > 0:
-                L[i, j] /= np.sqrt(d[i] * d[j])
-    lam = np.linalg.eigvals(L).max().real
-    return 2 * L / lam - np.eye(n)
+                lap[i, j] /= np.sqrt(d[i] * d[j])
+    lam = np.linalg.eigvals(lap).max().real
+    return 2 * lap / lam - np.eye(n)
 
 
-def calculate_cheb_poly(L, Ks):
+def calculate_cheb_poly(lap, ks):
     """
-    :param L: scaled laplacian matrix
-    :param Ks: k-order
+    :param lap: scaled laplacian matrix
+    :param ks: k-order
     :return: k-order Chebyshev polynomials : T0(L)~Tk(L)
     T0(L)=I/1 T1(L)=L Tk(L)=2LTk-1(L)-Tk-2(L)
     """
-    n = L.shape[0]
-    LL = [np.eye(n), L[:]]
-    for i in range(2, Ks):
-        LL.append(np.matmul(2 * L, LL[-1]) - LL[-2])
-    if Ks == 0:
+    n = lap.shape[0]
+    lap_list = [np.eye(n), lap[:]]
+    for i in range(2, ks):
+        lap_list.append(np.matmul(2 * lap, lap_list[-1]) - lap_list[-2])
+    if ks == 0:
         raise ValueError('Ks must bigger than 0!')
-    if Ks == 1:
-        return np.asarray(LL[0:1])  # 1*n*n
+    if ks == 1:
+        return np.asarray(lap_list[0:1])  # 1*n*n
     else:
-        return np.asarray(LL)       # Ks*n*n
+        return np.asarray(lap_list)       # Ks*n*n
 
 
-def calculate_first_approx(W):
+def calculate_first_approx(weight):
     '''
     1st-order approximation function.
     :param W: weighted adjacency matrix of G. Not laplacian matrix.
     :return: np.ndarray
     '''
     # TODO: 如果W对角线本来就是全1？
-    n = W.shape[0]
-    A = W + np.identity(n)
-    d = np.sum(A, axis=1)
-    # sinvD = np.sqrt(np.mat(np.diag(d)).I)
-    # return np.array(sinvD * A * sinvD)
-    sinvD = np.sqrt(np.linalg.inv(np.diag(d)))
-    L = np.matmul(np.matmul(sinvD, A), sinvD)  # n*n
-    L = np.expand_dims(L, axis=0)              # 1*n*n
-    return L
+    n = weight.shape[0]
+    adj = weight + np.identity(n)
+    d = np.sum(adj, axis=1)
+    # sinvd = np.sqrt(np.mat(np.diag(d)).I)
+    # return np.array(sinvd * A * sinvd)
+    sinvd = np.sqrt(np.linalg.inv(np.diag(d)))
+    lap = np.matmul(np.matmul(sinvd, adj), sinvd)  # n*n
+    lap = np.expand_dims(lap, axis=0)              # 1*n*n
+    return lap
 
 
-class align(nn.Module):
+class Align(nn.Module):
     def __init__(self, c_in, c_out):
-        super(align, self).__init__()
+        super(Align, self).__init__()
         self.c_in = c_in
         self.c_out = c_out
         if c_in > c_out:
@@ -80,13 +80,13 @@ class align(nn.Module):
         return x  # return: (batch_size, c_out, input_length-1+1, num_nodes-1+1)
 
 
-class temporal_conv_layer(nn.Module):
+class TemporalConvLayer(nn.Module):
     def __init__(self, kt, c_in, c_out, act="relu"):
-        super(temporal_conv_layer, self).__init__()
+        super(TemporalConvLayer, self).__init__()
         self.kt = kt
         self.act = act
         self.c_out = c_out
-        self.align = align(c_in, c_out)
+        self.align = Align(c_in, c_out)
         if self.act == "GLU":
             self.conv = nn.Conv2d(c_in, c_out * 2, (kt, 1), 1)
         else:
@@ -110,13 +110,13 @@ class temporal_conv_layer(nn.Module):
         return torch.relu(self.conv(x) + x_in)  # residual connection
 
 
-class spatio_conv_layer(nn.Module):
-    def __init__(self, ks, c_in, c_out, Lk, device):
-        super(spatio_conv_layer, self).__init__()
-        self.Lk = Lk
+class SpatioConvLayer(nn.Module):
+    def __init__(self, ks, c_in, c_out, lk, device):
+        super(SpatioConvLayer, self).__init__()
+        self.Lk = lk
         self.theta = nn.Parameter(torch.FloatTensor(c_in, c_out, ks).to(device))  # kernel: C_in*C_out*ks
         self.b = nn.Parameter(torch.FloatTensor(1, c_out, 1, 1).to(device))
-        self.align = align(c_in, c_out)
+        self.align = Align(c_in, c_out)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -137,12 +137,12 @@ class spatio_conv_layer(nn.Module):
         return torch.relu(x_gc + x_in)  # residual connection
 
 
-class st_conv_block(nn.Module):
-    def __init__(self, ks, kt, n, c, p, Lk, device):
-        super(st_conv_block, self).__init__()
-        self.tconv1 = temporal_conv_layer(kt, c[0], c[1], "GLU")
-        self.sconv = spatio_conv_layer(ks, c[1], c[1], Lk, device)
-        self.tconv2 = temporal_conv_layer(kt, c[1], c[2])
+class STConvBlock(nn.Module):
+    def __init__(self, ks, kt, n, c, p, lk, device):
+        super(STConvBlock, self).__init__()
+        self.tconv1 = TemporalConvLayer(kt, c[0], c[1], "GLU")
+        self.sconv = SpatioConvLayer(ks, c[1], c[1], lk, device)
+        self.tconv2 = TemporalConvLayer(kt, c[1], c[2])
         self.ln = nn.LayerNorm([n, c[2]])
         self.dropout = nn.Dropout(p)
 
@@ -154,22 +154,22 @@ class st_conv_block(nn.Module):
         return self.dropout(x_ln)
 
 
-class fully_conv_layer(nn.Module):
+class FullyConvLayer(nn.Module):
     def __init__(self, c, out_dim):
-        super(fully_conv_layer, self).__init__()
+        super(FullyConvLayer, self).__init__()
         self.conv = nn.Conv2d(c, out_dim, 1)  # c,self.output_dim,1
 
     def forward(self, x):
         return self.conv(x)
 
 
-class output_layer(nn.Module):
-    def __init__(self, c, T, n, out_dim):
-        super(output_layer, self).__init__()
-        self.tconv1 = temporal_conv_layer(T, c, c, "GLU")
+class OutputLayer(nn.Module):
+    def __init__(self, c, t, n, out_dim):
+        super(OutputLayer, self).__init__()
+        self.tconv1 = TemporalConvLayer(t, c, c, "GLU")
         self.ln = nn.LayerNorm([n, c])
-        self.tconv2 = temporal_conv_layer(1, c, c, "sigmoid")  # kernel=1*1
-        self.fc = fully_conv_layer(c, out_dim)
+        self.tconv2 = TemporalConvLayer(1, c, c, "sigmoid")  # kernel=1*1
+        self.fc = FullyConvLayer(c, out_dim)
 
     def forward(self, x):
         # (batch_size, input_dim(c), T, num_nodes)
@@ -197,7 +197,7 @@ class STGCN(AbstractTrafficStateModel):
         self.drop_prob = config['dropout']
         self.blocks[0][0] = self.feature_dim
         if self.input_window - len(self.blocks) * 2 * (self.Kt - 1) <= 0:
-            raise ValueError('Input_window must bigger than 4*(Kt-1) for 2 st_conv_block'
+            raise ValueError('Input_window must bigger than 4*(Kt-1) for 2 STConvBlock'
                              ' have 4 kt-kernel convolutional layer.')
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
@@ -220,12 +220,12 @@ class STGCN(AbstractTrafficStateModel):
             raise ValueError('Error graph_conv_type, must be chebconv or gcnconv.')
 
         # 模型结构
-        self.st_conv1 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[0],
-                                      self.drop_prob, self.Lk, self.device)
-        self.st_conv2 = st_conv_block(self.Ks, self.Kt, self.num_nodes, self.blocks[1],
-                                      self.drop_prob, self.Lk, self.device)
-        self.output = output_layer(self.blocks[1][2], self.input_window - len(self.blocks) * 2 * (self.Kt - 1),
-                                   self.num_nodes, self.output_dim)
+        self.st_conv1 = STConvBlock(self.Ks, self.Kt, self.num_nodes,
+                                    self.blocks[0], self.drop_prob, self.Lk, self.device)
+        self.st_conv2 = STConvBlock(self.Ks, self.Kt, self.num_nodes,
+                                    self.blocks[1], self.drop_prob, self.Lk, self.device)
+        self.output = OutputLayer(self.blocks[1][2], self.input_window - len(self.blocks) * 2
+                                  * (self.Kt - 1), self.num_nodes, self.output_dim)
 
     def forward(self, batch):
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
