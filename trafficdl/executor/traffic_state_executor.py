@@ -70,7 +70,7 @@ class TrafficStateExecutor(AbstractExecutor):
 
     def save_model_with_epoch(self, epoch):
         ensure_dir(self.cache_dir)
-        config = dict(self.config)
+        config = dict()
         config['model_state_dict'] = self.model.state_dict()
         config['epoch'] = epoch
         model_path = self.cache_dir + '/' + self.config['model'] + '_' + self.config['dataset'] + '_epoch%d.tar' % epoch

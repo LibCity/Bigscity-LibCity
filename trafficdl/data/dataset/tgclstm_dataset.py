@@ -9,7 +9,7 @@ class TGCLSTMDataset(TrafficStatePointDataset):
         super(TGCLSTMDataset, self).__init__(config)
 
     def _load_rel(self):
-        relfile = pd.read_csv(self.data_path + '.rel')
+        relfile = pd.read_csv(self.data_path + self.rel_file + '.rel')
         if self.weight_col != '':  # 根据weight_col确认权重列
             self.distance_df = relfile[~relfile[self.weight_col].isna()][[
                 'origin_id', 'destination_id', self.weight_col,

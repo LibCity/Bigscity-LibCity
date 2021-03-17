@@ -2,7 +2,7 @@ import os
 
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from trafficdl.utils import get_executor, get_model, get_logger
 
 
 def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
@@ -23,6 +23,8 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
     # load config
     config = ConfigParser(task, model_name, dataset_name,
                           config_file, other_args)
+    # logger
+    logger = get_logger(config)
     # 加载数据集
     dataset = get_dataset(config)
     # 转换数据，并划分数据集

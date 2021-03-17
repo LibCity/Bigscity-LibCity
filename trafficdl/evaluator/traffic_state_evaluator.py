@@ -155,7 +155,7 @@ class TrafficStateEvaluator(AbstractEvaluator):
         dataframe.to_csv(os.path.join(save_path, '{}.csv'.format(filename)), index=False)
         self._logger.info('Evaluate result is saved at ' +
                           os.path.join(save_path, '{}.csv'.format(filename)))
-        self._logger.info(str(dataframe))
+        self._logger.info("\n" + str(dataframe))
 
     def clear(self):
         """
