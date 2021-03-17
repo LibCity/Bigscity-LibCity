@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils import parseTime, calculateBaseTime, calculateTimeOff
+from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.data.utils import generate_dataloader
 
 allow_dataset = ['foursquare_tky', 'foursquare_nyk']
@@ -152,9 +152,9 @@ class SermTrajectoryDataset(AbstractDataset):
             sessions = []  # 存放该用户所有的 session
             session = []  # 单条轨迹
             # 这里还是使用当地时间吧
-            start_time = parseTime(usr_traj.iloc[0]['time'], int(
+            start_time = parse_time(usr_traj.iloc[0]['time'], int(
                 usr_traj.iloc[0]['timezone_offset_in_minutes']))
-            base_time = calculateBaseTime(start_time, base_zero)
+            base_time = cal_basetime(start_time, base_zero)
             for index, row in usr_traj.iterrows():
                 if index == 0:
                     assert start_time.hour - base_time.hour < time_window_size
@@ -177,9 +177,9 @@ class SermTrajectoryDataset(AbstractDataset):
                     session.append([row['location'], time_code,
                                     useful_words_list])
                 else:
-                    now_time = parseTime(row['time'], int(
+                    now_time = parse_time(row['time'], int(
                         row['timezone_offset_in_minutes']))
-                    time_off = calculateTimeOff(now_time, base_time)
+                    time_off = cal_timeoff(now_time, base_time)
                     # 处理语义
                     useful_words_list = []
                     if self.config['dataset'] in ['foursquare_tky',
@@ -206,7 +206,7 @@ class SermTrajectoryDataset(AbstractDataset):
                             sessions.append(session)
                         session = []
                         start_time = now_time
-                        base_time = calculateBaseTime(start_time, base_zero)
+                        base_time = cal_basetime(start_time, base_zero)
                         time_code = start_time.hour - base_time.hour
                         if start_time.weekday() in [5, 6]:
                             time_code += 24
