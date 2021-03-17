@@ -1,0 +1,6 @@
+{
+    "loc_emb_size": 50,
+    "tim_emb_size": 50,
+    "text_emb_size": 50,
+    "hidden_size": 50
+}
