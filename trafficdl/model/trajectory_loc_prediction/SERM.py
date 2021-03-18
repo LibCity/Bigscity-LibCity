@@ -13,9 +13,10 @@ class EmbeddingMatrix(nn.Module):  # text_embdeding
 
     def init_weight(self, word_vec):
         # word_vec为text_embedding初始权重矩阵,从data_feature传入.
-        # self.weight output_size*input_size namely length_of_wordvect_glove_pretrained(50)*text_size(the size of dictionary)
+        # self.weight output_size*input_size namely length_of_wordvect_glove_pretrained(50)
+        # *text_size(the size of dictionary)
         # 按照论文源代码 word_vec = text_size(the size of dictionary)*length_of_wordvect_glove_pretrained
-        word_vec = torch.Tensor(word_vec).t() # 转置
+        word_vec = torch.Tensor(word_vec).t()  # 转置
         self.layer.weight = nn.Parameter(word_vec)
 
     def forward(self, x):  # x:batch*seq*input_size
@@ -27,7 +28,7 @@ class SERM(AbstractModel):
     def __init__(self, config, data_feature):
         super(SERM, self).__init__(config, data_feature)
         # initialize parameters
-        #print(config['dataset_class'])
+        # print(config['dataset_class'])
         self.loc_size = data_feature['loc_size']
         self.loc_emb_size = config['loc_emb_size']
         self.tim_size = data_feature['tim_size']
@@ -62,20 +63,20 @@ class SERM(AbstractModel):
         user = batch['uid']
         text = batch['text']
 
-        #print(self.loc_size)
-        #print(self.loc_emb_size)
-        #print(self.tim_size)
-        #print(self.tim_emb_size)
-        #print(self.user_size)
-        #print(self.user_emb_size)
-        #print(self.text_size)
-        #print(self.text_emb_size)
-        #print(self.hidden_size)
+        # print(self.loc_size)
+        # print(self.loc_emb_size)
+        # print(self.tim_size)
+        # print(self.tim_emb_size)
+        # print(self.user_size)
+        # print(self.user_emb_size)
+        # print(self.text_size)
+        # print(self.text_emb_size)
+        # print(self.hidden_size)
 
-        #print(loc.size())
-        #print(tim.size())
-        #print(user.size())
-        #print(text.size())
+        # print(loc.size())
+        # print(tim.size())
+        # print(user.size())
+        # print(text.size())
 
         # batch*seq*emb_size
         # user batch*emb_size
@@ -84,26 +85,25 @@ class SERM(AbstractModel):
         user_emb = self.emb_user(user)
         text_emb = self.emb_text(text)
 
-        #print(loc_emb.size())
-        #print(tim_emb.size())
-        #print(user_emb.size())
-        #print(text_emb.size())
-
-        attrs_latent = torch.cat([loc_emb, tim_emb, text_emb], dim=2).permute(1, 0,
-                                                                              2)  # change batch*seq*emb_size to seq*batch*emb_size
-        #print(attrs_latent.size())
+        # print(loc_emb.size())
+        # print(tim_emb.size())
+        # print(user_emb.size())
+        # print(text_emb.size())
+        # change batch*seq*emb_size to seq*batch*emb_size
+        attrs_latent = torch.cat([loc_emb, tim_emb, text_emb], dim=2).permute(1, 0, 2)
+        # print(attrs_latent.size())
 
         lstm_out, (h_n, c_n) = self.lstm(attrs_latent)  # seq*batch*hidden_size
-        #print(lstm_out.size())
+        # print(lstm_out.size())
 
-        dense = self.dense(lstm_out)  #seq*batch*loc_size
-        #print(dense.size())
-
-        out_vec = torch.add(dense, user_emb).permute(1, 0, 2)  # get seq*batch*loc_size then change to batch*seq*loc_size
-        #print(out_vec.size())
+        dense = self.dense(lstm_out)  # seq*batch*loc_size
+        # print(dense.size())
+        # get seq*batch*loc_size then change to batch*seq*loc_size
+        out_vec = torch.add(dense, user_emb).permute(1, 0, 2)
+        # print(out_vec.size())
 
         pred = nn.Softmax(dim=2)(out_vec)  # result batch*seq*loc_size
-        #print(pred.size())
+        # print(pred.size())
 
         # 由于预测的是下一跳，所以选择有效轨迹（补齐前）的最后一个位置的预测值作为实际输出值
         loc_len = batch.get_origin_len('current_loc')
