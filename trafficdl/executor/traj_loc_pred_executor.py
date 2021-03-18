@@ -16,6 +16,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         self.model = model.to(self.config['device'])
+        torch.distributed.init_process_group(backend="nccl")
         self.model = nn.parallel.DistributedDataParallel(self.model)
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
