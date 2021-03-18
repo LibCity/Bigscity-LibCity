@@ -153,6 +153,9 @@ class TrajectoryDataset(AbstractDataset):
         min_sessions = self.config['min_sessions']
         time_window_size = self.config['time_window_size']
         base_zero = time_window_size > 12
+        useful_uid = 0  # 因为有些用户会被我们删除掉，所以需要对 uid 进行重新编号
+        useful_loc = {}  # loc 同理
+        loc_id = 0
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
             sessions = []  # 存放该用户所有的 session
@@ -165,33 +168,36 @@ class TrajectoryDataset(AbstractDataset):
                 if index == 0:
                     assert start_time.hour - base_time.hour < time_window_size
                     # time encode from 0 ~ time_window_size
-                    session.append(
-                        [row['location'], start_time.hour - base_time.hour])
+                    # 重新编码 loc
+                    if row['location'] not in useful_loc:
+                        useful_loc[row['location']] = loc_id
+                        loc_id += 1
+                    session.append([useful_loc[row['location']], start_time.hour - base_time.hour])
                 else:
                     now_time = parse_time(row['time'], int(
                         row['timezone_offset_in_minutes']))
                     time_off = cal_timeoff(now_time, base_time)
+                    if row['location'] not in useful_loc:
+                        useful_loc[row['location']] = loc_id
+                        loc_id += 1
                     if time_off < time_window_size and time_off >= 0:
                         assert int(time_off) < time_window_size
-                        session.append([row['location'], int(time_off)])
+                        session.append([useful_loc[row['location']], int(time_off)])
                     else:
                         if len(session) >= min_session_len:
                             sessions.append(session)
                         session = []
                         start_time = now_time
                         base_time = cal_basetime(start_time, base_zero)
-                        session.append(
-                            [row['location'], start_time.hour - base_time.hour]
-                            )
+                        session.append([useful_loc[row['location']], start_time.hour - base_time.hour])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
-                res[str(uid)] = sessions
+                res[useful_uid] = sessions
+                useful_uid += 1
         # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了
-        poi = pd.read_csv(os.path.join(
-            self.data_path, '{}.geo'.format(self.config['dataset'])))
-        loc_size = poi.shape[0]
-        uid_size = len(user_set)
+        loc_size = loc_id
+        uid_size = useful_uid
         print('loc_size: {}, uid_size: {}'.format(loc_size, uid_size))
         return {
             'loc_size': loc_size,
