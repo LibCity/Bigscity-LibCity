@@ -1,5 +1,6 @@
 import json
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import os
@@ -15,6 +16,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         self.model = model.to(self.config['device'])
+        self.model = nn.parallel.DistributedDataParallel(self.model)
         self.tmp_path = './trafficdl/tmp/checkpoint/'
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
