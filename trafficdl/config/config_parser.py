@@ -103,9 +103,9 @@ class ConfigParser(object):
 
     def _init_device(self):
         use_gpu = self.config.get('gpu', True)
-        # gpu_id = self.config.get('gpu_id', 0)
+        gpu_id = self.config.get('gpu_id', 0)
         if use_gpu:
-            os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+            torch.cuda.set_device(gpu_id)
         self.config['device'] = torch.device(
             "cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
