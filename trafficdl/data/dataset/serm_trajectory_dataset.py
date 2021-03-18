@@ -26,7 +26,7 @@ class SermTrajectoryDataset(AbstractDataset):
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
-            './trafficdl/cache/dataset_cache/', 'semantic_trajectory_{}.json \
+            './trafficdl/cache/dataset_cache/', 'serm_trajectory_{}.json \
             '.format(parameters_str))  # 缓存切好的轨迹
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
