@@ -168,31 +168,32 @@ class TrajectoryDataset(AbstractDataset):
                 if index == 0:
                     assert start_time.hour - base_time.hour < time_window_size
                     # time encode from 0 ~ time_window_size
-                    # 重新编码 loc
-                    if row['location'] not in useful_loc:
-                        useful_loc[row['location']] = loc_id
-                        loc_id += 1
-                    session.append([useful_loc[row['location']], start_time.hour - base_time.hour])
+                    session.append([row['location'], start_time.hour - base_time.hour])
                 else:
                     now_time = parse_time(row['time'], int(
                         row['timezone_offset_in_minutes']))
                     time_off = cal_timeoff(now_time, base_time)
-                    if row['location'] not in useful_loc:
-                        useful_loc[row['location']] = loc_id
-                        loc_id += 1
                     if time_off < time_window_size and time_off >= 0:
                         assert int(time_off) < time_window_size
-                        session.append([useful_loc[row['location']], int(time_off)])
+                        session.append([row['location'], int(time_off)])
                     else:
                         if len(session) >= min_session_len:
                             sessions.append(session)
                         session = []
                         start_time = now_time
                         base_time = cal_basetime(start_time, base_zero)
-                        session.append([useful_loc[row['location']], start_time.hour - base_time.hour])
+                        session.append([row['location'], start_time.hour - base_time.hour])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
+                # 到这里才确定 sessions 里的 loc 都是会被使用到的
+                for i in range(len(sessions)):
+                    for j in range(len(sessions[i])):
+                        loc = sessions[i][j][0]
+                        if loc not in useful_loc:
+                            useful_loc[loc] = loc_id
+                            loc_id += 1
+                        sessions[i][j][0] = useful_loc[loc]
                 res[useful_uid] = sessions
                 useful_uid += 1
         # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了

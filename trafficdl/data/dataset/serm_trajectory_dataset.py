@@ -177,10 +177,7 @@ class SermTrajectoryDataset(AbstractDataset):
                     time_code = start_time.hour - base_time.hour
                     if start_time.weekday() == 5 or start_time.weekday() == 6:
                         time_code += 24
-                    if row['location'] not in useful_loc:
-                        useful_loc[row['location']] = loc_id
-                        loc_id += 1
-                    session.append([useful_loc[row['location']], time_code,
+                    session.append([row['location'], time_code,
                                     useful_words_list])
                 else:
                     now_time = parse_time(row['time'], int(
@@ -199,17 +196,13 @@ class SermTrajectoryDataset(AbstractDataset):
                                 useful_vec[w] = text_vec[w]
                             if w in useful_vec:
                                 useful_words_list.append(w)
-                    # 重新编码 loc
-                    if row['location'] not in useful_loc:
-                        useful_loc[row['location']] = loc_id
-                        loc_id += 1
                     if time_off < time_window_size and time_off >= 0:
                         # 特殊的时间编码
                         time_code = int(time_off)
                         if now_time.weekday() in [5, 6]:
                             time_code += 24
                         assert int(time_off) < time_window_size
-                        session.append([useful_loc[row['location']], time_code,
+                        session.append([row['location'], time_code,
                                         useful_words_list])
                     else:
                         if len(session) >= min_session_len:
@@ -220,11 +213,19 @@ class SermTrajectoryDataset(AbstractDataset):
                         time_code = start_time.hour - base_time.hour
                         if start_time.weekday() in [5, 6]:
                             time_code += 24
-                        session.append([useful_loc[row['location']], time_code,
+                        session.append([row['location'], time_code,
                                         useful_words_list])
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
+                # 到这里才确定 sessions 里的 loc 都是会被使用到的
+                for i in range(len(sessions)):
+                    for j in range(len(sessions[i])):
+                        loc = sessions[i][j][0]
+                        if loc not in useful_loc:
+                            useful_loc[loc] = loc_id
+                            loc_id += 1
+                        sessions[i][j][0] = useful_loc[loc]
                 res[useful_uid] = sessions
                 useful_uid += 1
         # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了
