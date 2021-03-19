@@ -26,7 +26,7 @@ class SermTrajectoryDataset(AbstractDataset):
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
-            './trafficdl/cache/dataset_cache/', 'semantic_trajectory_{}.json \
+            './trafficdl/cache/dataset_cache/', 'serm_trajectory_{}.json \
             '.format(parameters_str))  # 缓存切好的轨迹
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
@@ -147,6 +147,9 @@ class SermTrajectoryDataset(AbstractDataset):
         min_sessions = self.config['min_sessions']
         time_window_size = 24  # serm 论文的时间编码方式比较独特
         base_zero = time_window_size > 12
+        useful_uid = 0  # 因为有些用户会被我们删除掉，所以需要对 uid 进行重新编号
+        useful_loc = {}  # loc 同理
+        loc_id = 0
         for uid in user_set:
             usr_traj = traj[traj['entity_id'] == uid]
             sessions = []  # 存放该用户所有的 session
@@ -215,10 +218,19 @@ class SermTrajectoryDataset(AbstractDataset):
             if len(session) >= min_session_len:
                 sessions.append(session)
             if len(sessions) >= min_sessions:
-                res[str(uid)] = sessions
+                # 到这里才确定 sessions 里的 loc 都是会被使用到的
+                for i in range(len(sessions)):
+                    for j in range(len(sessions[i])):
+                        loc = sessions[i][j][0]
+                        if loc not in useful_loc:
+                            useful_loc[loc] = loc_id
+                            loc_id += 1
+                        sessions[i][j][0] = useful_loc[loc]
+                res[useful_uid] = sessions
+                useful_uid += 1
         # 这里的 uid_size 和 loc_size 可能要大于实际的 uid 和 loc，因为有些可能被过滤掉了
-        loc_size = poi.shape[0]
-        uid_size = len(user_set)
+        loc_size = loc_id
+        uid_size = useful_uid
         # 根据 useful_vec 计算 word_vec
         word_index = {}
         word_vec = []
