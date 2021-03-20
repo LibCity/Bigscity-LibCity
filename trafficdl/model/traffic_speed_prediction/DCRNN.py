@@ -10,10 +10,13 @@ from trafficdl.model import loss
 
 def calculate_normalized_laplacian(adj):
     """
-    # L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
-    # D = diag(A 1)
-    :param adj:
-    :return:
+    L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
+
+    Args:
+        adj: adj matrix
+
+    Returns:
+        np.ndarray: L
     """
     adj = sp.coo_matrix(adj)
     d = np.array(adj.sum(1))
@@ -153,13 +156,16 @@ class DCGRUCell(nn.Module):
                  filter_type="laplacian", use_gc_for_ru=True):
         """
 
-        :param num_units:
-        :param adj_mx:
-        :param max_diffusion_step:
-        :param num_nodes:
-        :param nonlinearity:
-        :param filter_type: "laplacian", "random_walk", "dual_random_walk".
-        :param use_gc_for_ru: whether to use Graph convolution to calculate the reset and update gates.
+        Args:
+            input_dim:
+            num_units:
+            adj_mx:
+            max_diffusion_step:
+            num_nodes:
+            device:
+            nonlinearity:
+            filter_type: "laplacian", "random_walk", "dual_random_walk"
+            use_gc_for_ru: whether to use Graph convolution to calculate the reset and update gates.
         """
 
         super().__init__()
@@ -203,12 +209,15 @@ class DCGRUCell(nn.Module):
         return lap
 
     def forward(self, inputs, hx):
-        """Gated recurrent unit (GRU) with Graph Convolution.
-        :param inputs: (B, num_nodes * input_dim)
-        :param hx: (B, num_nodes * rnn_units)
+        """
+        Gated recurrent unit (GRU) with Graph Convolution.
 
-        :return
-        - Output: A `2-D` tensor with shape `(B, num_nodes * rnn_units)`.
+        Args:
+            inputs: (B, num_nodes * input_dim)
+            hx: (B, num_nodes * rnn_units)
+
+        Returns:
+            torch.tensor: shape (B, num_nodes * rnn_units)
         """
         output_size = 2 * self._num_units
         value = torch.sigmoid(self._fn(inputs, hx))  # (batch_size, num_nodes * output_size)
@@ -255,13 +264,17 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         """
         Encoder forward pass.
 
-        :param inputs: shape (batch_size, self.num_nodes * self.input_dim)
-        :param hidden_state: (num_layers, batch_size, self.hidden_state_size)
-               optional, zeros if not provided
-               hidden_state_size = num_nodes * rnn_units
-        :return: output: # shape (batch_size, self.hidden_state_size)
-                 hidden_state # shape (num_layers, batch_size, self.hidden_state_size)
-                 (lower indices mean lower layers)
+        Args:
+            inputs: shape (batch_size, self.num_nodes * self.input_dim)
+            hidden_state: (num_layers, batch_size, self.hidden_state_size),
+                optional, zeros if not provided, hidden_state_size = num_nodes * rnn_units
+
+        Returns:
+            tuple: tuple contains:
+                output: shape (batch_size, self.hidden_state_size) \n
+                hidden_state: shape (num_layers, batch_size, self.hidden_state_size) \n
+                (lower indices mean lower layers)
+
         """
         batch_size, _ = inputs.size()
         if hidden_state is None:
@@ -293,13 +306,16 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         """
         Decoder forward pass.
 
-        :param inputs: shape (batch_size, self.num_nodes * self.output_dim)
-        :param hidden_state: (num_layers, batch_size, self.hidden_state_size)
-               optional, zeros if not provided
-               hidden_state_size = num_nodes * rnn_units
-        :return: output: # shape (batch_size, self.num_nodes * self.output_dim)
-                 hidden_state # shape (num_layers, batch_size, self.hidden_state_size)
-                 (lower indices mean lower layers)
+        Args:
+            inputs:  shape (batch_size, self.num_nodes * self.output_dim)
+            hidden_state: (num_layers, batch_size, self.hidden_state_size),
+                optional, zeros if not provided, hidden_state_size = num_nodes * rnn_units
+
+        Returns:
+            tuple: tuple contains:
+                output: shape (batch_size, self.num_nodes * self.output_dim) \n
+                hidden_state: shape (num_layers, batch_size, self.hidden_state_size) \n
+                (lower indices mean lower layers)
         """
         hidden_states = []
         output = inputs
@@ -341,8 +357,12 @@ class DCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
     def encoder(self, inputs):
         """
         encoder forward pass on t time steps
-        :param inputs: shape (input_window, batch_size, num_sensor * input_dim)
-        :return: encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
+
+        Args:
+            inputs: shape (input_window, batch_size, num_sensor * input_dim)
+
+        Returns:
+            torch.tensor: (num_layers, batch_size, self.hidden_state_size)
         """
         encoder_hidden_state = None
         for t in range(self.input_window):
@@ -354,11 +374,15 @@ class DCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
     def decoder(self, encoder_hidden_state, labels=None, batches_seen=None):
         """
         Decoder forward pass
-        :param encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
-        :param labels: (self.output_window, batch_size, self.num_nodes * self.output_dim)
-               [optional, not exist for inference]
-        :param batches_seen: global step [optional, not exist for inference]
-        :return: output: (self.output_window, batch_size, self.num_nodes * self.output_dim)
+
+        Args:
+            encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
+            labels:  (self.output_window, batch_size, self.num_nodes * self.output_dim)
+                [optional, not exist for inference]
+            batches_seen: global step [optional, not exist for inference]
+
+        Returns:
+            torch.tensor: (self.output_window, batch_size, self.num_nodes * self.output_dim)
         """
         batch_size = encoder_hidden_state.size(1)
         go_symbol = torch.zeros((batch_size, self.num_nodes * self.output_dim), device=self.device)
@@ -380,10 +404,15 @@ class DCRNN(AbstractTrafficStateModel, Seq2SeqAttrs):
     def forward(self, batch, batches_seen=None):
         """
         seq2seq forward pass
-        :param inputs: shape (batch_size, input_window, num_nodes, input_dim)
-        :param labels: shape (batch_size, output_window, num_nodes, output_dim)
-        :param batches_seen: batches seen till now
-        :return: output: (batch_size, self.output_window, self.num_nodes, self.output_dim)
+
+        Args:
+            batch: a batch of input,
+                batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
+                batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
+            batches_seen: batches seen till now
+
+        Returns:
+            torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
         """
         inputs = batch['X']
         labels = batch['y']

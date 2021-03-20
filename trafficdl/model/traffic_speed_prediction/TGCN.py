@@ -8,10 +8,13 @@ from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateMod
 
 def calculate_normalized_laplacian(adj):
     """
-    # L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
-    # D = diag(A 1)
-    :param adj:
-    :return:
+    L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
+
+    Args:
+        adj: adj matrix
+
+    Returns:
+        np.ndarray: L
     """
     adj = sp.coo_matrix(adj)
     d = np.array(adj.sum(1))
@@ -24,11 +27,6 @@ def calculate_normalized_laplacian(adj):
 
 class TGCNCell(nn.Module):
     def __init__(self, num_units, adj_mx, num_nodes, device, input_dim=1):
-        """
-        :param num_units:
-        :param adj_mx:
-        :param num_nodes:
-        """
         # ----------------------初始化参数---------------------------#
         super().__init__()
         self.num_units = num_units
@@ -72,12 +70,15 @@ class TGCNCell(nn.Module):
         return lap
 
     def forward(self, inputs, state):
-        """ Gated recurrent unit (GRU) with Graph Convolution.
-        :param inputs:  # shape `(batch, self.num_nodes * self.dim)`
-        :param state:  # shape `(batch, self.num_nodes * self.gru_units)`
-                       default= None
-        :return
-        - Output: A `2-D` tensor with shape `(B, num_nodes * gru_units)`.
+        """
+        Gated recurrent unit (GRU) with Graph Convolution.
+
+        Args:
+            inputs: shape (batch, self.num_nodes * self.dim)
+            state: shape (batch, self.num_nodes * self.gru_units)
+
+        Returns:
+            torch.tensor: shape (B, num_nodes * gru_units)
         """
         output_size = 2 * self.num_units
         value = torch.sigmoid(
@@ -93,12 +94,17 @@ class TGCNCell(nn.Module):
 
     def _gc(self, inputs, state, output_size, bias_start=0.0):
         """
-        :param inputs:  # shape `(batch, self.num_nodes * self.dim)`
-        :param state:  # shape `(batch, self.num_nodes * self.gru_units)`
-                       default= None
-        :return shape `(B, num_nodes , output_size)`.
-        """
+        GCN
 
+        Args:
+            inputs: (batch, self.num_nodes * self.dim)
+            state: (batch, self.num_nodes * self.gru_units)
+            output_size:
+            bias_start:
+
+        Returns:
+            torch.tensor: (B, num_nodes , output_size)
+        """
         batch_size = inputs.shape[0]
         inputs = torch.reshape(inputs, (batch_size, self.num_nodes, -1))  # (batch, self.num_nodes, self.dim)
         state = torch.reshape(state, (batch_size, self.num_nodes, -1))  # (batch, self.num_nodes, self.gru_units)
@@ -149,9 +155,13 @@ class TGCN(AbstractTrafficStateModel):
 
     def forward(self, batch):
         """
-        :param inputs: shape (batch_size, input_window, num_nodes, input_dim)
-        :param labels: shape (batch_size, output_window, num_nodes, output_dim)
-        :return: output: (batch_size, self.output_window, self.num_nodes, self.output_dim)
+        Args:
+            batch: a batch of input,
+                batch['X']: shape (batch_size, input_window, num_nodes, input_dim) \n
+                batch['y']: shape (batch_size, output_window, num_nodes, output_dim) \n
+
+        Returns:
+            torch.tensor: (batch_size, self.output_window, self.num_nodes, self.output_dim)
         """
         inputs = batch['X']
         # labels = batch['y']

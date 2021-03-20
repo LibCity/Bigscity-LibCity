@@ -9,17 +9,15 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
               save_model=True, train=True, other_args=None):
     """
     Args:
-        task (str): task name
-        model_name (str): model name
-        dataset_name (str): dataset name
-        config_file (str): config filename used to modify the pipeline's
+        task(str): task name
+        model_name(str): model name
+        dataset_name(str): dataset name
+        config_file(str): config filename used to modify the pipeline's
             settings. the config file should be json.
-        save_model (bool): whether to save the model
-        train (bool): whether to train the model
-        other_args (dict): the rest parameter args, which will be pass to
-            the Config
+        save_model(bool): whether to save the model
+        train(bool): whether to train the model
+        other_args(dict): the rest parameter args, which will be pass to the Config
     """
-
     # load config
     config = ConfigParser(task, model_name, dataset_name,
                           config_file, other_args)

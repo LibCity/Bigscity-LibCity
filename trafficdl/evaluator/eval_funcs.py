@@ -52,17 +52,20 @@ def acc(loc_pred, loc_true):
 
 def top_k(loc_pred, loc_true, topk):
     """
-    count the hit numbers of loc_true in topK of loc_pred, used to calculate
-    Precision, Recall and F1-score
-    calculate the reciprocal rank, used to calcualte MRR
+    count the hit numbers of loc_true in topK of loc_pred, used to calculate Precision, Recall and F1-score,
+    calculate the reciprocal rank, used to calcualte MRR,
     calculate the sum of DCG@K of the batch, used to calculate NDCG
+
     Args:
-        loc_pred (batch_size * output_dim)
-        loc_true (batch_size * 1)
-    Return:
-        hit (int): the hit numbers
-        rank (float): the sum of the reciprocal rank of input batch
-        dcg (float)
+        loc_pred: (batch_size * output_dim)
+        loc_true: (batch_size * 1)
+        topk:
+
+    Returns:
+        tuple: tuple contains:
+            hit (int): the hit numbers \n
+            rank (float): the sum of the reciprocal rank of input batch \n
+            dcg (float): dcg
     """
     assert topk > 0, "top-k ACC评估方法：k值应不小于1"
     loc_pred = torch.FloatTensor(loc_pred)

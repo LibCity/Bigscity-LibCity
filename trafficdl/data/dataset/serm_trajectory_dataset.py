@@ -48,9 +48,9 @@ class SermTrajectoryDataset(AbstractDataset):
         }
 
     def get_data(self):
-        '''
+        """
         轨迹比较特殊，原子文件中存储的并不是轨迹而是一个一个点，因此需要先对轨迹进行切割
-        '''
+        """
         if self.data is None:
             if self.config['cache_dataset'] and os.path.exists(
                     self.cache_file_name):
@@ -113,9 +113,11 @@ class SermTrajectoryDataset(AbstractDataset):
         return res
 
     def cutter_filter(self):
-        '''
+        """
         切割后的轨迹存储格式: (dict)
         还需要考虑语义信息，将每个点对应的语义信息加入进去
+        """
+        """
             {
                 uid: [
                     [
@@ -132,7 +134,7 @@ class SermTrajectoryDataset(AbstractDataset):
                 ],
                 ...
             }
-        '''
+        """
         # load data according to config
         traj = pd.read_csv(os.path.join(
             self.data_path, '{}.dyna'.format(self.config['dataset'])))
@@ -251,12 +253,14 @@ class SermTrajectoryDataset(AbstractDataset):
         }
 
     def gen_input(self):
-        '''
-        return:
-            train_data (list)
-            eval_data (list)
-            test_data (list)
-        '''
+        """
+
+        Returns:
+            tuple: tuple contains:
+                train_data (list)
+                eval_data (list)
+                test_data (list)
+        """
         train_data = []
         eval_data = []
         test_data = []

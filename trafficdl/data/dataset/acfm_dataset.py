@@ -22,12 +22,16 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
     def _get_external_array(self, timestamp_list, ext_data=None, previous_ext=False, ext_time=True):
         """
         根据时间戳数组，获取对应时间的外部特征
-        :param timestamp_list: 时间戳序列
-        :param ext_data: 外部数据
-        :param previous_ext: 是否是用过去时间段的外部数据，因为对于预测的时间段Y，
+
+        Args:
+            timestamp_list(list): 时间戳序列
+            ext_data: 外部数据
+            previous_ext: 是否是用过去时间段的外部数据，因为对于预测的时间段Y，
                             一般没有真实的外部数据，所以用前一个时刻的数据，**多步预测则用提前多步的数据**
-        :param ext_time: 是否加载时间数据，False则只考虑星期，True则加上小时的信息
-        :return: ndarray (len(timestamp_list), ext_dim)
+            ext_time: 是否加载时间数据，False则只考虑星期，True则加上小时的信息
+
+        Returns:
+            numpy.ndarray: External data shape is (len(timestamp_list), ext_dim)
         """
         data = []
         if ext_time:
@@ -51,12 +55,16 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
 
     def _load_ext_data(self, ts_x, ts_y):
         """
-        加载外部数据(.ext)
-        :param ts_x: (num_samples, T_c+T_p+T_t)
-        :param ts_y: (num_samples, )
-        :return:
-        ext_x: (num_samples, T_c+T_p+T_t, ext_dim)
-        ext_y: (num_samples, ext_dim)
+        加载对应时间的外部数据(.ext)
+
+        Args:
+            ts_x: 输入数据X对应的时间戳，shape: (num_samples, T_c+T_p+T_t)
+            ts_y: 输出数据Y对应的时间戳，shape:(num_samples, )
+
+        Returns:
+            tuple: tuple contains:
+                ext_x(numpy.ndarray): 对应时间的外部数据, shape: (num_samples, T_c+T_p+T_t, ext_dim),
+                ext_y(numpy.ndarray): 对应时间的外部数据, shape: (num_samples, ext_dim)
         """
         # 加载外部数据
         if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
@@ -75,9 +83,11 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
     def get_data_feature(self):
         """
         返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是网格的个数，
-                      len_row是网格的行数，len_column是网格的列数，
-                     feature_dim是输入数据的维度，output_dim是模型输出的维度
-        :return: data_feature (dict)
+        len_row是网格的行数，len_column是网格的列数，
+        feature_dim是输入数据的维度，output_dim是模型输出的维度
+
+        Returns:
+            dict: 包含数据集的相关特征的字典
         """
         lp = self.len_period * (self.pad_forward_period + self.pad_back_period + 1)
         lt = self.len_trend * (self.pad_forward_trend + self.pad_back_trend + 1)

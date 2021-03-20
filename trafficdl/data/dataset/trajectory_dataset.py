@@ -127,6 +127,8 @@ class TrajectoryDataset(AbstractDataset):
     def cutter_filter(self):
         """
         切割后的轨迹存储格式: (dict)
+        """
+        """
             {
                 uid: [
                     [

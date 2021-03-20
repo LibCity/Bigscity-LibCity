@@ -11,10 +11,14 @@ from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateMod
 
 def calculate_scaled_laplacian(adj):
     """
-    :param adj: adj matrix
     L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
     L' = 2L/lambda - I
-    :return: L'
+
+    Args:
+        adj: adj_matrix
+
+    Returns:
+        np.ndarray: L'
     """
     n = adj.shape[0]
     d = np.sum(adj, axis=1)  # D
@@ -29,10 +33,15 @@ def calculate_scaled_laplacian(adj):
 
 def calculate_cheb_poly(lap, ks):
     """
-    :param lap: scaled laplacian matrix
-    :param ks: k-order
-    :return: k-order Chebyshev polynomials : T0(L)~Tk(L)
+    k-order Chebyshev polynomials : T0(L)~Tk(L)
     T0(L)=I/1 T1(L)=L Tk(L)=2LTk-1(L)-Tk-2(L)
+
+    Args:
+        lap: scaled laplacian matrix
+        ks: k-order
+
+    Returns:
+        np.ndarray: T0(L)~Tk(L)
     """
     n = lap.shape[0]
     lap_list = [np.eye(n), lap[:]]

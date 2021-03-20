@@ -31,11 +31,12 @@ class TrafficStateEvaluator(AbstractEvaluator):
 
     def collect(self, batch):
         """
-        评估输入数据
-        :param batch: (dict) 字典类型，包含两个Key:(y_true, y_pred)
-        batch['y_true']: (num_samples/batch_size, timeslots, ..., feature_dim)
-        batch['y_pred']: (num_samples/batch_size, timeslots, ..., feature_dim)
-        :return:
+        收集一 batch 的评估输入
+
+        Args:
+            batch(dict): 输入数据，字典类型，包含两个Key:(y_true, y_pred):
+                batch['y_true']: (num_samples/batch_size, timeslots, ..., feature_dim)
+                batch['y_pred']: (num_samples/batch_size, timeslots, ..., feature_dim)
         """
         if not isinstance(batch, dict):
             raise TypeError('evaluator.collect input is not a dict of user')
@@ -120,7 +121,6 @@ class TrafficStateEvaluator(AbstractEvaluator):
     def evaluate(self):
         """
         返回之前收集到的所有 batch 的评估结果
-        :return:
         """
         for i in range(1, self.len_timeslots + 1):
             for metric in self.metrics:
@@ -131,9 +131,10 @@ class TrafficStateEvaluator(AbstractEvaluator):
     def save_result(self, save_path, filename=None):
         """
         将评估结果保存到 save_path 文件夹下的 filename 文件中
-        :param save_path: 保存路径
-        :param filename: 保存文件名
-        :return:
+
+        Args:
+            save_path: 保存路径
+            filename: 保存文件名
         """
         self.evaluate()
         ensure_dir(save_path)
@@ -160,7 +161,6 @@ class TrafficStateEvaluator(AbstractEvaluator):
     def clear(self):
         """
         清除之前收集到的 batch 的评估信息，适用于每次评估开始时进行一次清空，排除之前的评估输入的影响。
-        :return:
         """
         self.result = {}
         self.intermediate_result = {}

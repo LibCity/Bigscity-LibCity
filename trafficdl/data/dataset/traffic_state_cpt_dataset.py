@@ -11,8 +11,8 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     """
     交通状态预测数据集的另一个基类
     部分交通预测模型通过对接近度(closeness)/周期(period)/趋势(trend)进行建模实现预测。
-    默认使用`len_closeness`/`len_period`/`len_trend`的数据预测当前时刻的数据，即一个X，一个y。（一般是单步预测）
-    **数据原始的时间戳不能为空！**
+    默认使用len_closeness/len_period/len_trend的数据预测当前时刻的数据，即一个X，一个y。（一般是单步预测）
+    **数据原始的时间戳不能为空！**。
     一般对外部数据进行单独建模，因此数据为[X, y, X_ext(可选), y_ext(可选)]。
     默认使用`train_rate`和`eval_rate`在样本数量(num_samples)维度上直接切分训练集、测试集、验证集。
     """
@@ -35,8 +35,23 @@ class TrafficStateCPTDataset(TrafficStateDataset):
 
     def _generate_input_data(self, df):
         """
-        根据全局参数`len_closeness`/`len_period`/`len_trend`切分输入，产生模型需要的输入
+        根据全局参数len_closeness/len_period/len_trend切分输入，产生模型需要的输入。
+        interval_period是period的长度，一般是一天，单位是天，
+        interval_trend是trend的长度，一般是一周，单位是天，
+        pad_**则是向前或向后扩展多长的距离，
+        用三段的输入一起与预测输出，单步预测。
 
+        Args:
+            df(np.ndarray): 数据数组，shape: (len_time, ..., feature_dim)
+
+        Returns:
+            tuple: tuple contains:
+                x(np.ndarray): 模型输入数据，(num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y(np.ndarray): 模型输出数据，(num_samples, 1, ..., feature_dim) \n
+                ts_x: 输入数据对应的时间片，(num_samples, T_c+T_p+T_t) \n
+                ts_y: 输出数据对应的时间片，(num_samples, )
+        """
+        """
         Structure:
                   |<---------------------- it --------------------->|
                   |                     |<----------- ip ---------->|
@@ -46,17 +61,6 @@ class TrafficStateCPTDataset(TrafficStateDataset):
             |<bt >|  |< ft>|      |<bp >|  |< fp>|      |<- lc ->|
              ^  ^  ^  ^  ^         ^  ^  ^  ^  ^          ^  ^  ^
             Trend data x lt       Period data x lp     Closeness data
-
-        `interval_period`是period的长度，一般是一天，单位是天
-        `interval_trend`是trend的长度，一般是一周，单位是天
-        `pad_**`则是向前或向后扩展多长的距离
-        用三段的输入一起与预测输出，单步预测
-        :param df: ndarray (len_time, ..., feature_dim)
-        :return:
-        # x: (num_samples, T_c+T_p+T_t, ..., feature_dim)
-        # y: (num_samples, 1, ..., feature_dim)
-        # ts_x: (num_samples, T_c+T_p+T_t)
-        # ts_y: (num_samples, )
         """
         # 求三段相对于预测位置（即y）的偏移距离
         tday = self.points_per_hour * 24  # 每天的时间片数
@@ -126,11 +130,15 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     def _get_external_array(self, timestamp_list, ext_data=None, previous_ext=False):
         """
         根据时间戳数组，获取对应时间的外部特征
-        :param timestamp_list: 时间戳序列
-        :param ext_data: 外部数据
-        :param previous_ext: 是否是用过去时间段的外部数据，因为对于预测的时间段Y，
+
+        Args:
+            timestamp_list(np.ndarray): 时间戳序列
+            ext_data: 外部数据
+            previous_ext: 是否是用过去时间段的外部数据，因为对于预测的时间段Y，
                             一般没有真实的外部数据，所以用前一个时刻的数据，**多步预测则用提前多步的数据**
-        :return: ndarray (len(timestamp_list), ext_dim)
+
+        Returns:
+            np.ndarray: External data shape is (len(timestamp_list), ext_dim)
         """
         data_list = []
         if self.add_time_in_day:
@@ -163,11 +171,13 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     def _load_data(self):
         """
         加载数据文件(.dyna/.grid/.od/.gridod)
-        :return:
-        x: (num_samples, T_c+T_p+T_t, ..., feature_dim)
-        y: (num_samples, 1, ..., feature_dim)
-        ts_x: (num_samples, T_c+T_p+T_t)
-        ts_y: (num_samples, )
+
+        Returns:
+            tuple: tuple contains:
+                x: (num_samples, T_c+T_p+T_t, ..., feature_dim)
+                y: (num_samples, 1, ..., feature_dim)
+                ts_x: (num_samples, T_c+T_p+T_t)
+                ts_y: (num_samples, )
         """
         # 处理多数据文件问题
         if isinstance(self.data_files, list):
@@ -190,12 +200,16 @@ class TrafficStateCPTDataset(TrafficStateDataset):
 
     def _load_ext_data(self, ts_x, ts_y):
         """
-        加载外部数据(.ext)
-        :param ts_x: (num_samples, T_c+T_p+T_t)
-        :param ts_y: (num_samples, )
-        :return:
-        ext_x: (num_samples, T_c+T_p+T_t, ext_dim)
-        ext_y: (num_samples, ext_dim)
+        加载对应时间的外部数据(.ext)
+
+        Args:
+            ts_x: 输入数据X对应的时间戳，shape: (num_samples, T_c+T_p+T_t)
+            ts_y: 输出数据Y对应的时间戳，shape:(num_samples, )
+
+        Returns:
+            tuple: tuple contains:
+                ext_x(np.ndarray): 对应时间的外部数据, shape: (num_samples, T_c+T_p+T_t, ext_dim),
+                ext_y(np.ndarray): 对应时间的外部数据, shape: (num_samples, ext_dim)
         """
         # 加载外部数据
         if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
@@ -214,11 +228,13 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     def _generate_data(self):
         """
         加载数据文件(.dyna/.grid/.od/.gridod)和外部数据(.ext)
-        :return:
-        x: (num_samples, T_c+T_p+T_t, ..., feature_dim)
-        y: (num_samples, 1, ..., feature_dim)
-        ext_x: (num_samples, T_c+T_p+T_t, ext_dim)
-        ext_y: (num_samples, ext_dim)
+
+        Returns:
+            tuple: tuple contains:
+                x(np.ndarray): 模型输入数据，(num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y(np.ndarray): 模型输出数据，(num_samples, 1, ..., feature_dim) \n
+                ext_x(np.ndarray): 模型输入外部数据，(num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y(np.ndarray): 模型输出外部数据，(num_samples, ext_dim)
         """
         x, y, ts_x, ts_y = self._load_data()
         ext_x, ext_y = self._load_ext_data(ts_x, ts_y)
@@ -227,15 +243,30 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         self._logger.info("ext_x shape: " + str(ext_x.shape) + ", ext_y shape: " + str(ext_y.shape))
         return x, y, ext_x, ext_y
 
-    def _split_train_val_test(self, x, y, ext_x, ext_y):
+    def _split_train_val_test(self, x, y, ext_x=None, ext_y=None):
         """
         划分训练集、测试集、验证集，并缓存数据集
-        :param x: (num_samples, T_c+T_p+T_t, ..., feature_dim)
-        :param y: (num_samples, 1, ..., feature_dim)
-        :param ext_x: (num_samples, T_c+T_p+T_t, ext_dim)
-        :param ext_y: (num_samples, ext_dim)
-        :return: x_train, y_train, x_val, y_val, x_test, y_test:
-                    (num_samples, input_length, ..., feature_dim)
+
+        Args:
+            x(np.ndarray): 输入数据 (num_samples, T_c+T_p+T_t, ..., feature_dim)
+            y(np.ndarray): 输出数据 (num_samples, 1, ..., feature_dim)
+            ext_x(np.ndarray): 输入外部数据 (num_samples, T_c+T_p+T_t, ext_dim)
+            ext_y(np.ndarray): 输出外部数据 (num_samples, ext_dim)
+
+        Returns:
+            tuple: tuple contains:
+                x_train: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_train: (num_samples, 1, ..., feature_dim) \n
+                x_val: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_val: (num_samples, 1, ..., feature_dim) \n
+                x_test: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_test: (num_samples, 1, ..., feature_dim) \n
+                ext_x_train: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_train: (num_samples, ext_dim) \n
+                ext_x_val: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_val: (num_samples, ext_dim) \n
+                ext_x_test: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_test: (num_samples, ext_dim)
         """
         test_rate = 1 - self.train_rate - self.eval_rate
         num_samples = x.shape[0]
@@ -272,8 +303,21 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     def _generate_train_val_test(self):
         """
         加载数据集，并划分训练集、测试集、验证集，并缓存数据集
-        :return: x_train, y_train, x_val, y_val, x_test, y_test:
-                    (num_samples, input_length, ..., feature_dim)
+
+        Returns:
+            tuple: tuple contains:
+                x_train: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_train: (num_samples, 1, ..., feature_dim) \n
+                x_val: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_val: (num_samples, 1, ..., feature_dim) \n
+                x_test: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_test: (num_samples, 1, ..., feature_dim) \n
+                ext_x_train: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_train: (num_samples, ext_dim) \n
+                ext_x_val: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_val: (num_samples, ext_dim) \n
+                ext_x_test: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_test: (num_samples, ext_dim)
         """
         x, y, ext_x, ext_y = self._generate_data()
         return self._split_train_val_test(x, y, ext_x, ext_y)
@@ -281,7 +325,21 @@ class TrafficStateCPTDataset(TrafficStateDataset):
     def _load_cache_train_val_test(self):
         """
         加载之前缓存好的训练集、测试集、验证集
-        :return: x_train, y_train, x_val, y_val, x_test, y_test: (num_samples, input_length, ..., feature_dim)
+
+        Returns:
+            tuple: tuple contains:
+                x_train: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_train: (num_samples, 1, ..., feature_dim) \n
+                x_val: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_val: (num_samples, 1, ..., feature_dim) \n
+                x_test: (num_samples, T_c+T_p+T_t, ..., feature_dim) \n
+                y_test: (num_samples, 1, ..., feature_dim) \n
+                ext_x_train: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_train: (num_samples, ext_dim) \n
+                ext_x_val: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_val: (num_samples, ext_dim) \n
+                ext_x_test: (num_samples, T_c+T_p+T_t, ext_dim) \n
+                ext_y_test: (num_samples, ext_dim)
         """
         self._logger.info('Loading ' + self.cache_file_name)
         cat_data = np.load(self.cache_file_name)
@@ -308,12 +366,13 @@ class TrafficStateCPTDataset(TrafficStateDataset):
 
     def get_data(self):
         """
-        获取数据，数据归一化，之后返回训练集、测试集、验证集对应的DataLoader
-        :return:
-            train_dataloader (pytorch.DataLoader)
-            eval_dataloader (pytorch.DataLoader)
-            test_dataloader (pytorch.DataLoader)
-            all the dataloaders are composed of Batch (class)
+        返回数据的DataLoader，包括训练数据、测试数据、验证数据
+
+        Returns:
+            tuple: tuple contains:
+                train_dataloader: Dataloader composed of Batch (class) \n
+                eval_dataloader: Dataloader composed of Batch (class) \n
+                test_dataloader: Dataloader composed of Batch (class)
         """
         # 加载数据集
         x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
@@ -358,18 +417,24 @@ class TrafficStateCPTDataset(TrafficStateDataset):
 
     def get_data_feature(self):
         """
-        由于此类的数据输入包含`len_closeness`/`len_period`/`len_trend`的数据，但都融合到`X`中，
+        由于此类的数据输入包含len_closeness/len_period/len_trend的数据，但都融合到X中，
         因此，继承此类的子类此函数应该返回这三段数据的具体长度（不一定等于上述的三个参数的值）
-        :return: data_feature (dict)
+
+        Returns:
+            dict: 包含数据集的相关特征的字典
         """
         raise NotImplementedError('Please implement the function `get_data_feature()`.')
 
     def _add_external_information(self, df, ext_data=None):
         """
-        将外部数据和原始交通状态数据结合到高维数组中，子类必须实现这个方法来指定如何融合外部数据和交通状态数据
-        **由于基于`len_closeness`/`len_period`/`len_trend`的方法一般将外部数据单独处理，所以不需要实现此方法。**
-        :param df: 交通状态数据多维数组
-        :param ext_data: 外部数据
-        :return: 融合后的外部数据和交通状态数据
+        将外部数据和原始交通状态数据结合到高维数组中，子类必须实现这个方法来指定如何融合外部数据和交通状态数据,
+        **由于基于len_closeness/len_period/len_trend的方法一般将外部数据单独处理，所以不需要实现此方法。**
+
+        Args:
+            df(np.ndarray): 交通状态数据多维数组
+            ext_data(np.ndarray): 外部数据
+
+        Returns:
+            np.ndarray: 融合后的外部数据和交通状态数据
         """
         return df

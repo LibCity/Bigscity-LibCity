@@ -17,9 +17,9 @@ def parse_time(time_in, timezone_offset_in_minute):
 
 def cal_basetime(start_time, base_zero):
     """
-    用于切分轨迹成一个 session
-    思路为：给定一个 start_time 找到一个基准时间 base_time
-    在该 base_time 到 base_time + time_length 区间的点划分到一个 session 内
+    用于切分轨迹成一个 session，
+    思路为：给定一个 start_time 找到一个基准时间 base_time，
+    在该 base_time 到 base_time + time_length 区间的点划分到一个 session 内，
     选取 base_time 来做的理由是：这样可以保证同一个小时段总是被 encode 成同一个数
     """
     if base_zero:
@@ -92,11 +92,15 @@ def string2timestamp(strings, offset_frame):
 
 def timestamp2array(timestamps, t):
     """
-    把时间戳的序列中的每一个时间戳转成特征数组，考虑了星期和小时
+    把时间戳的序列中的每一个时间戳转成特征数组，考虑了星期和小时，
     时间戳: numpy.datetime64('2013-07-01T00:00:00.000000000')
-    :param timestamps: 时间戳序列
-    :param t: 一天有多少个时间步
-    :return: len(timestamps) * ext_dim
+
+    Args:
+        timestamps: 时间戳序列
+        t: 一天有多少个时间步
+
+    Returns:
+        np.ndarray: 特征数组，shape: (len(timestamps), ext_dim)
     """
     vec_wday = [time.strptime(
         str(t)[:10], '%Y-%m-%d').tm_wday for t in timestamps]
@@ -130,10 +134,14 @@ def timestamp2array(timestamps, t):
 
 def timestamp2vec_origin(timestamps):
     """
-    把时间戳的序列中的每一个时间戳转成特征数组，只考虑星期
+    把时间戳的序列中的每一个时间戳转成特征数组，只考虑星期，
     时间戳: numpy.datetime64('2013-07-01T00:00:00.000000000')
-    :param timestamps: 时间戳序列
-    :return: len(timestamps) * 8
+
+    Args:
+        timestamps: 时间戳序列
+
+    Returns:
+        np.ndarray: 特征数组，shape: (len(timestamps), 8)
     """
     vec = [time.strptime(str(t)[:10], '%Y-%m-%d').tm_wday for t in timestamps]
     ret = []

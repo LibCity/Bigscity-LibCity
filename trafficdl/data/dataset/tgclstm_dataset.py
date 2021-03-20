@@ -9,6 +9,9 @@ class TGCLSTMDataset(TrafficStatePointDataset):
         super(TGCLSTMDataset, self).__init__(config)
 
     def _load_rel(self):
+        """
+        加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)]
+        """
         relfile = pd.read_csv(self.data_path + self.rel_file + '.rel')
         if self.weight_col != '':  # 根据weight_col确认权重列
             self.distance_df = relfile[~relfile[self.weight_col].isna()][[
@@ -38,6 +41,13 @@ class TGCLSTMDataset(TrafficStatePointDataset):
             self._calculate_adjacency_matrix()
 
     def get_data_feature(self):
+        """
+        返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是点的个数，
+        feature_dim是输入数据的维度，output_dim是模型输出的维度, FFR是额外的输入矩阵
+
+        Returns:
+            dict: 包含数据集的相关特征的字典
+        """
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "FFR": self.FFR,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
                 "output_dim": self.output_dim}

@@ -30,13 +30,17 @@ class ASTGCNDataset(TrafficStatePointDataset):
 
     def _search_data(self, sequence_length, label_start_idx, num_for_predict, num_of_depend, units):
         """
-        根据全局参数`len_closeness`/`len_period`/`len_trend`找到数据索引的位置
-        :param sequence_length: int, 历史数据的总长度
-        :param label_start_idx: int, 预测开始的时间片的索引
-        :param num_for_predict: int, 预测的时间片序列长度
-        :param num_of_depend: int, len_trend/len_period/len_closeness
-        :param units: int, trend/period/closeness的长度(以小时为单位)
-        :return: 起点-终点区间段的数组，list[(start_idx, end_idx)]
+        根据全局参数len_closeness/len_period/len_trend找到数据索引的位置
+
+        Args:
+            sequence_length(int): 历史数据的总长度
+            label_start_idx(int): 预测开始的时间片的索引
+            num_for_predict(int): 预测的时间片序列长度
+            num_of_depend(int): len_trend/len_period/len_closeness
+            units(int): trend/period/closeness的长度(以小时为单位)
+
+        Returns:
+            list: 起点-终点区间段的数组，list[(start_idx, end_idx)]
         """
         if self.points_per_hour < 0:
             raise ValueError("points_per_hour should be greater than 0!")
@@ -57,15 +61,19 @@ class ASTGCNDataset(TrafficStatePointDataset):
 
     def _get_sample_indices(self, data_sequence, label_start_idx):
         """
-        根据全局参数`len_closeness`/`len_period`/`len_trend`找到数据
-        预测目标数据段: [label_start_idx: label_start_idx+output_window)
-        :param data_sequence: np.ndarray (len_time, ..., feature_dim)
-        :param label_start_idx: the first index of predicting target, 预测开始的时间片的索引
-        :return:
-        trend_sample: np.ndarray (len_trend * self.output_window, ..., feature_dim)
-        period_sample: np.ndarray (len_period * self.output_window, ..., feature_dim)
-        closeness_sample: np.ndarray (len_closeness * self.output_window, ..., feature_dim)
-        target: np.ndarray (self.output_window, ..., feature_dim)
+        根据全局参数len_closeness/len_period/len_trend找到数据预测目标数据
+        段: [label_start_idx: label_start_idx+output_window)
+
+        Args:
+            data_sequence(np.ndarray): 输入数据，shape: (len_time, ..., feature_dim)
+            label_start_idx(int): the first index of predicting target, 预测开始的时间片的索引
+
+        Returns:
+            tuple: tuple contains:
+                trend_sample: 输入数据1, (len_trend * self.output_window, ..., feature_dim) \n
+                period_sample: 输入数据2, (len_period * self.output_window, ..., feature_dim) \n
+                closeness_sample: 输入数据3, (len_closeness * self.output_window, ..., feature_dim) \n
+                target: 输出数据, (self.output_window, ..., feature_dim)
         """
         trend_sample, period_sample, closeness_sample = None, None, None
         if label_start_idx + self.output_window > data_sequence.shape[0]:
@@ -101,11 +109,15 @@ class ASTGCNDataset(TrafficStatePointDataset):
 
     def _generate_input_data(self, df):
         """
-        根据全局参数`len_closeness`/`len_period`/`len_trend`切分输入，产生模型需要的输入
-        :param df: ndarray (len_time, ..., feature_dim)
-        :return:
-        # x: (num_samples, Tw+Td+Th, ..., feature_dim)
-        # y: (num_samples, Tp, ..., feature_dim)
+        根据全局参数len_closeness/len_period/len_trend切分输入，产生模型需要的输入
+
+        Args:
+            df(np.ndarray): 输入数据, shape: (len_time, ..., feature_dim)
+
+        Returns:
+            tuple: tuple contains:
+                sources(np.ndarray): 模型输入数据, shape: (num_samples, Tw+Td+Th, ..., feature_dim) \n
+                targets(np.ndarray): 模型输出数据, shape: (num_samples, Tp, ..., feature_dim)
         """
         trend_samples, period_samples, closeness_samples, targets = [], [], [], []
         for idx in range(df.shape[0]):
@@ -145,8 +157,11 @@ class ASTGCNDataset(TrafficStatePointDataset):
     def get_data_feature(self):
         """
         返回数据集特征，scaler是归一化方法，adj_mx是邻接矩阵，num_nodes是点的个数，
-                     feature_dim是输入数据的维度，output_dim是模型输出的维度
-        :return: data_feature (dict)
+        feature_dim是输入数据的维度，output_dim是模型输出的维度,
+        len_closeness/len_period/len_trend分别是三段数据的长度
+
+        Returns:
+            dict: 包含数据集的相关特征的字典
         """
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
