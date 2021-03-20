@@ -4,9 +4,10 @@ from heapq import nlargest
 
 def output(method, value, field):
     """
-    :param method: 评估方法
-    :param value: 对应评估方法的评估结果值
-    :param field: 评估的范围, 对一条轨迹或是整个模型
+    Args:
+        method: 评估方法
+        value: 对应评估方法的评估结果值
+        field: 评估的范围, 对一条轨迹或是整个模型
     """
     if method == 'ACC':
         if field == 'model':

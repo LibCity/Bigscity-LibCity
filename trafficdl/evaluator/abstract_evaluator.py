@@ -6,6 +6,9 @@ class AbstractEvaluator(object):
     def collect(self, batch):
         """
         收集一 batch 的评估输入
+
+        Args:
+            batch(dict): 输入数据
         """
         raise NotImplementedError('evaluator collect not implemented')
 
@@ -15,9 +18,13 @@ class AbstractEvaluator(object):
         """
         raise NotImplementedError('evaluator evaluate not implemented')
 
-    def save_result(self, save_path, filename):
+    def save_result(self, save_path, filename=None):
         """
         将评估结果保存到 save_path 文件夹下的 filename 文件中
+
+        Args:
+            save_path: 保存路径
+            filename: 保存文件名
         """
         raise NotImplementedError('evaluator save_result not implemented')
 

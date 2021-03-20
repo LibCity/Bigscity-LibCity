@@ -4,9 +4,27 @@ class Scaler:
     """
 
     def transform(self, data):
+        """
+        数据归一化接口
+
+        Args:
+            data(np.ndarray): 归一化前的数据
+
+        Returns:
+            np.ndarray: 归一化后的数据
+        """
         raise NotImplementedError("Transform not implemented")
 
     def inverse_transform(self, data):
+        """
+        数据逆归一化接口
+
+        Args:
+            data(np.ndarray): 归一化后的数据
+
+        Returns:
+            np.ndarray: 归一化前的数据
+        """
         raise NotImplementedError("Inverse_transform not implemented")
 
 
@@ -65,11 +83,11 @@ class MinMax01Scaler(Scaler):
         self.min = minn
         self.max = maxx
 
-    def transform(self, x):
-        return (x - self.min) / (self.max - self.min)
+    def transform(self, data):
+        return (data - self.min) / (self.max - self.min)
 
-    def inverse_transform(self, x):
-        return x * (self.max - self.min) + self.min
+    def inverse_transform(self, data):
+        return data * (self.max - self.min) + self.min
 
 
 class MinMax11Scaler(Scaler):
@@ -83,8 +101,8 @@ class MinMax11Scaler(Scaler):
         self.min = minn
         self.max = maxx
 
-    def transform(self, x):
-        return ((x - self.min) / (self.max - self.min)) * 2. - 1.
+    def transform(self, data):
+        return ((data - self.min) / (self.max - self.min)) * 2. - 1.
 
-    def inverse_transform(self, x):
-        return ((x + 1.) / 2.) * (self.max - self.min) + self.min
+    def inverse_transform(self, data):
+        return ((data + 1.) / 2.) * (self.max - self.min) + self.min

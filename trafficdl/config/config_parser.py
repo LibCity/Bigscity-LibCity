@@ -7,7 +7,7 @@ class ConfigParser(object):
     """
     use to parse the user defined parameters and use these to modify the
     pipeline's parameter setting.
-    值得注意的是，目前各阶段的参数是放置于同一个 dict 中的，因此需要编程时保证命名空间不冲突
+    值得注意的是，目前各阶段的参数是放置于同一个 dict 中的，因此需要编程时保证命名空间不冲突。
     config 优先级：命令行 > config file > default config
     """
 
@@ -110,6 +110,7 @@ class ConfigParser(object):
             "cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
     def get(self, key, default=None):
+
         return self.config.get(key, default)
 
     def __getitem__(self, key):

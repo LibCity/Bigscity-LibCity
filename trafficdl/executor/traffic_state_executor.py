@@ -60,15 +60,33 @@ class TrafficStateExecutor(AbstractExecutor):
         self.lr_scheduler = self._build_lr_scheduler()
 
     def save_model(self, cache_name):
+        """
+        将当前的模型保存到文件
+
+        Args:
+            cache_name(str): 保存的文件名
+        """
         ensure_dir(self.cache_dir)
         self._logger.info("Saved model at " + cache_name)
         torch.save(self.model.state_dict(), cache_name)
 
     def load_model(self, cache_name):
+        """
+        加载对应模型的 cache
+
+        Args:
+            cache_name(str): 保存的文件名
+        """
         self._logger.info("Loaded model at " + cache_name)
         self.model.load_state_dict(torch.load(cache_name))
 
     def save_model_with_epoch(self, epoch):
+        """
+        保存某个epoch的模型
+
+        Args:
+            epoch(int): 轮数
+        """
         ensure_dir(self.cache_dir)
         config = dict()
         config['model_state_dict'] = self.model.state_dict()
@@ -79,6 +97,12 @@ class TrafficStateExecutor(AbstractExecutor):
         return model_path
 
     def load_model_with_epoch(self, epoch):
+        """
+        加载某个epoch的模型
+
+        Args:
+            epoch(int): 轮数
+        """
         model_path = self.cache_dir + '/' + self.config['model'] + '_' + self.config['dataset'] + '_epoch%d.tar' % epoch
         assert os.path.exists(model_path), 'Weights at epoch %d not found' % epoch
         checkpoint = torch.load(model_path, map_location='cpu')
@@ -86,6 +110,9 @@ class TrafficStateExecutor(AbstractExecutor):
         self._logger.info("Loaded model at {}".format(epoch))
 
     def _build_optimizer(self):
+        """
+        根据全局参数`learner`选择optimizer
+        """
         if self.learner.lower() == 'adam':
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
                                          eps=self.lr_epsilon, weight_decay=self.weight_decay)
@@ -104,6 +131,9 @@ class TrafficStateExecutor(AbstractExecutor):
         return optimizer
 
     def _build_lr_scheduler(self):
+        """
+        根据全局参数`lr_scheduler`选择对应的lr_scheduler
+        """
         if self.lr_decay:
             if self.lr_scheduler_type.lower() == 'multisteplr':
                 lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
@@ -127,6 +157,12 @@ class TrafficStateExecutor(AbstractExecutor):
         return lr_scheduler
 
     def evaluate(self, test_dataloader):
+        """
+        use model to test data
+
+        Args:
+            test_dataloader(torch.Dataloader): Dataloader
+        """
         self._logger.info('Start evaluating ...')
         with torch.no_grad():
             self.model.eval()
@@ -155,6 +191,13 @@ class TrafficStateExecutor(AbstractExecutor):
             self.evaluator.save_result(self.evaluate_res_dir)
 
     def train(self, train_dataloader, eval_dataloader):
+        """
+        use data to train model with config
+
+        Args:
+            train_dataloader(torch.Dataloader): Dataloader
+            eval_dataloader(torch.Dataloader): Dataloader
+        """
         self._logger.info('Start training ...')
         min_val_loss = float('inf')
         wait = 0
@@ -198,6 +241,17 @@ class TrafficStateExecutor(AbstractExecutor):
         self.load_model_with_epoch(best_epoch)
 
     def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
+        """
+        完成模型一个轮次的训练
+
+        Args:
+            train_dataloader: 训练数据
+            epoch_idx: 轮次数
+            loss_func: 损失函数
+
+        Returns:
+            list: 每个batch的损失的数组
+        """
         self.model.train()
         loss_func = loss_func if loss_func is not None else self.model.calculate_loss
         losses = []
@@ -214,6 +268,17 @@ class TrafficStateExecutor(AbstractExecutor):
         return losses
 
     def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
+        """
+        完成模型一个轮次的评估
+
+        Args:
+            eval_dataloader: 评估数据
+            epoch_idx: 轮次数
+            loss_func: 损失函数
+
+        Returns:
+            float: 评估数据的平均损失值
+        """
         with torch.no_grad():
             self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss

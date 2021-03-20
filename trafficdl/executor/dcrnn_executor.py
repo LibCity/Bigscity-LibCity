@@ -10,6 +10,13 @@ class DCRNNExecutor(TrafficStateExecutor):
         TrafficStateExecutor.__init__(self, config, model)
 
     def train(self, train_dataloader, eval_dataloader):
+        """
+        use data to train model with config
+
+        Args:
+            train_dataloader(torch.Dataloader): Dataloader
+            eval_dataloader(torch.Dataloader): Dataloader
+        """
         self._logger.info('Start training ...')
         min_val_loss = float('inf')
         wait = 0
@@ -55,6 +62,20 @@ class DCRNNExecutor(TrafficStateExecutor):
         self.load_model_with_epoch(best_epoch)
 
     def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
+        """
+        完成模型一个轮次的训练
+
+        Args:
+            train_dataloader: 训练数据
+            epoch_idx: 轮次数
+            batches_seen: 全局batch数
+            loss_func: 损失函数
+
+        Returns:
+            tuple: tuple contains
+                losses(list): 每个batch的损失的数组 \n
+                batches_seen(int): 全局batch数
+        """
         self.model.train()
         loss_func = loss_func if loss_func is not None else self.model.calculate_loss
         losses = []
@@ -72,6 +93,18 @@ class DCRNNExecutor(TrafficStateExecutor):
         return losses, batches_seen
 
     def _valid_epoch(self, eval_dataloader, epoch_idx, batches_seen=None, loss_func=None):
+        """
+        完成模型一个轮次的评估
+
+        Args:
+            eval_dataloader: 评估数据
+            epoch_idx: 轮次数
+            batches_seen: 全局batch数
+            loss_func: 损失函数
+
+        Returns:
+            float: 评估数据的平均损失值
+        """
         with torch.no_grad():
             self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
