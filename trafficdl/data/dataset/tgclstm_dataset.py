@@ -21,11 +21,15 @@ class TGCLSTMDataset(TrafficStatePointDataset):
             raise ValueError("Don't know which column to be loaded! Please set `weight_col` parameter!")
         # 把数据转换成矩阵的形式
         self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
-        self.adj_mx[:] = np.inf
+        if self.init_weight_inf_or_zero.lower() == 'inf':
+            self.adj_mx[:] = np.inf
         for row in self.distance_df.values:
             if row[0] not in self.geo_to_ind or row[1] not in self.geo_to_ind:
                 continue
-            self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+            if self.set_weight_link_or_dist.lower() == 'dist':  # 保留原始的距离数值
+                self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+            else:  # self.set_weight_link_or_dist.lower()=='link' 只保留01的邻接性
+                self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = 1
         self._logger.info("Loaded file " + self.dataset + '.rel')
         # 得到可达性矩阵
         for i in range(3, 8):
@@ -37,7 +41,7 @@ class TGCLSTMDataset(TrafficStatePointDataset):
                 ffr_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[i]
             self.FFR.append(ffr_mx)
         # 计算权重
-        if self.calculate_weight:
+        if self.calculate_weight_adj:
             self._calculate_adjacency_matrix()
 
     def get_data_feature(self):
