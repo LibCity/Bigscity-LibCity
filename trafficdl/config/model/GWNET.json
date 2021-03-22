@@ -15,7 +15,6 @@
   "end_channels": 512,
 
   "scaler": "standard",
-  "calculate_weight": true,
   "load_external": false,
   "normal_external": false,
   "add_time_in_day": false,

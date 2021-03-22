@@ -1,6 +1,6 @@
 {
   "gpu": true,
-  "gpu_id": "0",
+  "gpu_id": 0,
   "max_epoch": 100,
   "epoch": 0,
   "learner": "adam",

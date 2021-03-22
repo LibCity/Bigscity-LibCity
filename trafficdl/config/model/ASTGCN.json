@@ -1,16 +1,20 @@
 {
-  "rnn_units": 100,
-  "lambda": 0.0015,
+  "nb_block": 2,
+  "K": 3,
+  "nb_chev_filter": 64,
+  "nb_time_filter": 64,
 
-  "scaler": "normal",
+  "scaler": "standard",
   "load_external": false,
   "normal_external": false,
   "add_time_in_day": false,
   "add_day_in_week": false,
+  "train_rate": 0.6,
+  "eval_rate": 0.2,
 
-  "max_epoch": 5000,
+  "max_epoch": 100,
   "learner": "adam",
-  "learning_rate": 0.001,
+  "learning_rate": 0.0001,
   "lr_decay": false,
   "clip_grad_norm": false,
   "use_early_stop": false

@@ -10,15 +10,12 @@
   "normal_external": false,
   "input_window": 12,
   "output_window": 12,
-  "output_dim": 1,
   "add_time_in_day": false,
   "add_day_in_week": false,
-  "calculate_weight": false,
-  "adj_epsilon": 0.1,
   "points_per_hour": 12,
-  "len_closeness": 3,
-  "len_period": 4,
-  "len_trend": 0,
+  "len_closeness": 2,
+  "len_period": 1,
+  "len_trend": 2,
   "interval_period": 1,
   "interval_trend": 7
 }

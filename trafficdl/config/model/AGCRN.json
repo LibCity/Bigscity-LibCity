@@ -5,8 +5,6 @@
   "cheb_order": 2,
 
   "scaler": "standard",
-  "pad_with_last_sample": false,
-  "calculate_weight": true,
   "load_external": false,
   "normal_external": false,
   "add_time_in_day": false,

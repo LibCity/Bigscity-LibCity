@@ -6,7 +6,6 @@
   "graph_conv_type": "chebconv",
 
   "scaler": "standard",
-  "calculate_weight": true,
   "load_external": true,
   "normal_external": true,
   "add_time_in_day": true,

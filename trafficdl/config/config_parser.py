@@ -88,6 +88,8 @@ class ConfigParser(object):
         default_file_list = []
         # model
         default_file_list.append('model/{}.json'.format(self.config['model']))
+        # dataset
+        default_file_list.append('../../raw_data/{}/config.json'.format(self.config['dataset']))
         default_file_list.append('data/{}.json'.format(self.config['dataset_class']))
         # executor
         default_file_list.append('executor/{}.json'.format(self.config['executor']))
@@ -110,7 +112,6 @@ class ConfigParser(object):
             "cuda" if torch.cuda.is_available() and use_gpu else "cpu")
 
     def get(self, key, default=None):
-
         return self.config.get(key, default)
 
     def __getitem__(self, key):
