@@ -51,7 +51,8 @@ class TrafficStateExecutor(AbstractExecutor):
         self.log_every = self.config.get('log_every', 1)
         self.saved = self.config.get('saved_model', True)
 
-        self.output_dim = self.config.get('output_dim', 1)
+        # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
+        self.output_dim = self.config.get('info', {}).get('output_dim', 1)
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)

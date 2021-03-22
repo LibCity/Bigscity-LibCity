@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import numpy as np
 import datetime
-import json
 from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
@@ -30,13 +29,10 @@ class TrafficStateDataset(AbstractDataset):
         self.scaler_type = self.config.get('scaler', 'none')
         self.load_external = self.config.get('load_external', False)
         self.normal_external = self.config.get('normal_external', False)
-        self.input_window = self.config.get('input_window', 12)
-        self.output_window = self.config.get('output_window', 12)
-        self.output_dim = self.config.get('output_dim', 0)
         self.add_time_in_day = self.config.get('add_time_in_day', False)
         self.add_day_in_week = self.config.get('add_day_in_week', False)
-        self.calculate_weight = self.config.get('calculate_weight', False)
-        self.adj_epsilon = self.config.get('adj_epsilon', 0.1)
+        self.input_window = self.config.get('input_window', 12)
+        self.output_window = self.config.get('output_window', 12)
         self.parameters_str = \
             str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
             + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
@@ -51,14 +47,18 @@ class TrafficStateDataset(AbstractDataset):
             raise ValueError("Dataset {} not exist! Please ensure the path "
                              "'./raw_data/{}/' exist!".format(self.dataset, self.dataset))
         # 加载数据集的config.json文件
-        self.data_config = json.load(open(self.data_path + 'config.json', 'r'))
-        self.weight_col = self.data_config.get('info', {}).get('weight_col', '')
-        self.data_col = self.data_config.get('info', {}).get('data_col', '')
-        self.ext_col = self.data_config.get('info', {}).get('ext_col', '')
-        self.geo_file = self.data_config.get('info', {}).get('geo_file', self.dataset)
-        self.rel_file = self.data_config.get('info', {}).get('rel_file', self.dataset)
-        self.data_files = self.data_config.get('info', {}).get('data_files', self.dataset)
-        self.ext_file = self.data_config.get('info', {}).get('ext_file', self.dataset)
+        self.weight_col = self.config.get('info', {}).get('weight_col', '')
+        self.data_col = self.config.get('info', {}).get('data_col', '')
+        self.ext_col = self.config.get('info', {}).get('ext_col', '')
+        self.geo_file = self.config.get('info', {}).get('geo_file', self.dataset)
+        self.rel_file = self.config.get('info', {}).get('rel_file', self.dataset)
+        self.data_files = self.config.get('info', {}).get('data_files', self.dataset)
+        self.ext_file = self.config.get('info', {}).get('ext_file', self.dataset)
+        self.output_dim = self.config.get('info', {}).get('output_dim', 1)
+        self.init_weight_inf_or_zero = self.config.get('info', {}).get('init_weight_inf_or_zero', 'inf')
+        self.set_weight_link_or_dist = self.config.get('info', {}).get('set_weight_link_or_dist', 'dist')
+        self.calculate_weight_adj = self.config.get('info', {}).get('calculate_weight_adj', False)
+        self.weight_adj_epsilon = self.config.get('info', {}).get('weight_adj_epsilon', 0.1)
         # 初始化
         self.data = None
         self.feature_name = {'X': 'float', 'y': 'float'}  # 此类的输入只有X和y
@@ -111,7 +111,7 @@ class TrafficStateDataset(AbstractDataset):
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)],
         生成N*N的矩阵，其中权重所在的列名用全局参数`weight_col`来指定,
         .rel文件中缺少的位置的权重填充为np.inf,
-        全局参数`calculate_weight`表示是否需要对加载的.rel的默认权重进行进一步计算,
+        全局参数`calculate_weight_adj`表示是否需要对加载的.rel的默认权重进行进一步计算,
         如果需要，则调用函数self._calculate_adjacency_matrix()进行计算
 
         Returns:
@@ -134,14 +134,18 @@ class TrafficStateDataset(AbstractDataset):
                     'origin_id', 'destination_id', self.weight_col]]
         # 把数据转换成矩阵的形式
         self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
-        self.adj_mx[:] = np.inf
+        if self.init_weight_inf_or_zero.lower() == 'inf':
+            self.adj_mx[:] = np.inf
         for row in self.distance_df.values:
             if row[0] not in self.geo_to_ind or row[1] not in self.geo_to_ind:
                 continue
-            self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+            if self.set_weight_link_or_dist.lower() == 'dist':  # 保留原始的距离数值
+                self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+            else:  # self.set_weight_link_or_dist.lower()=='link' 只保留01的邻接性
+                self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = 1
         self._logger.info("Loaded file " + self.rel_file + '.rel, shape=' + str(self.adj_mx.shape))
         # 计算权重
-        if self.calculate_weight:
+        if self.calculate_weight_adj:
             self._calculate_adjacency_matrix()
 
     def _load_grid_rel(self):
@@ -169,7 +173,7 @@ class TrafficStateDataset(AbstractDataset):
         """
         使用带有阈值的高斯核计算邻接矩阵的权重，如果有其他的计算方法，可以覆盖这个函数,
         公式为：$ w_{ij} = \exp \left(- \\frac{d_{ij}^{2}}{\sigma^{2}} \\right) $, $\sigma$ 是方差,
-        小于阈值`adj_epsilon`的值设为0：$  w_{ij}[w_{ij}<\epsilon]=0 $
+        小于阈值`weight_adj_epsilon`的值设为0：$  w_{ij}[w_{ij}<\epsilon]=0 $
 
         Returns:
             np.ndarray: self.adj_mx, N*N的邻接矩阵
@@ -178,7 +182,7 @@ class TrafficStateDataset(AbstractDataset):
         distances = self.adj_mx[~np.isinf(self.adj_mx)].flatten()
         std = distances.std()
         self.adj_mx = np.exp(-np.square(self.adj_mx / std))
-        self.adj_mx[self.adj_mx < self.adj_epsilon] = 0
+        self.adj_mx[self.adj_mx < self.weight_adj_epsilon] = 0
 
     def _load_dyna(self, filename):
         """
