@@ -1,22 +1,25 @@
 {
-  "batch_size": 64,
+  "batch_size": 32,
   "cache_dataset": true,
   "num_workers": 0,
   "pad_with_last_sample": true,
   "train_rate": 0.7,
   "eval_rate": 0.1,
-  "scaler": "none",
+  "scaler": "minmax11",
   "load_external": false,
   "normal_external": false,
   "input_window": 12,
   "output_window": 12,
   "add_time_in_day": false,
   "add_day_in_week": false,
-  "points_per_hour": 12,
+  "points_per_hour": 1,
   "len_closeness": 3,
   "len_period": 4,
-  "len_trend": 0,
+  "len_trend": 4,
   "interval_period": 1,
   "interval_trend": 7,
-  "use_row_column": true
+  "use_row_column": true,
+  "info": {
+    "output_dim": 2
+  }
 }

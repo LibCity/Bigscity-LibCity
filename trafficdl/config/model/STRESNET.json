@@ -1,0 +1,8 @@
+{
+  "scaler": "minmax11",
+  "load_external": false,
+  "max_epoch": 500,
+  "learning_rate": 0.0002,
+  "use_early_stop": true,
+  "patience": 30
+}
