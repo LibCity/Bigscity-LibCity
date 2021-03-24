@@ -5,7 +5,7 @@
 本项目为交通大数据领域下的模型开发开源框架，目前支持以下任务：
 
 * 交通轨迹下一跳预测
-* 交通速度预测
+* 交通状态预测
 
 #### 架构说明
 
@@ -40,18 +40,29 @@
 python run_model.py --task traj_loc_pred --model DeepMove --dataset foursquare_tky
 ```
 
-这里简单介绍部分常用命令行参数，完整参数列表参见 [文档](https://aptx1231.github.io/Bigscity-TrafficDL-Docs/index.html)：
+所支持的命令行参数如下：：
 
-* task：所要执行的任务名，默认为`traj_loc_pred`。
-* model：所要运行的模型名，默认为`DeepMove`。
-* dataset：所要运行的数据集，默认为 `foursquare_tky`。
-* config_file：用户指定 config 文件名，默认为 `None`。
-* saved_model：是否保存训练的模型结果，默认为 `True`。
-* train：当模型已被训练时是否要重新训练，默认为 `True`。
+- `task`：所要执行的任务名，包括`traj_loc_pred`和`traffic_state_pred`，默认为`traj_loc_pred`。
+- `model`：所要运行的模型名，应是`trafficdl/model/`目录下各Model类名中的一个，默认为`DeepMove`。
+- `dataset`：所要运行的数据集，默认为 `foursquare_tky`。
+- `config_file`：用户指定 config 文件名，默认为 `None`。
+- `saved_model`：是否保存训练的模型结果，默认为 `True`。
+- `train`：当模型已被训练时是否要重新训练，默认为 `True`。
+- `batch_size`：单次输入的 Batch 大小。
+- `train_rate`：训练集所占比例，如`0.6`，划分顺序是【训练集，验证集，测试集】。
+- `eval_rate`：验证集所占比例，如`0.2`，划分顺序是【训练集，验证集，测试集】。
+- `learning_rate`：优化器的学习率。
+- `max_epoch`：训练的最大轮次。
+- `gpu`：是否是用GPU，默认为 `True`。
+- `gpu_id`：指定使用的GPU的id，默认为`0`。
 
 ## 标准赛道
 
-在交通大数据领域中，长期存在着评测数据集不统一、评测指标不统一、数据集预处理不统一等现象，导致了不同模型的性能可比性较差。因此本项目为了解决上述问题，为每个任务实现了一套标准流水线（赛道）。标准赛道上，使用项目提供的原始数据集、标准数据模块（Data 模块）、标准评估模块（Evaluator 模块），从而约束不同模型使用相同的数据输入与评估指标，以提高评估结果的可比性。下面对不同任务的标准数据输入格式与评估输入格式进行说明：
+在交通大数据领域中，长期存在着评测数据集不统一、评测指标不统一、数据集预处理不统一等现象，导致了不同模型的性能可比性较差。因此本项目为了解决上述问题，为每个任务实现了一套标准流水线（赛道）。
+
+标准赛道上，使用项目提供的原始数据集、标准数据模块（Data 模块）、标准评估模块（Evaluator 模块），从而约束不同模型使用相同的数据输入与评估指标，以提高评估结果的可比性。
+
+下面对不同任务的标准数据输入格式与评估输入格式进行说明：
 
 #### 轨迹下一跳预测
 
@@ -75,17 +86,24 @@ python run_model.py --task traj_loc_pred --model DeepMove --dataset foursquare_t
 * `loc_true`：期望下一跳位置信息，`shape = (batch_size)`。
 * `loc_pred`：模型预测输出，`shape = (batch_size, output_dim)`。 
 
-#### 交通速度预测
+#### 交通状态预测
+
+根据交通数据的不同空间结构，交通状态数据一般可以用如下几种格式的张量进行表示：
+
+- `（N,T,F）`的三维张量，`T`是时间长度，`F`是特征维度，`N`是传感器的个数。
+- `（T,F,I,J）`的四维张量，`T`是时间长度，`F`是特征维度，`I,J`表示网格数据的行列索引。
+- `（T,F,S,T）`的四维张量，`T`是时间长度，`F`是特征维度，`S,T`表示`od`数据的起点和终点的编号。
+- `（T,F,SI,SJ,TI,TJ）`的六维张量，`T`是时间长度，`F`是特征维度，`SI,SJ,TI,TJ`表示网格结构的`od`数据的起点和终点的行列索引。
 
 标准模型输入格式为类字典的 [Batch](https://aptx1231.github.io/Bigscity-TrafficDL-Docs/user_guide/data/batch.html) 对象实例，该对象所具有的键名如下：
 
-* `X`：四维张量，`shape = (batch_size, input_window_width, geo_number, feature_dim)`，分别表示 batch 中的样本总数，输入时间窗的宽度，地理实体个数，数据特征维数。
-
-* `y`：四维张量，`shape = (batch_size, output_window_width, geo_number, feature_dim)`，分别表示 batch 中的样本总数，输出时间窗的宽度，地理实体个数，数据特征维数。
+- `X`：模型输入的多维张量，`shape = (batch_size, T_in, space_dim, feature_dim)`，分别表示 batch 中的样本总数，输入时间窗的宽度，空间上的维度，数据特征维数。其中，空间上的维度可以是上文中的`N`或`I,J`或`S,T`或`SI,SJ,TI,TJ`。
+- `y`：模型期望输出的多维张量，`shape = (batch_size, T_out, space_dim, feature_dim)`，分别表示 batch 中的样本总数，输出时间窗的宽度，空间上的维度，数据特征维数。其中，空间上的维度可以是上文中的`N`或`I,J`或`S,T`或`SI,SJ,TI,TJ`。
+- `X_ext`：可选的外部数据，`shape = (batch_size, T_in, ext_dim)`，分别表示 batch 中的样本总数，输入时间窗的宽度，空间上的维度，外部数据特征维数。部分模型可能直接将`X_ext`融合到`X`中作为模型的输入。
+- `y_ext`：可选的外部数据，`shape = (batch_size, T_out, ext_dim)`，分别表示 batch 中的样本总数，输出时间窗的宽度，空间上的维度，外部数据特征维数。
 
 标准评估模块的输入格式为字典对象，该对象所具有的键名如下：
 
-\- `y_true`：真实的输出张量，格式同输入中的 `y`。
-
-\- `y_pred`：预测的输出张量，格式同输入中的 `y`。
+- `y_true`：真实值，格式同输入中的 `y`。
+- `y_pred`：预测值，格式同输入中的 `y`。
 
