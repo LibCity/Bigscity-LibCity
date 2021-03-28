@@ -1,12 +1,6 @@
-import os
-import torch
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
-from trafficdl.utils.dataset import parseCoordinate
-from geopy import distance
-import numpy as np
-import torch.nn.functional as F
+from trafficdl.utils import get_model
 
 config = ConfigParser('traj_loc_pred', 'STRNN', 'foursquare_tky', None, None)
 dataset = get_dataset(config)

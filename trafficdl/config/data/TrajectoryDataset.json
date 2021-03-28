@@ -1,12 +1,14 @@
 {
     "min_session_len": 5,
     "min_sessions": 2,
-    "time_window_size": 72,
+    "window_size": 72,
     "history_len": 50,
     "batch_size": 20,
     "num_workers": 0,
     "cache_dataset": true,
     "train_rate": 0.6,
     "eval_rate": 0.2,
-    "history_type": "splice"
+    "history_type": "splice",
+    "window_type": "time_window",
+    "traj_encoder": "StandardTrajectoryEncoder"
 }

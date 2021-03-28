@@ -8,4 +8,4 @@
 /.idea
 /trafficdl/log/*
 /trafficdl/model/*/__pycache__
-
+/trafficdl/data/dataset/trajectory_encoder/__pycache__
