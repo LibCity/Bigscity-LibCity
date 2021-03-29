@@ -15,6 +15,9 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         self.location2id = {}  # 因为原始数据集中的部分 loc id 不会被使用到因此这里需要重新编码一下
         self.loc_id = 0
         self.tim_max = 0  # 记录最大的时间编码
+        if self.config['window_type'] == 'time_window':
+            # 对于以时间窗口切割的轨迹，最大时间编码是已知的
+            self.tim_max = self.config['window_size'] - 1
         self.history_type = self.config['history_type']
         self.feature_dict = {'history_loc': 'int', 'history_tim': 'int',
                              'current_loc': 'int', 'current_tim': 'int',
