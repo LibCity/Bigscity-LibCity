@@ -72,8 +72,8 @@ class AbstractTrajectoryEncoder(object):
             subsequently be converted to a torch.tensor and then directly input to the model.
             (see more in trafficdl.Batch)
             Take the StandardTrajectoryEncoder as an example.
-                encoded_trajectory = (history_loc, history_tim, current_loc, current_tim, target, target_tim, uid)
-            Please make sure the order of the features in the tuple is consistent with the order
+                encoded_trajectory = [history_loc, history_tim, current_loc, current_tim, target, target_tim, uid]
+            Please make sure the order of the features in the list is consistent with the order
             of the features in self.feature_dict.
         """
 
