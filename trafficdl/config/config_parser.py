@@ -71,8 +71,9 @@ class ConfigParser(object):
             model = self.config['model']
             # 加载 dataset、executor、evaluator 的模块
             if 'dataset_class' not in self.config:
-                self.config['dataset_class'] = \
-                    task_config[model]['dataset_class']
+                self.config['dataset_class'] = task_config[model]['dataset_class']
+            if self.config['task'] == 'traj_loc_pred' and 'traj_encoder' not in self.config:
+                self.config['traj_encoder'] = task_config[model]['traj_encoder']
             if 'executor' not in self.config:
                 self.config['executor'] = task_config[model]['executor']
             if 'evaluator' not in self.config:

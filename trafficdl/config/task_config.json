@@ -5,47 +5,56 @@
         "DeepMove": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "RNN": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "LSTM": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "GRU": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "FPMC": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "LSTPM": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "STRNN": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "SERM": {
             "dataset_class": "SermTrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         },
         "TemplateTLP": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
-            "evaluator": "TrajLocPredEvaluator"
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
         }
     },
     "traffic_state_pred": {

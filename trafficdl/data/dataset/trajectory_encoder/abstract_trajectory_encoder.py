@@ -76,3 +76,8 @@ class AbstractTrajectoryEncoder(object):
             Please make sure the order of the features in the tuple is consistent with the order
             of the features in self.feature_dict.
         """
+
+        def gen_data_feature(self):
+            """After encode all trajectories, this method will be called to tell encoder that you can generate the
+            data_feature and pad_item
+            """
