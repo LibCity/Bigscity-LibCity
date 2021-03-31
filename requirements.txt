@@ -7,3 +7,4 @@ tensorboard==2.4.1
 flake8==3.3.0
 pep8-naming==0.4.1
 scikit-learn==0.24.0
+pytest==3.2.1
