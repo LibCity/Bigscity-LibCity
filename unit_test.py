@@ -56,9 +56,33 @@ def test_new_tsp_model():
     # test model.predict
     res = model.predict(batch)
     assert torch.is_tensor(res)
+    assert res.shape[0] == config['batch_size']
+    assert res.dim() == batch['y'].dim()
+    assert res.shape[-1] == data_feature['output_dim']
+    if config['dataset_class'] == 'TrafficStatePointDataset':
+        assert res.shape[1] == config['output_window']
+        assert res.shape[2] == data_feature['num_nodes']
+    elif config['dataset_class'] == 'TrafficStateGridDataset':
+        assert res.shape[1] == config['output_window']
+        if config['use_row_column'] is False:
+            assert res.shape[2] == data_feature['num_nodes']
+        else:
+            assert res.shape[2] == data_feature['len_row']
+            assert res.shape[3] == data_feature['len_column']
+    elif config['dataset_class'] == 'TrafficStateGridOdDataset':
+        assert res.shape[1] == config['output_window']
+        if config['use_row_column'] is False:
+            assert res.shape[2] == data_feature['num_nodes']
+            assert res.shape[3] == data_feature['num_nodes']
+        else:
+            assert res.shape[2] == data_feature['len_row']
+            assert res.shape[3] == data_feature['len_column']
+            assert res.shape[4] == data_feature['len_row']
+            assert res.shape[5] == data_feature['len_column']
     # test model.calculate_loss
     loss = model.calculate_loss(batch)
     assert torch.is_tensor(loss)
+    assert loss.requires_grad
 
 
 def test_new_traj_encoder():
