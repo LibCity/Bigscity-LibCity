@@ -1,6 +1,6 @@
 ## 介绍
 
-[文档](https://aptx1231.github.io/Bigscity-TrafficDL-Docs/index.html)
+[文档](https://bigscity-trafficdl-docs.readthedocs.io/en/latest/index.html)
 
 本项目为交通大数据领域下的模型开发开源框架，目前支持以下任务：
 
