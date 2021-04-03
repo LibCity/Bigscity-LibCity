@@ -216,7 +216,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.data_col, list):
                 data_col = self.data_col.copy()
             else:  # str
-                data_col = [self.data_col.copy()]
+                data_col = [self.data_col].copy()
             data_col.insert(0, 'time')
             data_col.insert(1, 'entity_id')
             dynafile = dynafile[data_col]
@@ -260,7 +260,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.data_col, list):
                 data_col = self.data_col.copy()
             else:  # str
-                data_col = [self.data_col.copy()]
+                data_col = [self.data_col].copy()
             data_col.insert(0, 'time')
             data_col.insert(1, 'row_id')
             data_col.insert(2, 'column_id')
@@ -305,7 +305,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.data_col, list):
                 data_col = self.data_col.copy()
             else:  # str
-                data_col = [self.data_col.copy()]
+                data_col = [self.data_col].copy()
             data_col.insert(0, 'time')
             data_col.insert(1, 'row_id')
             data_col.insert(2, 'column_id')
@@ -355,7 +355,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.data_col, list):
                 data_col = self.data_col.copy()
             else:  # str
-                data_col = [self.data_col.copy()]
+                data_col = [self.data_col].copy()
             data_col.insert(0, 'time')
             data_col.insert(1, 'origin_row_id')
             data_col.insert(2, 'origin_column_id')
@@ -411,7 +411,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.data_col, list):
                 data_col = self.data_col.copy()
             else:  # str
-                data_col = [self.data_col.copy()]
+                data_col = [self.data_col].copy()
             data_col.insert(0, 'time')
             data_col.insert(1, 'origin_row_id')
             data_col.insert(2, 'origin_column_id')
@@ -460,7 +460,7 @@ class TrafficStateDataset(AbstractDataset):
             if isinstance(self.ext_col, list):
                 ext_col = self.ext_col.copy()
             else:  # str
-                ext_col = [self.ext_col.copy()]
+                ext_col = [self.ext_col].copy()
             ext_col.insert(0, 'time')
             extfile = extfile[ext_col]
         else:  # 不指定则加载所有列
@@ -683,9 +683,9 @@ class TrafficStateDataset(AbstractDataset):
         """
         # 处理多数据文件问题
         if isinstance(self.data_files, list):
-            data_files = self.data_files
+            data_files = self.data_files.copy()
         else:  # str
-            data_files = [self.data_files]
+            data_files = [self.data_files].copy()
         # 加载外部数据
         if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
             ext_data = self._load_ext()
