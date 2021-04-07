@@ -1,5 +1,6 @@
-from trafficdl.pipeline.pipeline import run_model
+from trafficdl.pipeline.pipeline import run_model, objective_function
 
 __all__ = [
-    "run_model"
+    "run_model",
+    "objective_function"
 ]
