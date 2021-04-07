@@ -63,6 +63,7 @@ class MTGNNExecutor(TrafficStateExecutor):
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
         self.load_model_with_epoch(best_epoch)
+        return min_val_loss
 
     def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
         """
