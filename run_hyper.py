@@ -59,8 +59,8 @@ if __name__ == '__main__':
                      max_evals=args.max_evals, task=args.task, model_name=args.model,
                      dataset_name=args.dataset, config_file=args.config_file,
                      saved_model=args.saved_model, train=args.train, other_args=other_args)
-    hp.run()
-    hp.export_result(output_file='hyper_example.result')
+    hp.start()
+    hp.save_result(filename='hyper.result')
     logger.info('best params: ' + str(hp.best_params))
     logger.info('best result: ')
     logger.info(str(hp.params2result[hp.params2str(hp.best_params)]))
