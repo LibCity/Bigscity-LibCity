@@ -263,7 +263,7 @@ class GWNET(AbstractTrafficStateModel):
             # (batch_size, skip_channels, num_nodes, receptive_field-kernel_size+1)
             try:
                 skip = skip[:, :, :,  -s.size(3):]
-            except:
+            except(Exception):
                 skip = 0
             skip = s + skip
             # (batch_size, skip_channels, num_nodes, receptive_field-kernel_size+1)
