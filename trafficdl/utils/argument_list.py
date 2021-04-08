@@ -13,6 +13,19 @@ general_arguments = {
     "gpu_id": "int"
 }
 
+hyper_arguments = {
+    "gpu": {
+        "type": "bool",
+        "default": None,
+        "help": "whether use gpu"
+    },
+    "gpu_id": {
+        "type": "int",
+        "default": None,
+        "help": "the gpu id to use"
+    }
+}
+
 
 def str2bool(s):
     if isinstance(s, bool):

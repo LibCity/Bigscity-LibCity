@@ -9,5 +9,7 @@
     "clip": 5.0,
     "schedule_threshold": 1e-3,
     "verbose": 10,
-    "loss_func": "default"
+    "loss_func": "default",
+    "load_best_epoch": true,
+    "hyper_tune": false
 }
