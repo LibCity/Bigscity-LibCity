@@ -45,5 +45,5 @@ if __name__ == '__main__':
         'task', 'model', 'dataset', 'config_file', 'saved_model', 'train'] and
         val is not None}
     run_model(task=args.task, model_name=args.model, dataset_name=args.dataset,
-              config_file=args.config_file, save_model=args.saved_model,
+              config_file=args.config_file, saved_model=args.saved_model,
               train=args.train, other_args=other_args)
