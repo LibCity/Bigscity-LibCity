@@ -40,14 +40,21 @@ if __name__ == '__main__':
                         default='FIFO', help='the trial sheduler which will be used in ray.tune.run')
     parser.add_argument('--search_alg', type=str,
                         default='BasicSearch', help='the search algorithm')
+    parser.add_argument('--num_samples', type=int,
+                        default=5, help='the number of times to sample from hyperparameter space.')
+    parser.add_argument('--max_concurrent', type=int,
+                        default=1, help='Maximum number of trails running at the same time')
     # 增加其他可选的参数
     add_other_args(parser)
     # 解析参数
     args = parser.parse_args()
     dict_args = vars(args)
     other_args = {key: val for key, val in dict_args.items() if key not in [
-        'task', 'model', 'dataset', 'config_file', 'space_file', 'scheduler', 'search_alg'] and
+        'task', 'model', 'dataset', 'config_file', 'space_file', 'scheduler', 'search_alg',
+        'num_samples', 'max_concurrent'] and
         val is not None}
     hyper_parameter(task=args.task, model_name=args.model, dataset_name=args.dataset,
                     config_file=args.config_file, space_file=args.space_file,
-                    scheduler=args.scheduler, search_alg=args.search_alg, other_args=other_args)
+                    scheduler=args.scheduler, search_alg=args.search_alg,
+                    num_samples=args.num_samples, max_concurrent=args.max_concurrent,
+                    other_args=other_args)

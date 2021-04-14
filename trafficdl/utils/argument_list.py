@@ -23,6 +23,21 @@ hyper_arguments = {
         "type": "int",
         "default": None,
         "help": "the gpu id to use"
+    },
+    "train_rate": {
+        "type": "float",
+        "default": None,
+        "help": "the train set rate"
+    },
+    "eval_rate": {
+        "type": "float",
+        "default": None,
+        "help": "the validation set rate"
+    },
+    "batch_size": {
+        "type": "int",
+        "default": None,
+        "help": "the batch size"
     }
 }
 
