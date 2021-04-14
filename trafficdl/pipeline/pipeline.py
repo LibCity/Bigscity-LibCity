@@ -132,6 +132,11 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         exit(0)
     # parse space_file
     search_sapce = parse_search_space(space_file)
+    # load dataset
+    dataset = get_dataset(experiment_config)
+    # get train valid test data
+    train_data, valid_data, test_data = dataset.get_data()
+    data_feature = dataset.get_data_feature()
 
     def train(config, checkpoint_dir=None):
         """trainable function which meets ray tune API
@@ -143,11 +148,6 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         for key in config:
             if key in experiment_config:
                 experiment_config[key] = config[key]
-        # load dataset
-        dataset = get_dataset(experiment_config)
-        # get train valid test data
-        train_data, valid_data, test_data = dataset.get_data()
-        data_feature = dataset.get_data_feature()
         # load model
         model = get_model(experiment_config, data_feature)
         # load executor
