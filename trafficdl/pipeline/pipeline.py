@@ -1,5 +1,9 @@
 import os
 from ray import tune
+from ray.tune.suggest.hyperopt import HyperOptSearch
+from ray.tune.suggest.bayesopt import BayesOptSearch
+from ray.tune.suggest.basic_variant import BasicVariantGenerator
+from ray.tune.schedulers import FIFOScheduler, ASHAScheduler, MedianStoppingRule
 import json
 import torch
 
@@ -159,19 +163,19 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
 
     # init search algorithm and scheduler
     if search_alg == 'BasicSearch':
-        algorithm = tune.suggest.basic_variant.BasicVariantGenerator()
+        algorithm = BasicVariantGenerator()
     elif search_alg == 'BayesOptSearch':
-        algorithm = tune.suggest.bayesopt.BayesOptSearch(metric='loss', mode='min')
+        algorithm = BayesOptSearch(metric='loss', mode='min')
     elif search_alg == 'HyperOpt':
-        algorithm = tune.suggest.hyperopt.HyperOptSearch(metric='loss', mode='min')
+        algorithm = HyperOptSearch(metric='loss', mode='min')
     else:
         raise ValueError('the search_alg is illegal.')
     if scheduler == 'FIFO':
-        tune_scheduler = tune.schedulers.FIFOScheduler()
+        tune_scheduler = FIFOScheduler()
     elif scheduler == 'ASHA':
-        tune_scheduler = tune.schedulers.ASHAScheduler()
+        tune_scheduler = ASHAScheduler()
     elif scheduler == 'MedianStoppingRule':
-        tune_scheduler = tune.schedulers.MedianStoppingRule()
+        tune_scheduler = MedianStoppingRule()
     else:
         raise ValueError('the scheduler is illegal')
     # ray tune run
