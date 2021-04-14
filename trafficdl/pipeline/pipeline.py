@@ -179,9 +179,8 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
                       metric='loss', mode='min', scheduler=tune_scheduler, search_alg=algorithm,
                       local_dir='./trafficdl/tmp')
     best_trial = result.get_best_trial("loss", "min", "last")
-    print("Best trial config: {}".format(best_trial.config))
-    print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
-    print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
+    logger.info("Best trial config: {}".format(best_trial.config))
+    logger.info("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     # save best
     best_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
     model_state, optimizer_state = torch.load(best_path)

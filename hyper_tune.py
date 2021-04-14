@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler', type=str,
                         default='FIFO', help='the trial sheduler which will be used in ray.tune.run')
     parser.add_argument('--search_alg', type=str,
-                        default='GridSearch', help='the search algorithm')
+                        default='BasicSearch', help='the search algorithm')
     # 增加其他可选的参数
     add_other_args(parser)
     # 解析参数
