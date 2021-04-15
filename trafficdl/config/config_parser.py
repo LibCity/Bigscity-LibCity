@@ -12,7 +12,7 @@ class ConfigParser(object):
     """
 
     def __init__(self, task, model, dataset, config_file=None,
-                 other_args=None):
+                 saved_model=True, train=True, other_args=None, hyper_config_dict=None):
         """
         Args:
             task, model, dataset (str): 用户在命令行必须指明的三个参数
@@ -20,12 +20,13 @@ class ConfigParser(object):
             other_args (dict): 通过命令行传入的其他参数
         """
         self.config = {}
-        self._parse_external_config(task, model, dataset, other_args)
+        self._parse_external_config(task, model, dataset, saved_model, train, other_args, hyper_config_dict)
         self._parse_config_file(config_file)
         self._load_default_config()
         self._init_device()
 
-    def _parse_external_config(self, task, model, dataset, other_args=None):
+    def _parse_external_config(self, task, model, dataset,
+                               saved_model=True, train=True, other_args=None, hyper_config_dict=None):
         if task is None:
             raise ValueError('the parameter task should not be None!')
         if model is None:
@@ -36,10 +37,16 @@ class ConfigParser(object):
         self.config['task'] = task
         self.config['model'] = model
         self.config['dataset'] = dataset
+        self.config['saved_model'] = saved_model
+        self.config['train'] = train
         if other_args is not None:
             # TODO: 这里可以设计加入参数检查，哪些参数是允许用户通过命令行修改的
             for key in other_args:
                 self.config[key] = other_args[key]
+        if hyper_config_dict is not None:
+            # 超参数调整时传入的待调整的参数，优先级低于命令行参数
+            for key in hyper_config_dict:
+                self.config[key] = hyper_config_dict[key]
 
     def _parse_config_file(self, config_file):
         if config_file is not None:

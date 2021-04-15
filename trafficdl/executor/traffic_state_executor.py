@@ -189,7 +189,8 @@ class TrafficStateExecutor(AbstractExecutor):
             np.savez_compressed(os.path.join(self.evaluate_res_dir, filename), **outputs)
             self.evaluator.clear()
             self.evaluator.collect({'y_true': torch.tensor(y_truths), 'y_pred': torch.tensor(y_preds)})
-            self.evaluator.save_result(self.evaluate_res_dir)
+            test_result = self.evaluator.save_result(self.evaluate_res_dir)
+            return test_result
 
     def train(self, train_dataloader, eval_dataloader):
         """
@@ -240,6 +241,7 @@ class TrafficStateExecutor(AbstractExecutor):
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
         self.load_model_with_epoch(best_epoch)
+        return min_val_loss
 
     def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
         """
