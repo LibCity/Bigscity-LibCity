@@ -2,6 +2,7 @@ import os
 import time
 import numpy as np
 import torch
+from ray import tune
 from logging import getLogger
 from torch.utils.tensorboard import SummaryWriter
 from trafficdl.executor.abstract_executor import AbstractExecutor
@@ -50,6 +51,8 @@ class TrafficStateExecutor(AbstractExecutor):
         self.patience = self.config.get('patience', 50)
         self.log_every = self.config.get('log_every', 1)
         self.saved = self.config.get('saved_model', True)
+        self.load_best_epoch = self.config.get('load_best_epoch', True)
+        self.hyper_tune = self.config.get('hyper_tune', False)
 
         # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
         self.output_dim = self.config.get('info', {}).get('output_dim', 1)
@@ -69,7 +72,7 @@ class TrafficStateExecutor(AbstractExecutor):
         """
         ensure_dir(self.cache_dir)
         self._logger.info("Saved model at " + cache_name)
-        torch.save(self.model.state_dict(), cache_name)
+        torch.save((self.model.state_dict(), self.optimizer.state_dict()), cache_name)
 
     def load_model(self, cache_name):
         """
@@ -79,7 +82,9 @@ class TrafficStateExecutor(AbstractExecutor):
             cache_name(str): 保存的文件名
         """
         self._logger.info("Loaded model at " + cache_name)
-        self.model.load_state_dict(torch.load(cache_name))
+        model_state, optimizer_state = torch.load(cache_name)
+        self.model.load_state_dict(model_state)
+        self.optimizer.load_state_dict(optimizer_state)
 
     def save_model_with_epoch(self, epoch):
         """
@@ -91,6 +96,7 @@ class TrafficStateExecutor(AbstractExecutor):
         ensure_dir(self.cache_dir)
         config = dict()
         config['model_state_dict'] = self.model.state_dict()
+        config['optimizer_state_dict'] = self.optimizer.state_dict()
         config['epoch'] = epoch
         model_path = self.cache_dir + '/' + self.config['model'] + '_' + self.config['dataset'] + '_epoch%d.tar' % epoch
         torch.save(config, model_path)
@@ -108,6 +114,7 @@ class TrafficStateExecutor(AbstractExecutor):
         assert os.path.exists(model_path), 'Weights at epoch %d not found' % epoch
         checkpoint = torch.load(model_path, map_location='cpu')
         self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self._logger.info("Loaded model at {}".format(epoch))
 
     def _build_optimizer(self):
@@ -227,6 +234,14 @@ class TrafficStateExecutor(AbstractExecutor):
                     format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 
+            if self.hyper_tune:
+                # use ray tune to checkpoint
+                with tune.checkpoint_dir(step=epoch_idx) as checkpoint_dir:
+                    path = os.path.join(checkpoint_dir, "checkpoint")
+                    self.save_model(path)
+                # ray tune use loss to determine which params are best
+                tune.report(loss=val_loss)
+
             if val_loss < min_val_loss:
                 wait = 0
                 if self.saved:
@@ -240,7 +255,8 @@ class TrafficStateExecutor(AbstractExecutor):
                 if wait == self.patience and self.use_early_stop:
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
-        self.load_model_with_epoch(best_epoch)
+        if self.load_best_epoch:
+            self.load_model_with_epoch(best_epoch)
         return min_val_loss
 
     def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
