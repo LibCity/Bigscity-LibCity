@@ -20,5 +20,7 @@
   "patience": 50,
   "log_level": "INFO",
   "log_every": 1,
-  "saved_model": true
+  "saved_model": true,
+  "load_best_epoch": true,
+  "hyper_tune": false
 }

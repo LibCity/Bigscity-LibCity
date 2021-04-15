@@ -21,6 +21,8 @@
   "log_level": "INFO",
   "log_every": 1,
   "saved_model": true,
+  "load_best_epoch": true,
+  "hyper_tune": false,
   "step_size2": 100,
   "num_split": 1
 }

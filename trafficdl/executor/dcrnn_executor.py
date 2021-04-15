@@ -1,6 +1,8 @@
 import time
 import numpy as np
 import torch
+import os
+from ray import tune
 
 from trafficdl.executor.traffic_state_executor import TrafficStateExecutor
 
@@ -41,10 +43,18 @@ class DCRNNExecutor(TrafficStateExecutor):
                     log_lr = self.lr_scheduler.get_last_lr()[0]
                 else:
                     log_lr = self.learning_rate
-                message = 'Epoch [{}/{}] ({}) train_mae: {:.4f}, val_mae: {:.4f}, lr: {:.6f}, {:.1f}s'. \
+                message = 'Epoch [{}/{}] ({}) train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.1f}s'. \
                     format(epoch_idx, self.epochs, batches_seen, np.mean(losses), val_loss,
                            log_lr, (end_time - start_time))
                 self._logger.info(message)
+
+            if self.hyper_tune:
+                # use ray tune to checkpoint
+                with tune.checkpoint_dir(step=epoch_idx) as checkpoint_dir:
+                    path = os.path.join(checkpoint_dir, "checkpoint")
+                    self.save_model(path)
+                # ray tune use loss to determine which params are best
+                tune.report(loss=val_loss)
 
             if val_loss < min_val_loss:
                 wait = 0
@@ -59,7 +69,8 @@ class DCRNNExecutor(TrafficStateExecutor):
                 if wait == self.patience and self.use_early_stop:
                     self._logger.warning('Early stopping at epoch: %d' % epoch_idx)
                     break
-        self.load_model_with_epoch(best_epoch)
+        if self.load_best_epoch:
+            self.load_model_with_epoch(best_epoch)
         return min_val_loss
 
     def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
