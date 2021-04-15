@@ -1,4 +1,4 @@
-import json
+from ray import tune
 import torch
 import torch.optim as optim
 import numpy as np
@@ -19,21 +19,19 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
         self.loss_func = None  # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
+        self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
+                                    lr=self.config['learning_rate'], weight_decay=self.config['L2'])
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'max',
+                                                              patience=self.config['lr_step'],
+                                                              factor=self.config['lr_decay'],
+                                                              threshold=self.config['schedule_threshold'])
 
     def train(self, train_dataloader, eval_dataloader):
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad,
-                                      self.model.parameters()),
-                               lr=self.config['learning_rate'],
-                               weight_decay=self.config['L2'])
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, 'max', patience=self.config['lr_step'],
-            factor=self.config['lr_decay'],
-            threshold=self.config['schedule_threshold'])
-
         if not os.path.exists(self.tmp_path):
             os.makedirs(self.tmp_path)
         metrics = {}
         metrics['accuracy'] = []
+        metrics['loss'] = []
         train_total_batch = len(train_dataloader.dataset) / \
             train_dataloader.batch_size
         eval_total_batch = len(eval_dataloader.dataset) / \
@@ -41,37 +39,34 @@ class TrajLocPredExecutor(AbstractExecutor):
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
             self.model, avg_loss = self.run(
-                train_dataloader, self.model, optimizer,
+                train_dataloader, self.model,
                 self.config['learning_rate'], self.config['clip'],
                 train_total_batch, self.config['verbose'])
             print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(
                 epoch, avg_loss, lr))
             # eval stage
-            avg_acc = self._valid_epoch(
-                eval_dataloader, self.model, eval_total_batch,
-                self.config['verbose'])
-            print('==>Eval Acc:{:.4f}'.format(avg_acc))
-            metrics['accuracy'].append(avg_acc)
-            save_name_tmp = 'ep_' + str(epoch) + '.m'
-            torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
-            scheduler.step(avg_acc)
-            lr_last = lr
-            lr = optimizer.param_groups[0]['lr']
-            if lr_last > lr:
-                load_epoch = np.argmax(metrics['accuracy'])
-                load_name_tmp = 'ep_' + str(load_epoch) + '.m'
-                self.model.load_state_dict(
-                    torch.load(self.tmp_path + load_name_tmp))
-                print('load epoch={} model state'.format(load_epoch))
-            if lr <= 0.9 * 1e-5:
-                break
-        best = np.argmax(metrics['accuracy'])  # 这个不是最好的一次吗？
-        avg_acc = metrics['accuracy'][best]
-        # save metrics
-        with open('./metrics.json', 'w') as f:
-            json.dump(metrics, f)
-        load_name_tmp = 'ep_' + str(best) + '.m'
-        self.model.load_state_dict(torch.load(self.tmp_path + load_name_tmp))
+            avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model,
+                                                            eval_total_batch, self.config['verbose'])
+            print('==>Eval Acc:{:.4f}'.format(avg_eval_acc))
+            metrics['accuracy'].append(avg_eval_acc)
+            metrics['loss'].append(avg_eval_loss)
+            if self.config['hyper_tune']:
+                # use ray tune to checkpoint
+                with tune.checkpoint_dir(step=epoch) as checkpoint_dir:
+                    path = os.path.join(checkpoint_dir, "checkpoint")
+                    self.save_model(path)
+                # ray tune use loss to determine which params are best
+                tune.report(loss=avg_eval_loss, accuracy=avg_eval_acc)
+            else:
+                save_name_tmp = 'ep_' + str(epoch) + '.m'
+                torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
+            # 这个 scheduler 看起来也没什么用呀？ TODO: 发现一下他的作用
+            self.scheduler.step(avg_eval_acc)
+        if self.config['load_best_epoch']:
+            best = np.argmax(metrics['accuracy'])  # 这个不是最好的一次吗？
+            load_name_tmp = 'ep_' + str(best) + '.m'
+            self.model.load_state_dict(
+                torch.load(self.tmp_path + load_name_tmp))
         # 删除之前创建的临时文件夹
         for rt, dirs, files in os.walk(self.tmp_path):
             for name in files:
@@ -80,12 +75,15 @@ class TrajLocPredExecutor(AbstractExecutor):
         os.rmdir(self.tmp_path)
 
     def load_model(self, cache_name):
-        self.model.load_state_dict(torch.load(cache_name))
+        model_state, optimizer_state = torch.load(cache_name)
+        self.model.load_state_dict(model_state)
+        self.optimizer.load_state_dict(optimizer_state)
 
     def save_model(self, cache_name):
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
-        torch.save(self.model.state_dict(), cache_name)
+        # save optimizer when load epoch to train
+        torch.save((self.model.state_dict(), self.optimizer.state_dict()), cache_name)
 
     def evaluate(self, test_dataloader):
         self.model.train(False)
@@ -107,7 +105,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def run(self, data_loader, model, optimizer, lr, clip, total_batch,
+    def run(self, data_loader, model, lr, clip, total_batch,
             verbose):
         model.train(True)
         total_loss = []
@@ -115,7 +113,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         loss_func = self.loss_func or model.calculate_loss
         for batch in data_loader:
             # one batch, one step
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
             loss = loss_func(batch)
             loss.backward()
@@ -127,12 +125,10 @@ class TrajLocPredExecutor(AbstractExecutor):
                         p.data.add_(-lr, p.grad.data)
             except:
                 pass
-            optimizer.step()
+            self.optimizer.step()
             cnt += 1
             if cnt % verbose == 0:
                 print('finish batch {}/{}'.format(cnt, total_batch))
-        with open('run_loss.pny', 'wb') as f:
-            np.save(f, total_loss)
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
@@ -140,9 +136,13 @@ class TrajLocPredExecutor(AbstractExecutor):
         model.train(False)
         self.evaluator.clear()
         cnt = 0
+        total_loss = []
+        loss_func = self.loss_func or model.calculate_loss
         for batch in data_loader:
             batch.to_tensor(device=self.config['device'])
             scores = model.predict(batch)
+            loss = loss_func(batch)
+            total_loss.append(loss.data.cpu().numpy().tolist())
             evaluate_input = {
                 'uid': batch['uid'].tolist(),
                 'loc_true': batch['target'].tolist(),
@@ -153,4 +153,5 @@ class TrajLocPredExecutor(AbstractExecutor):
                 print('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
         avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
-        return avg_acc
+        avg_loss = np.mean(total_loss, dtype=np.float64)
+        return avg_acc, avg_loss
