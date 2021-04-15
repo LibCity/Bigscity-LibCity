@@ -62,7 +62,7 @@ class TrajLocPredExecutor(AbstractExecutor):
                 torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
             # 这个 scheduler 看起来也没什么用呀？ TODO: 发现一下他的作用
             self.scheduler.step(avg_eval_acc)
-        if self.config['load_best_epoch']:
+        if not self.config['hyper_tune'] and self.config['load_best_epoch']:
             best = np.argmax(metrics['accuracy'])  # 这个不是最好的一次吗？
             load_name_tmp = 'ep_' + str(best) + '.m'
             self.model.load_state_dict(

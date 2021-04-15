@@ -10,7 +10,7 @@ import torch
 
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model, get_logger
+from trafficdl.utils import get_executor, get_model, get_logger, ensure_dir
 
 
 def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
@@ -124,7 +124,8 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         other_args(dict): the rest parameter args, which will be pass to the Config
     """
     # load config
-    experiment_config = ConfigParser(task, model_name, dataset_name, config_file, other_args)
+    experiment_config = ConfigParser(task, model_name, dataset_name, config_file=config_file,
+                                     other_args=other_args)
     # logger
     logger = get_logger(experiment_config)
     # check space_file
@@ -159,7 +160,6 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
             executor.load_model(checkpoint)
         # train
         experiment_config['hyper_tune'] = True
-        experiment_config['load_best_epoch'] = False
         executor.train(train_data, valid_data)
 
     # init search algorithm and scheduler
@@ -182,9 +182,10 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     else:
         raise ValueError('the scheduler is illegal')
     # ray tune run
+    ensure_dir('./trafficdl/cache/hyper_tune')
     result = tune.run(train, resources_per_trial={'cpu': 1, 'gpu': 1}, config=search_sapce,
                       metric='loss', mode='min', scheduler=tune_scheduler, search_alg=algorithm,
-                      local_dir='./trafficdl/tmp', num_samples=num_samples)
+                      local_dir='./trafficdl/cache/hyper_tune', num_samples=num_samples)
     best_trial = result.get_best_trial("loss", "min", "last")
     logger.info("Best trial config: {}".format(best_trial.config))
     logger.info("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
@@ -193,8 +194,7 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     model_state, optimizer_state = torch.load(best_path)
     model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(
         model_name, dataset_name)
-    if not os.path.exists('./trafficdl/cache/model_cache'):
-        os.makedirs('./trafficdl/cache/model_cache')
+    ensure_dir('./trafficdl/cache/model_cache')
     torch.save((model_state, optimizer_state), model_cache_file)
 
 
