@@ -8,6 +8,7 @@
   "scaler": "none",
   "load_external": false,
   "normal_external": false,
+  "ext_scaler": "none",
   "input_window": 12,
   "output_window": 12,
   "add_time_in_day": false,
