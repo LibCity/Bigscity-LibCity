@@ -389,7 +389,11 @@ class TrafficStateCPTDataset(TrafficStateDataset):
                     = self._generate_train_val_test()
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
-        self.scaler = self._get_scalar(x_train, y_train)
+        self.ext_dim = ext_x_train.shape[-1]
+        self.scaler = self._get_scalar(self.scaler_type,
+                                       x_train[..., :self.output_dim], y_train[..., :self.output_dim])
+        self.ext_scaler = self._get_scalar(self.ext_scaler_type,
+                                           x_train[..., self.output_dim:], y_train[..., self.output_dim:])
         x_train = self.scaler.transform(x_train)
         y_train = self.scaler.transform(y_train)
         x_val = self.scaler.transform(x_val)
@@ -397,12 +401,12 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         x_test = self.scaler.transform(x_test)
         y_test = self.scaler.transform(y_test)
         if self.normal_external:
-            ext_x_train = self.scaler.transform(ext_x_train)
-            ext_y_train = self.scaler.transform(ext_y_train)
-            ext_x_val = self.scaler.transform(ext_x_val)
-            ext_y_val = self.scaler.transform(ext_y_val)
-            ext_x_test = self.scaler.transform(ext_x_test)
-            ext_y_test = self.scaler.transform(ext_y_test)
+            ext_x_train = self.ext_scaler.transform(ext_x_train)
+            ext_y_train = self.ext_scaler.transform(ext_y_train)
+            ext_x_val = self.ext_scaler.transform(ext_x_val)
+            ext_y_val = self.ext_scaler.transform(ext_y_val)
+            ext_x_test = self.ext_scaler.transform(ext_x_test)
+            ext_y_test = self.ext_scaler.transform(ext_y_test)
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成

@@ -27,6 +27,7 @@ class TrafficStateDataset(AbstractDataset):
         self.train_rate = self.config.get('train_rate', 0.7)
         self.eval_rate = self.config.get('eval_rate', 0.1)
         self.scaler_type = self.config.get('scaler', 'none')
+        self.ext_scaler_type = self.config.get('ext_scaler', 'none')
         self.load_external = self.config.get('load_external', False)
         self.normal_external = self.config.get('normal_external', False)
         self.add_time_in_day = self.config.get('add_time_in_day', False)
@@ -64,7 +65,9 @@ class TrafficStateDataset(AbstractDataset):
         self.feature_name = {'X': 'float', 'y': 'float'}  # 此类的输入只有X和y
         self.adj_mx = None
         self.scaler = None
+        self.ext_scaler = None
         self.feature_dim = 0
+        self.ext_dim = 0
         self.num_nodes = 0
         self._logger = getLogger()
         if os.path.exists(self.data_path + self.geo_file + '.geo'):
@@ -796,7 +799,7 @@ class TrafficStateDataset(AbstractDataset):
         self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test
 
-    def _get_scalar(self, x_train, y_train):
+    def _get_scalar(self, scaler_type, x_train, y_train):
         """
         根据全局参数`scaler_type`选择数据归一化方法
 
@@ -807,25 +810,21 @@ class TrafficStateDataset(AbstractDataset):
         Returns:
             Scaler: 归一化对象
         """
-        if self.scaler_type == "normal":
-            scaler = NormalScaler(
-                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()))
+        if scaler_type == "normal":
+            scaler = NormalScaler(maxx=max(x_train.max(), y_train.max()))
             self._logger.info('NormalScaler max: ' + str(scaler.max))
-        elif self.scaler_type == "standard":
-            scaler = StandardScaler(mean=x_train[..., :self.output_dim].mean(),
-                                    std=x_train[..., :self.output_dim].std())
+        elif scaler_type == "standard":
+            scaler = StandardScaler(mean=x_train.mean(), std=x_train.std())
             self._logger.info('StandardScaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
-        elif self.scaler_type == "minmax01":
+        elif scaler_type == "minmax01":
             scaler = MinMax01Scaler(
-                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
-                minn=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+                maxx=max(x_train.max(), y_train.max()), minn=min(x_train.min(), y_train.min()))
             self._logger.info('MinMax01Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
-        elif self.scaler_type == "minmax11":
+        elif scaler_type == "minmax11":
             scaler = MinMax11Scaler(
-                maxx=max(x_train[..., :self.output_dim].max(), y_train[..., :self.output_dim].max()),
-                minn=min(x_train[..., :self.output_dim].min(), y_train[..., :self.output_dim].min()))
+                maxx=max(x_train.max(), y_train.max()), minn=min(x_train.min(), y_train.min()))
             self._logger.info('MinMax11Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
-        elif self.scaler_type == "none":
+        elif scaler_type == "none":
             scaler = NoneScaler()
             self._logger.info('NoneScaler')
         else:
@@ -852,7 +851,11 @@ class TrafficStateDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
-        self.scaler = self._get_scalar(x_train, y_train)
+        self.ext_dim = self.feature_dim - self.output_dim
+        self.scaler = self._get_scalar(self.scaler_type,
+                                       x_train[..., :self.output_dim], y_train[..., :self.output_dim])
+        self.ext_scaler = self._get_scalar(self.ext_scaler_type,
+                                           x_train[..., self.output_dim:], y_train[..., self.output_dim:])
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
         x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
@@ -860,12 +863,12 @@ class TrafficStateDataset(AbstractDataset):
         x_test[..., :self.output_dim] = self.scaler.transform(x_test[..., :self.output_dim])
         y_test[..., :self.output_dim] = self.scaler.transform(y_test[..., :self.output_dim])
         if self.normal_external:
-            x_train[..., self.output_dim:] = self.scaler.transform(x_train[..., self.output_dim:])
-            y_train[..., self.output_dim:] = self.scaler.transform(y_train[..., self.output_dim:])
-            x_val[..., self.output_dim:] = self.scaler.transform(x_val[..., self.output_dim:])
-            y_val[..., self.output_dim:] = self.scaler.transform(y_val[..., self.output_dim:])
-            x_test[..., self.output_dim:] = self.scaler.transform(x_test[..., self.output_dim:])
-            y_test[..., self.output_dim:] = self.scaler.transform(y_test[..., self.output_dim:])
+            x_train[..., self.output_dim:] = self.ext_scaler.transform(x_train[..., self.output_dim:])
+            y_train[..., self.output_dim:] = self.ext_scaler.transform(y_train[..., self.output_dim:])
+            x_val[..., self.output_dim:] = self.ext_scaler.transform(x_val[..., self.output_dim:])
+            y_val[..., self.output_dim:] = self.ext_scaler.transform(y_val[..., self.output_dim:])
+            x_test[..., self.output_dim:] = self.ext_scaler.transform(x_test[..., self.output_dim:])
+            y_test[..., self.output_dim:] = self.ext_scaler.transform(y_test[..., self.output_dim:])
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
