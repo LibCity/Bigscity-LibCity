@@ -11,5 +11,7 @@
     "verbose": 10,
     "loss_func": "default",
     "load_best_epoch": true,
-    "hyper_tune": false
+    "hyper_tune": false,
+    "optimizer": "adam",
+    "early_stop_lr": 9e-6
 }

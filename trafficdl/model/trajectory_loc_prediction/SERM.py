@@ -36,7 +36,7 @@ class SERM(AbstractModel):
         self.user_size = data_feature['uid_size']
         self.user_emb_size = data_feature['loc_size']  # 根据论文
         self.text_size = data_feature['text_size']
-        self.text_emb_size = config['text_emb_size']
+        self.text_emb_size = len(data_feature['word_vec'][0])  # 这个受限于 word_vec 的长度
         self.hidden_size = config['hidden_size']
 
         # Embedding layer
@@ -55,40 +55,17 @@ class SERM(AbstractModel):
         self.dense = nn.Linear(in_features=self.hidden_size, out_features=self.loc_size)
 
     def forward(self, batch):
-        # input
-        # batch*seq
-        # user batch
+
         loc = batch['current_loc']
         tim = batch['current_tim']
         user = batch['uid']
         text = batch['text']
 
-        # print(self.loc_size)
-        # print(self.loc_emb_size)
-        # print(self.tim_size)
-        # print(self.tim_emb_size)
-        # print(self.user_size)
-        # print(self.user_emb_size)
-        # print(self.text_size)
-        # print(self.text_emb_size)
-        # print(self.hidden_size)
-
-        # print(loc.size())
-        # print(tim.size())
-        # print(user.size())
-        # print(text.size())
-
-        # batch*seq*emb_size
-        # user batch*emb_size
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
         user_emb = self.emb_user(user)
         text_emb = self.emb_text(text)
 
-        # print(loc_emb.size())
-        # print(tim_emb.size())
-        # print(user_emb.size())
-        # print(text_emb.size())
         # change batch*seq*emb_size to seq*batch*emb_size
         attrs_latent = torch.cat([loc_emb, tim_emb, text_emb], dim=2).permute(1, 0, 2)
         # print(attrs_latent.size())
@@ -97,10 +74,8 @@ class SERM(AbstractModel):
         # print(lstm_out.size())
 
         dense = self.dense(lstm_out)  # seq*batch*loc_size
-        # print(dense.size())
         # get seq*batch*loc_size then change to batch*seq*loc_size
         out_vec = torch.add(dense, user_emb).permute(1, 0, 2)
-        # print(out_vec.size())
 
         pred = nn.Softmax(dim=2)(out_vec)  # result batch*seq*loc_size
         # print(pred.size())
