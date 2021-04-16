@@ -94,6 +94,6 @@ class SERM(AbstractModel):
         return self.forward(batch)
 
     def calculate_loss(self, batch):
-        criterion = nn.NLLLoss()  # CrossEntropyLoss: 1)log softmax 2)cross entropy
+        criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss: 1)log softmax 2)cross entropy
         scores = self.forward(batch)  # batch*loc_size
         return criterion(scores, batch['target'])
