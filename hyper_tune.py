@@ -43,7 +43,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_samples', type=int,
                         default=5, help='the number of times to sample from hyperparameter space.')
     parser.add_argument('--max_concurrent', type=int,
-                        default=1, help='Maximum number of trails running at the same time')
+                        default=1, help='maximum number of trails running at the same time')
+    parser.add_argument('--cpu_per_trial', type=int,
+                        default=1, help='the number of cpu which per trial will allocate')
+    parser.add_argument('--gpu_per_trial', type=int,
+                        default=1, help='the number of gpu which per trial will allocate')
     # 增加其他可选的参数
     add_other_args(parser)
     # 解析参数
@@ -51,10 +55,11 @@ if __name__ == '__main__':
     dict_args = vars(args)
     other_args = {key: val for key, val in dict_args.items() if key not in [
         'task', 'model', 'dataset', 'config_file', 'space_file', 'scheduler', 'search_alg',
-        'num_samples', 'max_concurrent'] and
+        'num_samples', 'max_concurrent', 'cpu_per_trial', 'gpu_per_trial'] and
         val is not None}
     hyper_parameter(task=args.task, model_name=args.model, dataset_name=args.dataset,
                     config_file=args.config_file, space_file=args.space_file,
                     scheduler=args.scheduler, search_alg=args.search_alg,
                     num_samples=args.num_samples, max_concurrent=args.max_concurrent,
+                    cpu_per_trial=args.cpu_per_trial, gpu_per_trial=args.gpu_per_trial,
                     other_args=other_args)
