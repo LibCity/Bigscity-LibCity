@@ -42,6 +42,8 @@ if __name__ == '__main__':
                         default='BasicSearch', help='the search algorithm')
     parser.add_argument('--num_samples', type=int,
                         default=5, help='the number of times to sample from hyperparameter space.')
+    parser.add_argument('--max_concurrent', type=int,
+                        default=1, help='maximum number of trails running at the same time')
     parser.add_argument('--cpu_per_trial', type=int,
                         default=1, help='the number of cpu which per trial will allocate')
     parser.add_argument('--gpu_per_trial', type=int,
