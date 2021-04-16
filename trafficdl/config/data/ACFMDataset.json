@@ -13,7 +13,6 @@
   "output_window": 12,
   "add_time_in_day": false,
   "add_day_in_week": false,
-  "points_per_hour": 2,
   "len_closeness": 4,
   "len_period": 2,
   "len_trend": 0,

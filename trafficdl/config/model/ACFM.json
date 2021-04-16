@@ -17,7 +17,6 @@
   "add_time_in_day": false,
   "add_day_in_week": false,
   "external_time": false,
-  "points_per_hour": 2,
 
   "max_epoch": 500,
   "learner": "adam",

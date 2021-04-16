@@ -35,7 +35,8 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         """
         data = []
         if ext_time:
-            vecs_timestamp = timestamp2array(timestamp_list, self.points_per_hour * 24)  # len(timestamp_list) * dim
+            vecs_timestamp = timestamp2array(
+                timestamp_list, 24 * 60 * 60 // self.time_intervals)  # len(timestamp_list) * dim
         else:
             vecs_timestamp = timestamp2vec_origin(timestamp_list)  # len(timestamp_list) * dim
         data.append(vecs_timestamp)
@@ -69,6 +70,7 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         # 加载外部数据
         if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
             ext_data = self._load_ext()
+            ext_data = 1. * (ext_data - ext_data.min()) / (ext_data.max() - ext_data.min())
         else:
             ext_data = None
         ext_x = []
@@ -92,6 +94,6 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         lp = self.len_period * (self.pad_forward_period + self.pad_back_period + 1)
         lt = self.len_trend * (self.pad_forward_trend + self.pad_back_trend + 1)
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
-                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
+                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim, "ext_dim": self.ext_dim,
                 "output_dim": self.output_dim, "len_row": self.len_row, "len_column": self.len_column,
                 "len_closeness": self.len_closeness, "len_period": lp, "len_trend": lt}

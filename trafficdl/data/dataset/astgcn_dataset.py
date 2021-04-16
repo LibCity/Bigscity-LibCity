@@ -8,8 +8,7 @@ class ASTGCNDataset(TrafficStatePointDataset):
 
     def __init__(self, config):
         super().__init__(config)
-        self.points_per_hour = self.config.get('points_per_hour', 2)
-        self.offset_frame = np.timedelta64(60 // int(self.points_per_hour), 'm')
+        self.points_per_hour = 3600 // self.time_intervals  # 每小时的时间片数
         self.len_closeness = self.config.get('len_closeness', 3)
         self.len_period = self.config.get('len_period', 4)
         self.len_trend = self.config.get('len_trend', 0)
