@@ -55,7 +55,7 @@ if __name__ == '__main__':
     dict_args = vars(args)
     other_args = {key: val for key, val in dict_args.items() if key not in [
         'task', 'model', 'dataset', 'config_file', 'space_file', 'scheduler', 'search_alg',
-        'num_samples', 'cpu_per_trial', 'gpu_per_trial'] and
+        'num_samples', 'max_concurrent', 'cpu_per_trial', 'gpu_per_trial'] and
         val is not None}
     hyper_parameter(task=args.task, model_name=args.model, dataset_name=args.dataset,
                     config_file=args.config_file, space_file=args.space_file,
