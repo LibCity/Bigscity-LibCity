@@ -4,7 +4,6 @@ from ray.tune.suggest.hyperopt import HyperOptSearch
 from ray.tune.suggest.bayesopt import BayesOptSearch
 from ray.tune.suggest.basic_variant import BasicVariantGenerator
 from ray.tune.schedulers import FIFOScheduler, ASHAScheduler, MedianStoppingRule
-from ray.tune.suggest import ConcurrencyLimiter
 import json
 import torch
 
@@ -109,7 +108,8 @@ def parse_search_space(space_file):
 
 
 def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=None, space_file=None,
-                    scheduler=None, search_alg=None, other_args=None, num_samples=5, max_concurrent=1):
+                    scheduler=None, search_alg=None, other_args=None, num_samples=5, max_concurrent=1,
+                    cpu_per_trial=1, gpu_per_trial=1):
     """ Use Ray tune to hyper parameter tune
 
     Args:
@@ -140,7 +140,8 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     train_data, valid_data, test_data = dataset.get_data()
     data_feature = dataset.get_data_feature()
 
-    def train(config, checkpoint_dir=None):
+    def train(config, checkpoint_dir=None, experiment_config=None,
+              train_data=None, valid_data=None, data_feature=None):
         """trainable function which meets ray tune API
 
         Args:
@@ -171,8 +172,6 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         algorithm = HyperOptSearch(metric='loss', mode='min')
     else:
         raise ValueError('the search_alg is illegal.')
-    # add concurrency limit
-    algorithm = ConcurrencyLimiter(algorithm, max_concurrent=max_concurrent)
     if scheduler == 'FIFO':
         tune_scheduler = FIFOScheduler()
     elif scheduler == 'ASHA':
@@ -183,7 +182,9 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         raise ValueError('the scheduler is illegal')
     # ray tune run
     ensure_dir('./trafficdl/cache/hyper_tune')
-    result = tune.run(train, resources_per_trial={'cpu': 1, 'gpu': 1}, config=search_sapce,
+    result = tune.run(tune.with_parameters(train, experiment_config=experiment_config, train_data=train_data,
+                      valid_data=valid_data, data_feature=data_feature),
+                      resources_per_trial={'cpu': cpu_per_trial, 'gpu': gpu_per_trial}, config=search_sapce,
                       metric='loss', mode='min', scheduler=tune_scheduler, search_alg=algorithm,
                       local_dir='./trafficdl/cache/hyper_tune', num_samples=num_samples)
     best_trial = result.get_best_trial("loss", "min", "last")
