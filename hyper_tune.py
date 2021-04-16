@@ -42,8 +42,6 @@ if __name__ == '__main__':
                         default='BasicSearch', help='the search algorithm')
     parser.add_argument('--num_samples', type=int,
                         default=5, help='the number of times to sample from hyperparameter space.')
-    parser.add_argument('--max_concurrent', type=int,
-                        default=1, help='Maximum number of trails running at the same time')
     parser.add_argument('--cpu_per_trial', type=int,
                         default=1, help='the number of cpu which per trial will allocate')
     parser.add_argument('--gpu_per_trial', type=int,
@@ -55,7 +53,7 @@ if __name__ == '__main__':
     dict_args = vars(args)
     other_args = {key: val for key, val in dict_args.items() if key not in [
         'task', 'model', 'dataset', 'config_file', 'space_file', 'scheduler', 'search_alg',
-        'num_samples', 'max_concurrent', 'cpu_per_trial', 'gpu_per_trial'] and
+        'num_samples', 'cpu_per_trial', 'gpu_per_trial'] and
         val is not None}
     hyper_parameter(task=args.task, model_name=args.model, dataset_name=args.dataset,
                     config_file=args.config_file, space_file=args.space_file,

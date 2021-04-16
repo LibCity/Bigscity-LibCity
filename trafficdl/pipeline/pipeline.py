@@ -167,9 +167,9 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     if search_alg == 'BasicSearch':
         algorithm = BasicVariantGenerator()
     elif search_alg == 'BayesOptSearch':
-        algorithm = BayesOptSearch(metric='loss', mode='min')
+        algorithm = BayesOptSearch(metric='loss', mode='min', max_concurrent=max_concurrent)
     elif search_alg == 'HyperOpt':
-        algorithm = HyperOptSearch(metric='loss', mode='min')
+        algorithm = HyperOptSearch(metric='loss', mode='min', max_concurrent=max_concurrent)
     else:
         raise ValueError('the search_alg is illegal.')
     if scheduler == 'FIFO':
