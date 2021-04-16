@@ -56,6 +56,7 @@ class TrafficStateDataset(AbstractDataset):
         self.data_files = self.config.get('info', {}).get('data_files', self.dataset)
         self.ext_file = self.config.get('info', {}).get('ext_file', self.dataset)
         self.output_dim = self.config.get('info', {}).get('output_dim', 1)
+        self.time_intervals = self.config.get('info', {}).get('time_intervals', 300)  # s
         self.init_weight_inf_or_zero = self.config.get('info', {}).get('init_weight_inf_or_zero', 'inf')
         self.set_weight_link_or_dist = self.config.get('info', {}).get('set_weight_link_or_dist', 'dist')
         self.calculate_weight_adj = self.config.get('info', {}).get('calculate_weight_adj', False)

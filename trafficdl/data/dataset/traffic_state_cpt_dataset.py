@@ -19,8 +19,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
 
     def __init__(self, config):
         super().__init__(config)
-        self.points_per_hour = self.config.get('points_per_hour', 2)
-        self.offset_frame = np.timedelta64(60 // int(self.points_per_hour), 'm')
+        self.offset_frame = np.timedelta64(self.time_intervals // 60, 'm')  # 时间片长度 min
         self.len_closeness = self.config.get('len_closeness', 3)
         self.len_period = self.config.get('len_period', 4)
         self.len_trend = self.config.get('len_trend', 0)
@@ -63,7 +62,7 @@ class TrafficStateCPTDataset(TrafficStateDataset):
             Trend data x lt       Period data x lp     Closeness data
         """
         # 求三段相对于预测位置（即y）的偏移距离
-        tday = self.points_per_hour * 24  # 每天的时间片数
+        tday = 24 * 60 * 60 // self.time_intervals  # 每天的时间片数
         r_c = range(1, self.len_closeness + 1)
         rl_p = [range(self.interval_period * tday * i - self.pad_forward_period,
                       self.interval_period * tday * i + self.pad_back_period + 1)
