@@ -5,6 +5,7 @@
   "scaler": "normal",
   "load_external": false,
   "normal_external": false,
+  "ext_scaler": "none",
   "add_time_in_day": false,
   "add_day_in_week": false,
 

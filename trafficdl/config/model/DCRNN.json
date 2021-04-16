@@ -8,7 +8,8 @@
 
   "scaler": "standard",
   "load_external": true,
-  "normal_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
   "add_time_in_day": true,
   "add_day_in_week": false,
 
