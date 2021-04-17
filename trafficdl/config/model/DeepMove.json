@@ -5,5 +5,9 @@
     "hidden_size": 500,
     "attn_type": "dot",
     "rnn_type": "LSTM",
-    "dropout_p": 0.3
+    "dropout_p": 0.3,
+    "learning_rate": 0.001,
+    "max_epoch": 30,
+    "verbose": 100,
+    "optimizer": "adam"
 }
