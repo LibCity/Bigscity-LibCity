@@ -8,7 +8,6 @@
   "merge_mode": "fuse",
   "lstm_channels": 16,
   "lstm_dropout": 0,
-  "extnn": true,
 
   "scaler": "minmax11",
   "load_external": true,
