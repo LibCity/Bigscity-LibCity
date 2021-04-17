@@ -3,5 +3,8 @@
     "tim_emb_size": 50,
     "hidden_size": 50,
     "verbose": 100,
-    "optimizer": "sgd"
+    "optimizer": "rmsprop",
+    "L2": 0,
+    "learning_rate": 0.01,
+    "max_epoch": 14
 }
