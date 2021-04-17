@@ -51,7 +51,10 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
                 indexs.append(ts_index)
             select_data = ext_data[indexs]  # len(timestamp_list) * ext_dim 选出所需要的时间步的数据
             data.append(select_data)
-        data = np.hstack(data)
+        if len(data) > 0:
+            data = np.hstack(data)
+        else:
+            data = np.zeros((len(timestamp_list), 0))
         return data  # (len(timestamp_list), ext_dim)
 
     def _load_ext_data(self, ts_x, ts_y):
