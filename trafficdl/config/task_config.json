@@ -59,7 +59,7 @@
     },
     "traffic_state_pred": {
         "allowed_model": ["DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
-            "ASTGCN", "MSTGCN", "MTGNN", "ACFM"],
+            "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet"],
         "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PeMSD7(M)",
             "Loop Seattle", "LOS-LOOP", "LOS-LOOP-SMALL", "Q-TRAFFIC", "SZ-TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi2014",
@@ -119,6 +119,11 @@
         },
         "ACFM": {
             "dataset_class": "ACFMDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "STResNet": {
+            "dataset_class": "STResNetDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         }

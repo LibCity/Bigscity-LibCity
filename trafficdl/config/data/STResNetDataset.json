@@ -13,10 +13,11 @@
   "output_window": 12,
   "add_time_in_day": false,
   "add_day_in_week": false,
-  "len_closeness": 3,
-  "len_period": 4,
+  "len_closeness": 4,
+  "len_period": 2,
   "len_trend": 0,
   "interval_period": 1,
   "interval_trend": 7,
-  "use_row_column": true
+  "use_row_column": true,
+  "external_time": true
 }
