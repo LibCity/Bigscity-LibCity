@@ -1,3 +1,4 @@
 {
-    "embedding_size": 64
+    "embedding_size": 64,
+    "verbose": 100
 }

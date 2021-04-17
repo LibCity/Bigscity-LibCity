@@ -3,6 +3,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 import os
+from logging import getLogger
 
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator
@@ -19,12 +20,9 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.cache_dir = './trafficdl/cache/model_cache'
         self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
         self.loss_func = None  # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
-        self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.model.parameters()),
-                                    lr=self.config['learning_rate'], weight_decay=self.config['L2'])
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'max',
-                                                              patience=self.config['lr_step'],
-                                                              factor=self.config['lr_decay'],
-                                                              threshold=self.config['schedule_threshold'])
+        self._logger = getLogger()
+        self.optimizer = self._build_optimizer()
+        self.scheduler = self._build_scheduler()
 
     def train(self, train_dataloader, eval_dataloader):
         if not os.path.exists(self.tmp_path):
@@ -42,12 +40,12 @@ class TrajLocPredExecutor(AbstractExecutor):
                 train_dataloader, self.model,
                 self.config['learning_rate'], self.config['clip'],
                 train_total_batch, self.config['verbose'])
-            print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(
+            self._logger.info('==>Train Epoch:{:4d} Loss:{:.5f} learning_rate:{}'.format(
                 epoch, avg_loss, lr))
             # eval stage
             avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model,
                                                             eval_total_batch, self.config['verbose'])
-            print('==>Eval Acc:{:.4f}'.format(avg_eval_acc))
+            self._logger.info('==>Eval Acc:{:.5f} Eval Loss:{:.5f}'.format(avg_eval_acc, avg_eval_loss))
             metrics['accuracy'].append(avg_eval_acc)
             metrics['loss'].append(avg_eval_loss)
             if self.config['hyper_tune']:
@@ -60,8 +58,12 @@ class TrajLocPredExecutor(AbstractExecutor):
             else:
                 save_name_tmp = 'ep_' + str(epoch) + '.m'
                 torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
-            # 这个 scheduler 看起来也没什么用呀？ TODO: 发现一下他的作用
             self.scheduler.step(avg_eval_acc)
+            # scheduler 会根据 avg_eval_acc 减小学习率
+            # 若当前学习率小于特定值，则 early stop
+            lr = self.optimizer.param_groups[0]['lr']
+            if lr < self.config['early_stop_lr']:
+                break
         if not self.config['hyper_tune'] and self.config['load_best_epoch']:
             best = np.argmax(metrics['accuracy'])  # 这个不是最好的一次吗？
             load_name_tmp = 'ep_' + str(best) + '.m'
@@ -101,7 +103,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             }
             cnt += 1
             if cnt % self.config['verbose'] == 0:
-                print('finish batch {}/{}'.format(cnt, test_total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, test_total_batch))
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
@@ -128,7 +130,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.optimizer.step()
             cnt += 1
             if cnt % verbose == 0:
-                print('finish batch {}/{}'.format(cnt, total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
@@ -150,8 +152,42 @@ class TrajLocPredExecutor(AbstractExecutor):
             }
             cnt += 1
             if cnt % verbose == 0:
-                print('finish batch {}/{}'.format(cnt, total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
         avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return avg_acc, avg_loss
+
+    def _build_optimizer(self):
+        """
+        根据全局参数`learner`选择optimizer
+        """
+        if self.config['optimizer'] == 'adam':
+            optimizer = optim.Adam(self.model.parameters(), lr=self.config['learning_rate'],
+                                   weight_decay=self.config['L2'])
+        elif self.config['optimizer'] == 'sgd':
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config['learning_rate'],
+                                        weight_decay=self.config['L2'])
+        elif self.config['optimizer'] == 'adagrad':
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.config['learning_rate'],
+                                            weight_decay=self.config['L2'])
+        elif self.config['optimizer'] == 'rmsprop':
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.config['learning_rate'],
+                                            weight_decay=self.config['L2'])
+        elif self.config['optimizer'] == 'sparse_adam':
+            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.config['learning_rate'])
+        else:
+            self._logger.warning('Received unrecognized optimizer, set default Adam optimizer')
+            optimizer = optim.Adam(self.model.parameters(), lr=self.config['learning_rate'],
+                                   weight_decay=self.config['L2'])
+        return optimizer
+
+    def _build_scheduler(self):
+        """
+        目前就固定的 scheduler 吧
+        """
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'max',
+                                                         patience=self.config['lr_step'],
+                                                         factor=self.config['lr_decay'],
+                                                         threshold=self.config['schedule_threshold'])
+        return scheduler
