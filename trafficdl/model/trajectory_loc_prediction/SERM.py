@@ -104,7 +104,7 @@ class SERM(AbstractModel):
         dense = self.dense(out)  # batch * loc_size
 
         out_vec = torch.add(dense, user_emb)  # batch * loc_size
-        pred = nn.Softmax(dim=1)(out_vec)  # result
+        pred = nn.LogSoftmax(dim=1)(out_vec)  # result
         # print(pred.size())
 
         return pred  # batch*loc_size
@@ -113,6 +113,6 @@ class SERM(AbstractModel):
         return self.forward(batch)
 
     def calculate_loss(self, batch):
-        criterion = nn.CrossEntropyLoss()  # CrossEntropyLoss: 1)log softmax 2)cross entropy
+        criterion = nn.NLLLoss()
         scores = self.forward(batch)  # batch*loc_size
         return criterion(scores, batch['target'])
