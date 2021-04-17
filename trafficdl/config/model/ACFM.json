@@ -11,12 +11,12 @@
   "extnn": true,
 
   "scaler": "minmax11",
-  "load_external": false,
+  "load_external": true,
   "normal_external": false,
   "ext_scaler": "none",
   "add_time_in_day": false,
   "add_day_in_week": false,
-  "external_time": false,
+  "external_time": true,
 
   "max_epoch": 500,
   "learner": "adam",

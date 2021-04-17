@@ -236,7 +236,10 @@ class TrafficStateCPTDataset(TrafficStateDataset):
                 ext_y(np.ndarray): 模型输出外部数据，(num_samples, ext_dim)
         """
         x, y, ts_x, ts_y = self._load_data()
-        ext_x, ext_y = self._load_ext_data(ts_x, ts_y)
+        if self.load_external:
+            ext_x, ext_y = self._load_ext_data(ts_x, ts_y)
+        else:
+            ext_x, ext_y = np.zeros((x.shape[0], 0)), np.zeros((y.shape[0], 0))
         self._logger.info("Dataset created")
         self._logger.info("x shape: " + str(x.shape) + ", y shape: " + str(y.shape))
         self._logger.info("ext_x shape: " + str(ext_x.shape) + ", ext_y shape: " + str(ext_y.shape))
