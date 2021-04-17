@@ -40,12 +40,12 @@ class TrajLocPredExecutor(AbstractExecutor):
                 train_dataloader, self.model,
                 self.config['learning_rate'], self.config['clip'],
                 train_total_batch, self.config['verbose'])
-            print('==>Train Epoch:{:0>2d} Loss:{:.4f} learning_rate:{}'.format(
+            self._logger.info('==>Train Epoch:{:4d} Loss:{:.5f} learning_rate:{}'.format(
                 epoch, avg_loss, lr))
             # eval stage
             avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model,
                                                             eval_total_batch, self.config['verbose'])
-            print('==>Eval Acc:{:.4f}'.format(avg_eval_acc))
+            self._logger.info('==>Eval Acc:{:.5f} Eval Loss:{:.5f}'.format(avg_eval_acc, avg_eval_loss))
             metrics['accuracy'].append(avg_eval_acc)
             metrics['loss'].append(avg_eval_loss)
             if self.config['hyper_tune']:
@@ -103,7 +103,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             }
             cnt += 1
             if cnt % self.config['verbose'] == 0:
-                print('finish batch {}/{}'.format(cnt, test_total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, test_total_batch))
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
@@ -130,7 +130,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.optimizer.step()
             cnt += 1
             if cnt % verbose == 0:
-                print('finish batch {}/{}'.format(cnt, total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
@@ -152,7 +152,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             }
             cnt += 1
             if cnt % verbose == 0:
-                print('finish batch {}/{}'.format(cnt, total_batch))
+                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
             self.evaluator.collect(evaluate_input)
         avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
         avg_loss = np.mean(total_loss, dtype=np.float64)
