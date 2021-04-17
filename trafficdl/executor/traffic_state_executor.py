@@ -56,12 +56,11 @@ class TrafficStateExecutor(AbstractExecutor):
 
         # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
         self.output_dim = self.config.get('info', {}).get('output_dim', 1)
+        self.optimizer = self._build_optimizer()
+        self.lr_scheduler = self._build_lr_scheduler()
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
-
-        self.optimizer = self._build_optimizer()
-        self.lr_scheduler = self._build_lr_scheduler()
 
     def save_model(self, cache_name):
         """

@@ -152,6 +152,11 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         for key in config:
             if key in experiment_config:
                 experiment_config[key] = config[key]
+        experiment_config['hyper_tune'] = True
+        logger = get_logger(experiment_config)
+        logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}'.
+                     format(str(task), str(model_name), str(dataset_name)))
+        logger.info('running parameters: ' + str(config))
         # load model
         model = get_model(experiment_config, data_feature)
         # load executor
@@ -161,7 +166,6 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
             checkpoint = os.path.join(checkpoint_dir, 'checkpoint')
             executor.load_model(checkpoint)
         # train
-        experiment_config['hyper_tune'] = True
         executor.train(train_data, valid_data)
 
     # init search algorithm and scheduler
