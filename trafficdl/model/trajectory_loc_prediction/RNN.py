@@ -51,11 +51,11 @@ class RNN(AbstractModel):
              if 'bias' in name)
 
         for t in ih:
-            nn.init.xavier_uniform(t)
+            nn.init.xavier_uniform_(t)
         for t in hh:
-            nn.init.orthogonal(t)
+            nn.init.orthogonal_(t)
         for t in b:
-            nn.init.constant(t, 0)
+            nn.init.constant_(t, 0)
 
     def forward(self, batch):
         loc = batch['current_loc']
