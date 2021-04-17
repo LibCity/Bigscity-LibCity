@@ -8,6 +8,6 @@
     "dropout_p": 0.3,
     "learning_rate": 0.001,
     "max_epoch": 30,
-    "verbose": 100,
+    "verbose": 50,
     "optimizer": "adam"
 }
