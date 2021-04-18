@@ -18,13 +18,13 @@ class BnReluConv(nn.Module):
     def __init__(self, nb_filter, bn=False):
         super(BnReluConv, self).__init__()
         self.has_bn = bn
-        # self.bn1 = nn.BatchNorm2d(nb_filter)
+        self.bn1 = nn.BatchNorm2d(nb_filter)
         self.relu = torch.relu
         self.conv1 = conv3x3(nb_filter, nb_filter)
 
     def forward(self, x):
-        # if self.has_bn:
-        #    x = self.bn1(x)
+        if self.has_bn:
+            x = self.bn1(x)
         x = self.relu(x)
         x = self.conv1(x)
         return x
@@ -45,14 +45,14 @@ class ResidualUnit(nn.Module):
 
 
 class ResUnits(nn.Module):
-    def __init__(self, residual_unit, nb_filter, repetations=1):
+    def __init__(self, residual_unit, nb_filter, repetations=1, bn=False):
         super(ResUnits, self).__init__()
-        self.stacked_resunits = self.make_stack_resunits(residual_unit, nb_filter, repetations)
+        self.stacked_resunits = self.make_stack_resunits(residual_unit, nb_filter, repetations, bn)
 
-    def make_stack_resunits(self, residual_unit, nb_filter, repetations):
+    def make_stack_resunits(self, residual_unit, nb_filter, repetations, bn):
         layers = []
         for i in range(repetations):
-            layers.append(residual_unit(nb_filter))
+            layers.append(residual_unit(nb_filter, bn))
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -92,6 +92,7 @@ class STResNet(AbstractTrafficStateModel):
         self._logger = getLogger()
 
         self.nb_residual_unit = config.get('nb_residual_unit', 12)
+        self.bn = config.get('batch_norm', False)
         self.device = config.get('device', torch.device('cpu'))
         self.relu = torch.relu
         self.tanh = torch.tanh
@@ -117,7 +118,7 @@ class STResNet(AbstractTrafficStateModel):
     def make_one_way(self, in_channels):
         return nn.Sequential(OrderedDict([
             ('conv1', conv3x3(in_channels=in_channels, out_channels=64)),
-            ('ResUnits', ResUnits(ResidualUnit, nb_filter=64, repetations=self.nb_residual_unit)),
+            ('ResUnits', ResUnits(ResidualUnit, nb_filter=64, repetations=self.nb_residual_unit, bn=self.bn)),
             ('relu', nn.ReLU()),
             ('conv2', conv3x3(in_channels=64, out_channels=2)),
             ('FusionLayer', TrainableEltwiseLayer(n=self.output_dim, h=self.len_row,

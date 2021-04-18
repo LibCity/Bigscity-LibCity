@@ -1,5 +1,6 @@
 {
   "nb_residual_unit": 12,
+  "batch_norm": false,
 
   "scaler": "minmax11",
   "load_external": true,

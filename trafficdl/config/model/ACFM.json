@@ -23,6 +23,6 @@
   "lr_decay": false,
   "clip_grad_norm": true,
   "max_grad_norm": 0.1,
-  "use_early_stop": false,
+  "use_early_stop": true,
   "patience": 50
 }
