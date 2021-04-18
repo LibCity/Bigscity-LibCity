@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from trafficdl.data.dataset import TrafficStateCPTDataset, TrafficStateGridDataset
-from trafficdl.utils.dataset import timestamp2vec_origin
+from trafficdl.utils.dataset import timestamp2array, timestamp2vec_origin
 
 
 class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
@@ -11,6 +11,7 @@ class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
 
     def __init__(self, config):
         super().__init__(config)
+        self.external_time = self.config.get('external_time', True)
         self.parameters_str = \
             self.parameters_str + '_' + str(self.len_closeness) \
             + '_' + str(self.len_period) + '_' + str(self.len_trend) \
@@ -22,7 +23,7 @@ class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         self.pad_forward_trend = 0
         self.pad_back_trend = 0
 
-    def _get_external_array(self, timestamp_list, ext_data=None, previous_ext=False):
+    def _get_external_array(self, timestamp_list, ext_data=None, previous_ext=False, ext_time=True):
         """
         根据时间戳数组，获取对应时间的外部特征
 
@@ -36,20 +37,28 @@ class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
             np.ndarray: External data shape is (len(timestamp_list), ext_dim)
         """
         data = []
-        vecs_timestamp = timestamp2vec_origin(timestamp_list)  # len(timestamp_list) * dim
+        if ext_time:
+            vecs_timestamp = timestamp2array(
+                timestamp_list, 24 * 60 * 60 // self.time_intervals)  # len(timestamp_list) * dim
+        else:
+            vecs_timestamp = timestamp2vec_origin(timestamp_list)  # len(timestamp_list) * dim
         data.append(vecs_timestamp)
         # 外部数据集
         if ext_data is not None:
             indexs = []
             for ts in timestamp_list:
                 if previous_ext:
+                    # TODO: 多步预测这里需要改
                     ts_index = self.idx_of_ext_timesolts[ts - self.offset_frame]
                 else:
                     ts_index = self.idx_of_ext_timesolts[ts]
                 indexs.append(ts_index)
             select_data = ext_data[indexs]  # len(timestamp_list) * ext_dim 选出所需要的时间步的数据
             data.append(select_data)
-        data = np.hstack(data)
+        if len(data) > 0:
+            data = np.hstack(data)
+        else:
+            data = np.zeros((len(timestamp_list), 0))
         return data  # (len(timestamp_list), ext_dim)
 
     def _load_ext_data(self, ts_x, ts_y):
@@ -68,14 +77,15 @@ class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         # 加载外部数据
         if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
             ext_data = self._load_ext()
+            ext_data = 1. * (ext_data - ext_data.min()) / (ext_data.max() - ext_data.min())
         else:
             ext_data = None
         ext_x = []
         for ts in ts_x:
-            ext_x.append(self._get_external_array(ts, ext_data))
+            ext_x.append(self._get_external_array(ts, ext_data, ext_time=self.external_time))
         ext_x = np.asarray(ext_x)
         # ext_x: (num_samples_plus, T_c+T_p+T_t, ext_dim)
-        ext_y = self._get_external_array(ts_y, ext_data, previous_ext=True)
+        ext_y = self._get_external_array(ts_y, ext_data, previous_ext=True, ext_time=self.external_time)
         # ext_y: (num_samples_plus, ext_dim)
         return ext_x, ext_y
 
@@ -91,6 +101,6 @@ class STResNetDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
         lp = self.len_period * (self.pad_forward_period + self.pad_back_period + 1)
         lt = self.len_trend * (self.pad_forward_trend + self.pad_back_trend + 1)
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
-                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
+                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim, "ext_dim": self.ext_dim,
                 "output_dim": self.output_dim, "len_row": self.len_row, "len_column": self.len_column,
                 "len_closeness": self.len_closeness, "len_period": lp, "len_trend": lt}

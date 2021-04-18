@@ -502,9 +502,8 @@ class ACFM(AbstractTrafficStateModel):
 
     def forward(self, batch):
         x = batch['X']  # (batch_size, T_c+T_p+T_t, len_row, len_column, feature_dim)
-        x_ext = batch['X_ext']  # (batch_size, T_c+T_p+T_t)
-        y_ext = batch['y_ext']  # (batch_size, )
-        # print('forward1', x.shape, x_ext.shape, y_ext.shape)
+        x_ext = batch['X_ext']  # (batch_size, T_c+T_p+T_t, ext_dim)
+        y_ext = batch['y_ext']  # (batch_size, ext_dim)
         batch_size, len_time, len_row, len_column, input_dim = x.shape
         assert len_row == self.len_row
         assert len_column == self.len_column
@@ -557,8 +556,6 @@ class ACFM(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
-        # print('y_true', y_true.shape)
-        # print('y_predicted', y_predicted.shape)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true)

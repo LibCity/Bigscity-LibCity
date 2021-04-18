@@ -1,13 +1,6 @@
 {
-  "res_repetation": 12,
-  "res_nbfilter": 16,
-  "res_bn": true,
-  "res_split_mode": "split",
-  "first_extnn_inter_channels": 40,
-  "first_extnn_dropout": 0.5,
-  "merge_mode": "fuse",
-  "lstm_channels": 16,
-  "lstm_dropout": 0,
+  "nb_residual_unit": 12,
+  "batch_norm": false,
 
   "scaler": "minmax11",
   "load_external": true,
@@ -19,7 +12,7 @@
 
   "max_epoch": 500,
   "learner": "adam",
-  "learning_rate": 0.0003,
+  "learning_rate": 0.0002,
   "lr_decay": false,
   "clip_grad_norm": true,
   "max_grad_norm": 0.1,
