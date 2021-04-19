@@ -106,6 +106,10 @@ class Batch(object):
                         except TypeError:
                             print('device is ', device)
                             exit()
+            elif self.feature_name[key] == 'no_pad_float':
+                for i in range(len(self.data[key])):
+                    self.data[key][i] = torch.FloatTensor(np.array(self.data[key][i])).to(device)
             else:
                 raise TypeError(
-                    'Batch to_tensor, only support int or float, and you give {}'.format(self.feature_name[key]))
+                    'Batch to_tensor, only support int, float, array of int, no_pad_float.\
+                    and you give {}'.format(self.feature_name[key]))

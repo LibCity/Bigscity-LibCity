@@ -36,7 +36,7 @@
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
             "evaluator": "TrajLocPredEvaluator",
-            "traj_encoder": "StandardTrajectoryEncoder"
+            "traj_encoder": "LstpmEncoder"
         },
         "STRNN": {
             "dataset_class": "TrajectoryDataset",
