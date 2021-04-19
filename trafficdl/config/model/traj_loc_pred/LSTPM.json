@@ -1,5 +1,7 @@
 {
     "hidden_size": 600,
     "emb_size": 500,
-    "dropout": 0.8
+    "dropout": 0.8,
+    "window_size": 24,
+    "window_type": "time_window"
 }
