@@ -20,7 +20,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         self.loc_id = 0
         self.tim_max = 47  # LSTPM 做的是 48 个 time slot
         self.feature_dict = {'history_loc': 'array of int', 'history_tim': 'array of int',
-                             'current_loc': 'int', 'current_tim': 'int', 'dilated_rnn_input_index': 'array of int',
+                             'current_loc': 'int', 'current_tim': 'int', 'dilated_rnn_input_index': 'no_pad_int',
                              'history_avg_distance': 'no_pad_float',
                              'target': 'int', 'uid': 'int'}
         parameters_str = ''
@@ -51,6 +51,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         self.uid += 1
         encoded_trajectories = []
         history_loc = []
+        history_loc_central = []
         history_tim = []
         for index, traj in enumerate(trajectories):
             current_loc = []
@@ -78,17 +79,22 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                 # 因为要历史轨迹特征，所以第一条轨迹是不能构成模型输入的
                 history_loc.append(current_loc)
                 history_tim.append(current_tim)
+                lon = []
+                lat = []
+                for poi in current_loc:
+                    lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[poi]]['coordinates'])
+                    lon.append(lon_cur)
+                    lat.append(lat_cur)
+                history_loc_central.append((np.mean(lat), np.mean(lon)))
                 continue
             trace = []
             target = current_loc[-1]
-            current_loc = current_loc[:-1]
-            current_tim = current_tim[:-1]
-            dilated_rnn_input_index = self._create_dilated_rnn_input(current_loc)
-            history_avg_distance = self._gen_distance_matrix(current_loc, history_loc)
-            trace.append(history_loc)
-            trace.append(history_tim)
-            trace.append(current_loc)
-            trace.append(current_tim)
+            dilated_rnn_input_index = self._create_dilated_rnn_input(current_loc[:-1])
+            history_avg_distance = self._gen_distance_matrix(current_loc[:-1], history_loc_central)
+            trace.append(history_loc.copy())
+            trace.append(history_tim.copy())
+            trace.append(current_loc[:-1])
+            trace.append(current_tim[:-1])
             trace.append(dilated_rnn_input_index)
             trace.append(history_avg_distance)
             trace.append(target)
@@ -96,6 +102,14 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             encoded_trajectories.append(trace)
             history_loc.append(current_loc)
             history_tim.append(current_tim)
+            # calculate current_loc
+            lon = []
+            lat = []
+            for poi in current_loc:
+                lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[poi]]['coordinates'])
+                lon.append(lon_cur)
+                lat.append(lat_cur)
+            history_loc_central.append((np.mean(lat), np.mean(lon)))
         return encoded_trajectories
 
     def gen_data_feature(self):
@@ -107,8 +121,8 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         }
         # generate time_sim_matrix
         # the pad time will not appear here
-        sim_matrix = np.zeros((self.time_max+1, self.tim_max+1))
-        for i in range(self.time_max+1):
+        sim_matrix = np.zeros((self.tim_max+1, self.tim_max+1))
+        for i in range(self.tim_max+1):
             sim_matrix[i][i] = 1
             for j in range(i+1, self.tim_max+1):
                 set_i = self.time_checkin_set[i]
@@ -123,7 +137,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             'uid_size': self.uid,
             'loc_pad': loc_pad,
             'tim_pad': tim_pad,
-            'tim_sim_matrix': sim_matrix
+            'tim_sim_matrix': sim_matrix.tolist()
         }
 
     def _create_dilated_rnn_input(self, current_loc):
@@ -139,25 +153,17 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             for target in poi_before:
                 lon, lat = parse_coordinate(self.poi_profile.iloc[self.id2location[target]]['coordinates'])
                 distance_row_explicit.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
-            index_closet = np.argmin(distance_row_explicit)
+            index_closet = np.argmin(distance_row_explicit).item()
             # reverse back
             session_dilated_rnn_input_index[sequence_length - i - 1] = sequence_length - 2 - index_closet - i
         current_loc.reverse()
         return session_dilated_rnn_input_index
 
-    def _gen_distance_matrix(self, current_loc, history_loc):
-        # 使用 profile 计算局部距离矩阵
-        history_avg_distance = []  # history_session_count * cur_seq_len
-        for sequence in history_loc:
-            distance_matrix = []
-            for origin in current_loc:
-                lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[origin]]['coordinates'])
-                distance_row = []
-                for target in sequence:
-                    lon, lat = parse_coordinate(self.poi_profile.iloc[self.id2location[target]]['coordinates'])
-                    distance_row.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
-                distance_matrix.append(distance_row)
-            # distance_matrix is cur_seq_len * history_len
-            distance_avg = np.mean(distance_matrix, axis=1).tolist()  # cur_seq_len
-            history_avg_distance.append(distance_avg)
+    def _gen_distance_matrix(self, current_loc, history_loc_central):
+        # 使用 profile 计算当前位置与历史轨迹中心点之间的距离
+        history_avg_distance = []  # history_session_count
+        now_loc = current_loc[-1]
+        lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[now_loc]]['coordinates'])
+        for central in history_loc_central:
+            history_avg_distance.append(distance.distance(central, (lat_cur, lon_cur)).kilometers)
         return history_avg_distance
