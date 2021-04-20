@@ -166,13 +166,8 @@ class TrajectoryDataset(AbstractDataset):
                 }
         """
         encoded_data = {}
-        total_uid = len(data)
-        cnt = 0
         for uid in data:
             encoded_data[str(uid)] = self.encoder.encode(uid, data[uid])
-            cnt += 1
-            if cnt % 10 == 0:
-                print('finish encode {} user of total user {}'.format(cnt, total_uid))
         self.encoder.gen_data_feature()
         return {
             'data_feature': self.encoder.data_feature,
