@@ -280,12 +280,12 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         y_train, y_val, y_test = y[:num_train], y[num_train: num_train + num_val], y[-num_test:]
         ext_x_train, ext_x_val, ext_x_test = ext_x[:num_train], ext_x[num_train: num_train + num_val], ext_x[-num_test:]
         ext_y_train, ext_y_val, ext_y_test = ext_y[:num_train], ext_y[num_train: num_train + num_val], ext_y[-num_test:]
-        self._logger.info("train\t" + "x: " + str(x_train.shape) + ",y: " + str(y_train.shape)
-                          + ",x_ext: " + str(ext_x_train.shape) + ",y_ext: " + str(ext_y_train.shape))
-        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ",y: " + str(y_val.shape)
-                          + ",x_ext: " + str(ext_x_val.shape) + ",y_ext: " + str(ext_y_val.shape))
-        self._logger.info("test\t" + "x: " + str(x_test.shape) + ",y: " + str(y_test.shape)
-                          + ",x_ext: " + str(ext_x_test.shape) + ",y_ext: " + str(ext_y_test.shape))
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape)
+                          + ", x_ext: " + str(ext_x_train.shape) + ", y_ext: " + str(ext_y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape)
+                          + ", x_ext: " + str(ext_x_val.shape) + ", y_ext: " + str(ext_y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape)
+                          + ", x_ext: " + str(ext_x_test.shape) + ", y_ext: " + str(ext_y_test.shape))
 
         if self.cache_dataset:
             ensure_dir(self.cache_file_folder)
@@ -357,12 +357,12 @@ class TrafficStateCPTDataset(TrafficStateDataset):
         ext_y_test = cat_data['ext_y_test']
         ext_x_val = cat_data['ext_x_val']
         ext_y_val = cat_data['ext_y_val']
-        self._logger.info("train\t" + "x: " + str(x_train.shape) + ",y: " + str(y_train.shape)
-                          + ",x_ext: " + str(ext_x_train.shape) + ",y_ext: " + str(ext_y_train.shape))
-        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ",y: " + str(y_val.shape)
-                          + ",x_ext: " + str(ext_x_val.shape) + ",y_ext: " + str(ext_y_val.shape))
-        self._logger.info("test\t" + "x: " + str(x_test.shape) + ",y: " + str(y_test.shape)
-                          + ",x_ext: " + str(ext_x_test.shape) + ",y_ext: " + str(ext_y_test.shape))
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape)
+                          + ", x_ext: " + str(ext_x_train.shape) + ", y_ext: " + str(ext_y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape)
+                          + ", x_ext: " + str(ext_x_val.shape) + ", y_ext: " + str(ext_y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape)
+                          + ", x_ext: " + str(ext_x_test.shape) + ", y_ext: " + str(ext_y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test, \
             ext_x_train, ext_y_train, ext_x_test, ext_y_test, ext_x_val, ext_y_val
 

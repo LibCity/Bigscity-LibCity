@@ -154,8 +154,8 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
                 experiment_config[key] = config[key]
         experiment_config['hyper_tune'] = True
         logger = get_logger(experiment_config)
-        logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}'.
-                     format(str(task), str(model_name), str(dataset_name)))
+        logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}'
+                    .format(str(task), str(model_name), str(dataset_name)))
         logger.info('running parameters: ' + str(config))
         # load model
         model = get_model(experiment_config, data_feature)

@@ -197,20 +197,26 @@ class STGCN(AbstractTrafficStateModel):
         super().__init__(config, data_feature)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
-        self.Ks = config['Ks']
-        self.Kt = config['Kt']
-        self.blocks = config['blocks']
+        self.output_dim = self.data_feature.get('output_dim', 1)
+        self._scaler = self.data_feature.get('scaler')
+        self._logger = getLogger()
+
+        self.Ks = config.get('Ks', 3)
+        self.Kt = config.get('Kt', 3)
+        self.blocks = config.get('blocks', [[1, 32, 64], [64, 32, 128]])
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.output_dim = self.data_feature.get('output_dim', 1)
-        self.drop_prob = config['dropout']
+        self.drop_prob = config.get('dropout', 0)
+
+        self.train_mode = config.get('stgcn_train_mode', 'quick')  # or full
+        if self.train_mode.lower() not in ['quick', 'full']:
+            raise ValueError('STGCN_train_mode must be `quick` or `full`.')
+        self._logger.info('You select {} mode to train STGCN model.'.format(self.train_mode))
         self.blocks[0][0] = self.feature_dim
         if self.input_window - len(self.blocks) * 2 * (self.Kt - 1) <= 0:
             raise ValueError('Input_window must bigger than 4*(Kt-1) for 2 STConvBlock'
                              ' have 4 kt-kernel convolutional layer.')
         self.device = config.get('device', torch.device('cpu'))
-        self._logger = getLogger()
-        self._scaler = self.data_feature.get('scaler')
 
         self.graph_conv_type = config.get('graph_conv_type', 'chebconv')
         adj_mx = data_feature['adj_mx']  # ndarray
@@ -242,28 +248,36 @@ class STGCN(AbstractTrafficStateModel):
         x_st1 = self.st_conv1(x)   # (batch_size, c[2](64), input_length-kt+1-kt+1, num_nodes)
         x_st2 = self.st_conv2(x_st1)  # (batch_size, c[2](128), input_length-kt+1-kt+1-kt+1-kt+1, num_nodes)
         outputs = self.output(x_st2)  # (batch_size, output_dim(1), output_length(1), num_nodes)
-        outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim(1))
+        outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim)
         return outputs
 
     def calculate_loss(self, batch):
-        y_true = batch['y']
-        y_predicted = self.predict(batch)
+        if self.train_mode.lower() == 'quick':
+            if self.training:  # 训练使用t+1时间步的loss
+                y_true = batch['y'][:, 0:1, :, :]  # (batch_size, 1, num_nodes, feature_dim)
+                y_predicted = self.forward(batch)  # (batch_size, 1, num_nodes, output_dim)
+            else:  # 其他情况使用全部时间步的loss
+                y_true = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
+                y_predicted = self.predict(batch)  # (batch_size, output_length, num_nodes, output_dim)
+        else:   # 'full'
+            y_true = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
+            y_predicted = self.predict(batch)  # (batch_size, output_length, num_nodes, output_dim)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true)
 
     def predict(self, batch):
+        # 多步预测
         x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
         y = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
-        output_length = y.shape[1]
         y_preds = []
-        x_ = x.clone()  # copy!!
-        for i in range(output_length):
+        x_ = x.clone()
+        for i in range(self.output_window):
             batch_tmp = {'X': x_}
-            y_ = self.forward(batch_tmp)  # (batch_size, 1(output_length), num_nodes, 1(feature_dim))
+            y_ = self.forward(batch_tmp)  # (batch_size, 1, num_nodes, output_dim)
             y_preds.append(y_.clone())
-            if y_.shape[3] < x_.shape[3]:  # y_的feature_dim可能小于x_的
+            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
                 y_ = torch.cat([y_, y[:, i:i+1, :, self.output_dim:]], dim=3)
             x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
-        y_preds = torch.cat(y_preds, dim=1)  # concat at time_length, y_preds.shape=y.shape
+        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, num_nodes, output_dim)
         return y_preds

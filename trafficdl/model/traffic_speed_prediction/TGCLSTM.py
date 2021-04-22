@@ -10,9 +10,9 @@ from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateMod
 
 class FilterLinear(nn.Module):
     def __init__(self, device, input_dim, output_dim, in_features, out_features, filter_square_matrix, bias=True):
-        '''
+        """
         filter_square_matrix : filter square matrix, whose each elements is 0 or 1.
-        '''
+        """
         super(FilterLinear, self).__init__()
         self.device = device
         self.in_features = in_features
@@ -47,23 +47,16 @@ class FilterLinear(nn.Module):
 
 class TGCLSTM(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-        '''
-        Args:
-            K: K-hop graph
-            A: adjacency matrix
-            FFR: free-flow reachability matrix
-            Clamp_A: Boolean value, clamping all elements of A between 0. to 1.
-        '''
         super(TGCLSTM, self).__init__(config, data_feature)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.input_dim = data_feature.get('feature_dim', 1)
+        self.input_dim = self.data_feature.get('feature_dim', 1)
         self.in_features = self.input_dim * self.num_nodes
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.out_features = self.output_dim * self.num_nodes
+
         self.K = config.get('K_hop_numbers', 3)
         self.back_length = config.get('back_length', 3)
         self.dataset_class = config.get('dataset_class', 'TrafficSpeedDataset')
-        self.scaler_type = config.get('scaler', 'standard')
         self.device = config.get('device', torch.device('cpu'))
         self._scaler = self.data_feature.get('scaler')
 
@@ -104,8 +97,8 @@ class TGCLSTM(AbstractTrafficStateModel):
         stdv = 1. / math.sqrt(self.out_features)
         self.Neighbor_weight.data.uniform_(-stdv, stdv)
 
-    def step(self, input, hidden_state, cell_state):
-        x = input  # [batch_size, in_features]
+    def step(self, step_input, hidden_state, cell_state):
+        x = step_input  # [batch_size, in_features]
 
         gc = self.gc_list[0](x)  # [batch_size, out_features]
         for i in range(1, self.K):
@@ -141,8 +134,8 @@ class TGCLSTM(AbstractTrafficStateModel):
         outputs = None
 
         for i in range(time_step):
-            input = torch.squeeze(torch.transpose(inputs[:, i:i + 1, :, :], 2, 3)).reshape(batch_size, -1)
-            hidden_state, cell_state, gc = self.step(input, hidden_state, cell_state)
+            step_input = torch.squeeze(torch.transpose(inputs[:, i:i + 1, :, :], 2, 3)).reshape(batch_size, -1)
+            hidden_state, cell_state, gc = self.step(step_input, hidden_state, cell_state)
             # gc: [batch_size, out_features * K]
             if outputs is None:
                 outputs = hidden_state.unsqueeze(1)  # [batch_size, 1, out_features]
