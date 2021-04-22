@@ -15,7 +15,7 @@ def masked_mae_loss(y_pred, y_true):
 
 
 def masked_mae_torch(preds, labels, null_val=np.nan):
-    labels[labels < 1e-4] = 0
+    labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
     else:
@@ -30,7 +30,7 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
 
 
 def masked_mape_torch(preds, labels, null_val=np.nan):
-    labels[labels < 1e-4] = 0
+    labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
     else:
@@ -45,7 +45,7 @@ def masked_mape_torch(preds, labels, null_val=np.nan):
 
 
 def masked_mse_torch(preds, labels, null_val=np.nan):
-    labels[labels < 1e-4] = 0
+    labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
     else:
@@ -60,7 +60,7 @@ def masked_mse_torch(preds, labels, null_val=np.nan):
 
 
 def masked_rmse_torch(preds, labels, null_val=np.nan):
-    labels[labels < 1e-4] = 0
+    labels[torch.abs(labels) < 1e-4] = 0
     return torch.sqrt(masked_mse_torch(preds=preds, labels=labels,
                                        null_val=null_val))
 
