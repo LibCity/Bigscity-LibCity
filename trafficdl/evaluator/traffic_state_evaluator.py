@@ -14,7 +14,7 @@ class TrafficStateEvaluator(AbstractEvaluator):
         self.metrics = config.get('metrics', ['MAE'])  # 评估指标, 是一个 list
         self.allowed_metrics = ['MAE', 'MSE', 'RMSE', 'MAPE', 'masked_MAE',
                                 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'R2', 'EVAR']
-        self.mode = config.get('evaluator_mode', 'average')  # or single
+        self.mode = config.get('evaluator_mode', 'single')  # or average
         self.config = config
         self.len_timeslots = 0
         self.result = {}  # 每一种指标的结果
@@ -136,6 +136,7 @@ class TrafficStateEvaluator(AbstractEvaluator):
             save_path: 保存路径
             filename: 保存文件名
         """
+        self._logger.info('Note that you select the {} mode to evaluate!'.format(self.mode))
         self.evaluate()
         ensure_dir(save_path)
         if filename is None:  # 使用时间戳
@@ -152,7 +153,7 @@ class TrafficStateEvaluator(AbstractEvaluator):
         for i in range(1, self.len_timeslots + 1):
             for metric in self.metrics:
                 dataframe[metric].append(self.result[metric+'@'+str(i)])
-        dataframe = pd.DataFrame(dataframe)
+        dataframe = pd.DataFrame(dataframe, index=range(1, self.len_timeslots + 1))
         dataframe.to_csv(os.path.join(save_path, '{}.csv'.format(filename)), index=False)
         self._logger.info('Evaluate result is saved at ' +
                           os.path.join(save_path, '{}.csv'.format(filename)))
