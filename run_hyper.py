@@ -54,7 +54,7 @@ if __name__ == '__main__':
         'task', 'model', 'dataset', 'config_file', 'saved_model', 'train',
         'params_file', 'hyper_algo'] and val is not None}
 
-    logger = get_logger({'model': args.model})
+    logger = get_logger({'model': args.model, 'dataset': args.dataset})
     hp = HyperTuning(objective_function, params_file=args.params_file, algo=args.hyper_algo,
                      max_evals=args.max_evals, task=args.task, model_name=args.model,
                      dataset_name=args.dataset, config_file=args.config_file,
