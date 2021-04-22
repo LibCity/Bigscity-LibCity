@@ -740,9 +740,9 @@ class TrafficStateDataset(AbstractDataset):
         x_val, y_val = x[num_train: num_train + num_val], y[num_train: num_train + num_val]
         # test
         x_test, y_test = x[-num_test:], y[-num_test:]
-        self._logger.info("train\t" + "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
-        self._logger.info("eval\t" + "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
-        self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
 
         if self.cache_dataset:
             ensure_dir(self.cache_file_folder)
@@ -795,9 +795,9 @@ class TrafficStateDataset(AbstractDataset):
         y_test = cat_data['y_test']
         x_val = cat_data['x_val']
         y_val = cat_data['y_val']
-        self._logger.info("train\t" + "x: " + str(x_train.shape) + "y: " + str(y_train.shape))
-        self._logger.info("eval\t" + "x: " + str(x_val.shape) + "y: " + str(y_val.shape))
-        self._logger.info("test\t" + "x: " + str(x_test.shape) + "y: " + str(y_test.shape))
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
         return x_train, y_train, x_val, y_val, x_test, y_test
 
     def _get_scalar(self, scaler_type, x_train, y_train):
