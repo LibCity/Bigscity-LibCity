@@ -89,12 +89,10 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
             trace = []
             target = current_loc[-1]
             target_tim = current_tim[-1]
-            current_loc = current_loc[:-1]
-            current_tim = current_tim[:-1]
-            trace.append(history_loc)
-            trace.append(history_tim)
-            trace.append(current_loc)
-            trace.append(current_tim)
+            trace.append(history_loc.copy())
+            trace.append(history_tim.copy())
+            trace.append(current_loc[:-1])
+            trace.append(current_tim[:-1])
             trace.append(target)
             trace.append(target_tim)
             trace.append(uid)

@@ -121,10 +121,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             loss.backward()
             total_loss.append(loss.data.cpu().numpy().tolist())
             try:
-                torch.nn.utils.clip_grad_norm(model.parameters(), clip)
-                for p in model.parameters():
-                    if p.requires_grad:
-                        p.data.add_(-lr, p.grad.data)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
             except:
                 pass
             self.optimizer.step()
