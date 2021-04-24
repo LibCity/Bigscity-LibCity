@@ -55,7 +55,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self.hyper_tune = self.config.get('hyper_tune', False)
 
         # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
-        self.output_dim = self.config.get('output_dim', 1)
+        self.output_dim = self.config.get('info', {}).get('output_dim', 1)
         self.optimizer = self._build_optimizer()
         self.lr_scheduler = self._build_lr_scheduler()
         self._epoch_num = self.config.get('epoch', 0)

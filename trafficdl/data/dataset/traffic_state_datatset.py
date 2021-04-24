@@ -48,19 +48,19 @@ class TrafficStateDataset(AbstractDataset):
             raise ValueError("Dataset {} not exist! Please ensure the path "
                              "'./raw_data/{}/' exist!".format(self.dataset, self.dataset))
         # 加载数据集的config.json文件
-        self.weight_col = self.config.get('weight_col', '')
-        self.data_col = self.config.get('data_col', '')
-        self.ext_col = self.config.get('ext_col', '')
-        self.geo_file = self.config.get('geo_file', self.dataset)
-        self.rel_file = self.config.get('rel_file', self.dataset)
-        self.data_files = self.config.get('data_files', self.dataset)
-        self.ext_file = self.config.get('ext_file', self.dataset)
-        self.output_dim = self.config.get('output_dim', 1)
-        self.time_intervals = self.config.get('time_intervals', 300)  # s
-        self.init_weight_inf_or_zero = self.config.get('init_weight_inf_or_zero', 'inf')
-        self.set_weight_link_or_dist = self.config.get('set_weight_link_or_dist', 'dist')
-        self.calculate_weight_adj = self.config.get('calculate_weight_adj', False)
-        self.weight_adj_epsilon = self.config.get('weight_adj_epsilon', 0.1)
+        self.weight_col = self.config.get('info', {}).get('weight_col', '')
+        self.data_col = self.config.get('info', {}).get('data_col', '')
+        self.ext_col = self.config.get('info', {}).get('ext_col', '')
+        self.geo_file = self.config.get('info', {}).get('geo_file', self.dataset)
+        self.rel_file = self.config.get('info', {}).get('rel_file', self.dataset)
+        self.data_files = self.config.get('info', {}).get('data_files', self.dataset)
+        self.ext_file = self.config.get('info', {}).get('ext_file', self.dataset)
+        self.output_dim = self.config.get('info', {}).get('output_dim', 1)
+        self.time_intervals = self.config.get('info', {}).get('time_intervals', 300)  # s
+        self.init_weight_inf_or_zero = self.config.get('info', {}).get('init_weight_inf_or_zero', 'inf')
+        self.set_weight_link_or_dist = self.config.get('info', {}).get('set_weight_link_or_dist', 'dist')
+        self.calculate_weight_adj = self.config.get('info', {}).get('calculate_weight_adj', False)
+        self.weight_adj_epsilon = self.config.get('info', {}).get('weight_adj_epsilon', 0.1)
         # 初始化
         self.data = None
         self.feature_name = {'X': 'float', 'y': 'float'}  # 此类的输入只有X和y
@@ -122,8 +122,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: self.adj_mx, N*N的邻接矩阵
         """
         relfile = pd.read_csv(self.data_path + self.rel_file + '.rel')
-        self._logger.info('set_weight_link_or_dist: {}'.format(self.set_weight_link_or_dist))
-        self._logger.info('init_weight_inf_or_zero: {}'.format(self.init_weight_inf_or_zero))
         if self.weight_col != '':  # 根据weight_col确认权重列
             if isinstance(self.weight_col, list):
                 if len(self.weight_col) != 1:
@@ -217,7 +215,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 数据数组, 3d-array: (len_time, num_nodes, feature_dim)
         """
         # 加载数据集
-        self._logger.info("Loading file " + filename + '.dyna')
         dynafile = pd.read_csv(self.data_path + filename + '.dyna')
         if self.data_col != '':  # 根据指定的列加载数据集
             if isinstance(self.data_col, list):
@@ -262,7 +259,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 数据数组, 3d-array: (len_time, num_grids, feature_dim)
         """
         # 加载数据集
-        self._logger.info("Loading file " + filename + '.grid')
         gridfile = pd.read_csv(self.data_path + filename + '.grid')
         if self.data_col != '':  # 根据指定的列加载数据集
             if isinstance(self.data_col, list):
@@ -308,7 +304,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 数据数组, 4d-array: (len_time, len_row, len_column, feature_dim)
         """
         # 加载数据集
-        self._logger.info("Loading file " + filename + '.grid')
         gridfile = pd.read_csv(self.data_path + filename + '.grid')
         if self.data_col != '':  # 根据指定的列加载数据集
             if isinstance(self.data_col, list):
@@ -359,7 +354,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 数据数组, 4d-array: (len_time, num_grids, num_grids, feature_dim)
         """
         # 加载数据集
-        self._logger.info("Loading file " + filename + '.gridod')
         gridodfile = pd.read_csv(self.data_path + filename + '.gridod')
         if self.data_col != '':  # 根据指定的列加载数据集
             if isinstance(self.data_col, list):
@@ -416,7 +410,6 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 数据数组, 6d-array: (len_time, len_row, len_column, len_row, len_column, feature_dim)
         """
         # 加载数据集
-        self._logger.info("Loading file " + filename + '.gridod')
         gridodfile = pd.read_csv(self.data_path + filename + '.gridod')
         if self.data_col != '':  # 根据指定的列加载数据集
             if isinstance(self.data_col, list):
