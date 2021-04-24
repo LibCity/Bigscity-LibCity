@@ -57,7 +57,7 @@ class TrajectoryDataset(AbstractDataset):
             self.data_path, '{}.geo'.format(self.config['dataset'])))
         with open(os.path.join(self.data_path, 'config.json'), 'r') as f:
             config = json.load(f)
-            res['distance_upper'] = config['distance_upper']
+            res['distance_upper'] = config['info']['distance_upper']
         return res
 
     def cutter_filter(self):

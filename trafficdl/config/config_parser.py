@@ -87,8 +87,8 @@ class ConfigParser(object):
                 self.config['evaluator'] = task_config[model]['evaluator']
             # 对于 LSTM RNN GRU 使用的都是同一个类，只是 RNN 模块不一样而已，这里做一下修改
             if self.config['model'].upper() in ['LSTM', 'GRU', 'RNN']:
-                self.config['rnn_type'] = self.config['model']
                 self.config['model'] = 'RNN'
+                self.config['rnn_type'] = self.config['model']
             if self.config['dataset'] not in task_config['allowed_dataset']:
                 raise ValueError('task {} do not support dataset {}'.format(
                     self.config['task'], self.config['dataset']))
@@ -97,6 +97,7 @@ class ConfigParser(object):
         # model
         default_file_list.append('model/{}/{}.json'.format(self.config['task'], self.config['model']))
         # dataset
+        default_file_list.append('../../raw_data/{}/config.json'.format(self.config['dataset']))
         default_file_list.append('data/{}.json'.format(self.config['dataset_class']))
         # executor
         default_file_list.append('executor/{}.json'.format(self.config['executor']))
@@ -107,17 +108,6 @@ class ConfigParser(object):
             with open('./trafficdl/config/{}'.format(file_name), 'r') as f:
                 x = json.load(f)
                 for key in x:
-                    if key not in self.config:
-                        self.config[key] = x[key]
-        # 加载数据集config.json
-        with open('./raw_data/{}/config.json'.format(self.config['dataset']), 'r') as f:
-            x = json.load(f)
-            for key in x:
-                if key == 'info':
-                    for ik in x[key]:
-                        if ik not in self.config:
-                            self.config[ik] = x[key][ik]
-                else:
                     if key not in self.config:
                         self.config[key] = x[key]
 
