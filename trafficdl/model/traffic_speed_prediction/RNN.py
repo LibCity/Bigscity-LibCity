@@ -20,7 +20,7 @@ class RNN(AbstractTrafficStateModel):
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
-        self.rnn_type = config.get('rnn_type', 'GRU')
+        self.rnn_type = config.get('rnn_type', 'RNN')
         self.hidden_size = config.get('hidden_size', 64)
         self.num_layers = config.get('num_layers', 1)
         self.dropout = config.get('dropout', 0)
