@@ -151,7 +151,7 @@ class TGCN(AbstractTrafficStateModel):
 
         # -------------------构造模型-----------------------------
         self.tgcn_model = TGCNCell(self.gru_units, self.adj_mx, self.num_nodes, self.device, self.input_dim)
-        self.output_model = nn.Linear(self.gru_units, self.output_window)
+        self.output_model = nn.Linear(self.gru_units, self.output_window * self.output_dim)
 
     def forward(self, batch):
         """
@@ -175,9 +175,9 @@ class TGCN(AbstractTrafficStateModel):
             state = self.tgcn_model(inputs[t], state)
 
         state = state.view(batch_size, self.num_nodes, self.gru_units)  # (batch_size, self.num_nodes, self.gru_units)
-        output = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window)
-        output = output.unsqueeze(-1)  # (batch_size, self.num_nodes, self.output_window, 1)
-        output = output.permute(0, 2, 1, 3).to(self.device)
+        output = self.output_model(state)  # (batch_size, self.num_nodes, self.output_window * self.output_dim)
+        output = output.view(batch_size, self.num_nodes, self.output_window, self.output_dim)
+        output = output.permute(0, 2, 1, 3)
         return output
 
     def calculate_loss(self, batch):

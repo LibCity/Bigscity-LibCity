@@ -26,7 +26,10 @@ class TrafficStateGridDataset(TrafficStateDataset):
         Returns:
             np.ndarray: self.adj_mx, N*N的邻接矩阵
         """
-        super()._load_grid_rel()
+        if os.path.exists(self.data_path + self.rel_file + '.rel'):
+            super()._load_rel()
+        else:
+            super()._load_grid_rel()
 
     def _load_dyna(self, filename):
         """
