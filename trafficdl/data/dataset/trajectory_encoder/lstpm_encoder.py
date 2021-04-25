@@ -56,12 +56,12 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         for index, traj in enumerate(trajectories):
             current_loc = []
             current_tim = []
-            start_time = parse_time(traj[0][1], traj[0][2])
+            start_time = parse_time(traj[0][1])
             # 以当天凌晨的时间作为计算 time_off 的基准
             base_time = cal_basetime(start_time, True)
             for point in traj:
                 loc = point[0]
-                now_time = parse_time(point[1], point[2])
+                now_time = parse_time(point[1])
                 if loc not in self.location2id:
                     self.location2id[loc] = self.loc_id
                     self.id2location[self.loc_id] = loc

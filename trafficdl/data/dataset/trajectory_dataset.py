@@ -66,13 +66,13 @@ class TrajectoryDataset(AbstractDataset):
             {
                 uid: [
                     [
-                        (location ID, timestamp, timezone_offset_in_minutes),
-                        (location ID, timestamp, timezone_offset_in_minutes),
+                        (location ID, timestamp),
+                        (location ID, timestamp),
                         ...
                     ],
                     [
-                        (location ID, timestamp, timezone_offset_in_minutes),
-                        (location ID, timestamp, timezone_offset_in_minutes),
+                        (location ID, timestamp),
+                        (location ID, timestamp),
                         ...
                     ],
                     ...
@@ -97,26 +97,24 @@ class TrajectoryDataset(AbstractDataset):
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
                 # 这里还是使用当地时间吧
-                start_time = parse_time(usr_traj.iloc[0]['time'], int(
-                    usr_traj.iloc[0]['timezone_offset_in_minutes']))
+                start_time = parse_time(usr_traj.iloc[0]['time'])
                 base_time = cal_basetime(start_time, base_zero)
                 for index, row in usr_traj.iterrows():
                     if index == 0:
                         assert start_time.hour - base_time.hour < window_size
-                        session.append((row['location'], row['time'], row['timezone_offset_in_minutes']))
+                        session.append((row['location'], row['time']))
                     else:
-                        now_time = parse_time(row['time'], int(
-                            row['timezone_offset_in_minutes']))
+                        now_time = parse_time(row['time'])
                         time_off = cal_timeoff(now_time, base_time)
                         if time_off < window_size and time_off >= 0:
-                            session.append((row['location'], row['time'], row['timezone_offset_in_minutes']))
+                            session.append((row['location'], row['time']))
                         else:
                             if len(session) >= min_session_len:
                                 sessions.append(session)
                             session = []
                             start_time = now_time
                             base_time = cal_basetime(start_time, base_zero)
-                            session.append((row['location'], row['time'], row['timezone_offset_in_minutes']))
+                            session.append((row['location'], row['time']))
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
@@ -129,11 +127,11 @@ class TrajectoryDataset(AbstractDataset):
                 session = []  # 单条轨迹
                 for index, row in usr_traj.iterrows():
                     if len(session) < window_size:
-                        session.append((row['location'], row['time'], row['timezone_offset_in_minutes']))
+                        session.append((row['location'], row['time']))
                     else:
                         sessions.append(session)
                         session = []
-                        session.append((row['location'], row['time'], row['timezone_offset_in_minutes']))
+                        session.append((row['location'], row['time']))
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
@@ -152,8 +150,8 @@ class TrajectoryDataset(AbstractDataset):
                     ]
                 }
                 trajectory1 = [
-                    (location ID, timestamp, timezone_offset_in_minutes),
-                    (location ID, timestamp, timezone_offset_in_minutes),
+                    (location ID, timestamp),
+                    (location ID, timestamp),
                     .....
                 ]
 
