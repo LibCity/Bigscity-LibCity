@@ -82,7 +82,8 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                 lon = []
                 lat = []
                 for poi in current_loc:
-                    lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[poi]]['coordinates'])
+                    lon_cur, lat_cur = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
+                                                        == self.id2location[poi]].iloc[0]['coordinates'])
                     lon.append(lon_cur)
                     lat.append(lat_cur)
                 history_loc_central.append((np.mean(lat), np.mean(lon)))
@@ -106,7 +107,8 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             lon = []
             lat = []
             for poi in current_loc:
-                lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[poi]]['coordinates'])
+                lon_cur, lat_cur = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
+                                                    == self.id2location[poi]].iloc[0]['coordinates'])
                 lon.append(lon_cur)
                 lat.append(lat_cur)
             history_loc_central.append((np.mean(lat), np.mean(lon)))
@@ -147,11 +149,13 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         for i in range(sequence_length - 1):
             current_poi = current_loc[i]
             poi_before = current_loc[i + 1:]
-            current_poi_profile = self.poi_profile.iloc[self.id2location[current_poi]]
+            current_poi_profile = self.poi_profile.loc[self.poi_profile['geo_id']
+                                                       == self.id2location[current_poi]].iloc[0]
             lon_cur, lat_cur = parse_coordinate(current_poi_profile['coordinates'])
             distance_row_explicit = []
             for target in poi_before:
-                lon, lat = parse_coordinate(self.poi_profile.iloc[self.id2location[target]]['coordinates'])
+                lon, lat = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
+                                            == self.id2location[target]].iloc[0]['coordinates'])
                 distance_row_explicit.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
             index_closet = np.argmin(distance_row_explicit).item()
             # reverse back
@@ -163,7 +167,8 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         # 使用 profile 计算当前位置与历史轨迹中心点之间的距离
         history_avg_distance = []  # history_session_count
         now_loc = current_loc[-1]
-        lon_cur, lat_cur = parse_coordinate(self.poi_profile.iloc[self.id2location[now_loc]]['coordinates'])
+        lon_cur, lat_cur = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
+                                            == self.id2location[now_loc]].iloc[0]['coordinates'])
         for central in history_loc_central:
             history_avg_distance.append(distance.distance(central, (lat_cur, lon_cur)).kilometers)
         return history_avg_distance
