@@ -3,10 +3,13 @@ import json
 import pandas as pd
 import math
 import importlib
+from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.data.utils import generate_dataloader
+
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'window_type', 'window_size']
 
 
 class TrajectoryDataset(AbstractDataset):
@@ -14,11 +17,16 @@ class TrajectoryDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
+        self.cut_data_cache = './trafficdl/cache/dataset_cache/cut_traj'
+        for param in parameter_list:
+            self.cut_data_cache += '_' + str(self.config[param])
+        self.cut_data_cache += '.json'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.data = None
         # 加载 encoder
         self.encoder = self.get_encoder()
         self.pad_item = None  # 因为若是使用缓存, pad_item 是记录在缓存文件中的而不是 encoder
+        self.logger = getLogger()
 
     def get_data(self):
         """
@@ -32,7 +40,13 @@ class TrajectoryDataset(AbstractDataset):
                 self.pad_item = self.data['pad_item']
                 f.close()
             else:
-                cut_data = self.cutter_filter()
+                if os.path.exists(self.cut_data_cache):
+                    f = open(self.cut_data_cache, 'r')
+                    cut_data = json.load(f)
+                    f.close()
+                else:
+                    cut_data = self.cutter_filter()
+                self.logger.info('finish cut data')
                 encoded_data = self.encode_traj(cut_data)
                 self.data = encoded_data
                 self.pad_item = self.encoder.pad_item
@@ -52,12 +66,7 @@ class TrajectoryDataset(AbstractDataset):
 
     def get_data_feature(self):
         res = self.data['data_feature']
-        # 由 dataset 添加 poi_profile
-        res['poi_profile'] = pd.read_csv(os.path.join(
-            self.data_path, '{}.geo'.format(self.config['dataset'])))
-        with open(os.path.join(self.data_path, 'config.json'), 'r') as f:
-            config = json.load(f)
-            res['distance_upper'] = config['distance_upper']
+        res['distance_upper'] = self.config['distance_upper']
         return res
 
     def cutter_filter(self):
@@ -164,8 +173,13 @@ class TrajectoryDataset(AbstractDataset):
                 }
         """
         encoded_data = {}
+        total_user = len(data)
+        cnt = 0
         for uid in data:
             encoded_data[str(uid)] = self.encoder.encode(uid, data[uid])
+            cnt += 1
+            if cnt % self.config['verbose'] == 0:
+                self.logger.info('finish encode {} user of total {}'.format(cnt, total_user))
         self.encoder.gen_data_feature()
         return {
             'data_feature': self.encoder.data_feature,
