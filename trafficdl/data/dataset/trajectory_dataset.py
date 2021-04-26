@@ -46,6 +46,10 @@ class TrajectoryDataset(AbstractDataset):
                     f.close()
                 else:
                     cut_data = self.cutter_filter()
+                    if not os.path.exists(self.cache_file_folder):
+                        os.makedirs(self.cache_file_folder)
+                    with open(self.cut_data_cache, 'w') as f:
+                        json.dump(cut_data, f)
                 self.logger.info('finish cut data')
                 encoded_data = self.encode_traj(cut_data)
                 self.data = encoded_data
@@ -132,7 +136,7 @@ class TrajectoryDataset(AbstractDataset):
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
-                    res[uid] = sessions
+                    res[str(uid)] = sessions
         else:
             # 按照轨迹长度进行划分
             for uid in user_set:
@@ -149,7 +153,7 @@ class TrajectoryDataset(AbstractDataset):
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
-                    res[uid] = sessions
+                    res[str(uid)] = sessions
         return res
 
     def encode_traj(self, data):
@@ -181,7 +185,7 @@ class TrajectoryDataset(AbstractDataset):
         total_user = len(data)
         cnt = 0
         for uid in data:
-            encoded_data[str(uid)] = self.encoder.encode(uid, data[uid])
+            encoded_data[uid] = self.encoder.encode(int(uid), data[uid])
             cnt += 1
             if cnt % self.config['verbose'] == 0:
                 self.logger.info('finish encode {} user of total {}'.format(cnt, total_user))
