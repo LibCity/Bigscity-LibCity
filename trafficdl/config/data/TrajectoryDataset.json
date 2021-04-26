@@ -1,7 +1,7 @@
 {
     "min_session_len": 5,
     "min_sessions": 2,
-    "min_checkins": 10,
+    "min_checkins": 3,
     "window_size": 72,
     "history_len": 50,
     "batch_size": 20,
