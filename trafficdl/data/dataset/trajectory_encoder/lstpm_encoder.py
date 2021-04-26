@@ -7,7 +7,7 @@ from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.utils.dataset import parse_coordinate
 from collections import defaultdict
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size']
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size', 'min_checkins']
 
 
 class LstpmEncoder(AbstractTrajectoryEncoder):
