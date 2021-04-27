@@ -154,12 +154,12 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "STResNetCommon": {
-            "dataset_class": "TrafficStatePointDataset",
+            "dataset_class": "TrafficStateGridDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "ACFMCommon": {
-            "dataset_class": "TrafficStatePointDataset",
+            "dataset_class": "TrafficStateGridDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
