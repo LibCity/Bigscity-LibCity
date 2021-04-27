@@ -89,9 +89,9 @@ class ConfigParser(object):
             if self.config['model'].upper() in ['LSTM', 'GRU', 'RNN']:
                 self.config['rnn_type'] = self.config['model']
                 self.config['model'] = 'RNN'
-            if self.config['dataset'] not in task_config['allowed_dataset']:
-                raise ValueError('task {} do not support dataset {}'.format(
-                    self.config['task'], self.config['dataset']))
+            # if self.config['dataset'] not in task_config['allowed_dataset']:
+            #     raise ValueError('task {} do not support dataset {}'.format(
+            #         self.config['task'], self.config['dataset']))
         # 接着加载每个阶段的 default config
         default_file_list = []
         # model

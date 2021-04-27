@@ -1,0 +1,21 @@
+{
+  "nb_residual_unit": 12,
+  "batch_norm": false,
+
+  "scaler": "minmax11",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "external_time": true,
+
+  "max_epoch": 500,
+  "learner": "adam",
+  "learning_rate": 0.0002,
+  "lr_decay": false,
+  "clip_grad_norm": true,
+  "max_grad_norm": 0.1,
+  "use_early_stop": true,
+  "patience": 50
+}
