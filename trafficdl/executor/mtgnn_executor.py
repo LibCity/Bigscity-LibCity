@@ -34,25 +34,26 @@ class MTGNNExecutor(TrafficStateExecutor):
         batches_seen = num_batches * self._epoch_num * self.num_split
         for epoch_idx in range(self._epoch_num, self.epochs):
             start_time = time.time()
-            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen)
+            losses, batches_seen = self._train_epoch(train_dataloader, epoch_idx, batches_seen, self.loss_func)
             t1 = time.time()
             train_time.append(t1 - start_time)
             self._writer.add_scalar('training loss', np.mean(losses), batches_seen)
             self._logger.info("epoch complete!")
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
 
             self._logger.info("evaluating now!")
             t2 = time.time()
-            val_loss = self._valid_epoch(eval_dataloader, epoch_idx, batches_seen)
+            val_loss = self._valid_epoch(eval_dataloader, epoch_idx, batches_seen, self.loss_func)
             end_time = time.time()
             eval_time.append(end_time - t2)
 
-            if (epoch_idx % self.log_every) == 0:
-                if self.lr_scheduler is not None:
-                    log_lr = self.lr_scheduler.get_last_lr()[0]
+            if self.lr_scheduler is not None:
+                if self.lr_scheduler_type.lower() == 'reducelronplateau':
+                    self.lr_scheduler.step(val_loss)
                 else:
-                    log_lr = self.learning_rate
+                    self.lr_scheduler.step()
+
+            if (epoch_idx % self.log_every) == 0:
+                log_lr = self.optimizer.param_groups[0]['lr']
                 message = 'Epoch [{}/{}] ({}) train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'. \
                     format(epoch_idx, self.epochs, batches_seen, np.mean(losses), val_loss,
                            log_lr, (end_time - start_time))

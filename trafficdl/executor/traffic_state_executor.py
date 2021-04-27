@@ -7,6 +7,7 @@ from logging import getLogger
 from torch.utils.tensorboard import SummaryWriter
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
+from trafficdl.model import loss
 
 
 class TrafficStateExecutor(AbstractExecutor):
@@ -33,6 +34,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self._logger.info('Total parameter numbers: {}'.format(total_num))
 
         self.epochs = self.config.get('max_epoch', 100)
+        self.train_loss = self.config.get('train_loss', 'none')
         self.learner = self.config.get('learner', 'adam')
         self.learning_rate = self.config.get('learning_rate', 0.01)
         self.weight_decay = self.config.get('weight_decay', 0)
@@ -45,6 +47,8 @@ class TrafficStateExecutor(AbstractExecutor):
         self.lr_lambda = self.config.get('lr_lambda', lambda x: x)
         self.lr_T_max = self.config.get('lr_T_max', 30)
         self.lr_eta_min = self.config.get('lr_eta_min', 0)
+        self.lr_patience = self.config.get('lr_patience', 10)
+        self.lr_threshold = self.config.get('lr_threshold', 1e-4)
         self.clip_grad_norm = self.config.get('clip_grad_norm', False)
         self.max_grad_norm = self.config.get('max_grad_norm', 1.)
         self.use_early_stop = self.config.get('use_early_stop', False)
@@ -61,6 +65,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self._epoch_num = self.config.get('epoch', 0)
         if self._epoch_num > 0:
             self.load_model_with_epoch(self._epoch_num)
+        self.loss_func = self._build_train_loss()
 
     def save_model(self, cache_name):
         """
@@ -120,6 +125,7 @@ class TrafficStateExecutor(AbstractExecutor):
         """
         根据全局参数`learner`选择optimizer
         """
+        self._logger.info('You select `{}` optimizer.'.format(self.learner.lower()))
         if self.learner.lower() == 'adam':
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
                                          eps=self.lr_epsilon, weight_decay=self.weight_decay)
@@ -142,6 +148,7 @@ class TrafficStateExecutor(AbstractExecutor):
         根据全局参数`lr_scheduler`选择对应的lr_scheduler
         """
         if self.lr_decay:
+            self._logger.info('You select `{}` lr_scheduler.'.format(self.lr_scheduler_type.lower()))
             if self.lr_scheduler_type.lower() == 'multisteplr':
                 lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
                     self.optimizer, milestones=self.milestones, gamma=self.lr_decay_ratio)
@@ -157,11 +164,107 @@ class TrafficStateExecutor(AbstractExecutor):
             elif self.lr_scheduler_type.lower() == 'lambdalr':
                 lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
                     self.optimizer, lr_lambda=self.lr_lambda)
+            elif self.lr_scheduler_type.lower() == 'reducelronplateau':
+                lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                    self.optimizer, mode='min', patience=self.lr_patience,
+                    factor=self.lr_decay_ratio, threshold=self.lr_threshold)
             else:
+                self._logger.warning('Received unrecognized lr_scheduler, '
+                                     'please check the parameter `lr_scheduler`.')
                 lr_scheduler = None
         else:
             lr_scheduler = None
         return lr_scheduler
+
+    def _build_train_loss(self):
+        """
+        根据全局参数`train_loss`选择训练过程的loss函数
+        如果该参数为none，则需要使用模型自定义的loss函数
+        注意，loss函数应该接收`Batch`对象作为输入，返回对应的loss(torch.tensor)
+        """
+        self._logger.info('You select `{}` as train loss function.'.format(self.train_loss.lower()))
+        if self.train_loss.lower() == 'mae':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mae_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'mse':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mse_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'rmse':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_rmse_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'mape':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mape_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'masked_mae':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mae_torch(y_predicted, y_true, 0)
+        elif self.train_loss.lower() == 'masked_mse':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mse_torch(y_predicted, y_true, 0)
+        elif self.train_loss.lower() == 'masked_rmse':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_rmse_torch(y_predicted, y_true, 0)
+        elif self.train_loss.lower() == 'masked_mape':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mape_torch(y_predicted, y_true, 0)
+        elif self.train_loss.lower() == 'r2':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.r2_score_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'evar':
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.explained_variance_score_torch(y_predicted, y_true)
+        elif self.train_loss.lower() == 'none':
+            func = None
+            self._logger.warning('Received none train loss func and will use the loss func defined in the model.')
+        else:
+            def func(batch):
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+                return loss.masked_mse_torch(y_predicted, y_true)
+            self._logger.warning('Received unrecognized train loss function, set default mae loss func.')
+        return func
 
     def evaluate(self, test_dataloader):
         """
@@ -217,25 +320,26 @@ class TrafficStateExecutor(AbstractExecutor):
 
         for epoch_idx in range(self._epoch_num, self.epochs):
             start_time = time.time()
-            losses = self._train_epoch(train_dataloader, epoch_idx)
+            losses = self._train_epoch(train_dataloader, epoch_idx, self.loss_func)
             t1 = time.time()
             train_time.append(t1 - start_time)
             self._writer.add_scalar('training loss', np.mean(losses), epoch_idx)
             self._logger.info("epoch complete!")
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
 
             self._logger.info("evaluating now!")
             t2 = time.time()
-            val_loss = self._valid_epoch(eval_dataloader, epoch_idx)
+            val_loss = self._valid_epoch(eval_dataloader, epoch_idx, self.loss_func)
             end_time = time.time()
             eval_time.append(end_time - t2)
 
-            if (epoch_idx % self.log_every) == 0:
-                if self.lr_scheduler is not None:
-                    log_lr = self.lr_scheduler.get_last_lr()[0]
+            if self.lr_scheduler is not None:
+                if self.lr_scheduler_type.lower() == 'reducelronplateau':
+                    self.lr_scheduler.step(val_loss)
                 else:
-                    log_lr = self.learning_rate
+                    self.lr_scheduler.step()
+
+            if (epoch_idx % self.log_every) == 0:
+                log_lr = self.optimizer.param_groups[0]['lr']
                 message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'.\
                     format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
