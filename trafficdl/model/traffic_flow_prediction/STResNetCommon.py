@@ -75,36 +75,43 @@ class TrainableEltwiseLayer(nn.Module):
         return x
 
 
-class STResNet(AbstractTrafficStateModel):
+class STResNetCommon(AbstractTrafficStateModel):
+    # 2021-04-26 10:09:03,657 - INFO - train	x: (14935, 6, 32, 32, 2), y: (14935, 1, 32, 32, 2)
+    # 2021-04-26 10:09:03,658 - INFO - eval	x: (2134, 6, 32, 32, 2), y: (2134, 1, 32, 32, 2)
+    # 2021-04-26 10:09:03,658 - INFO - test	x: (4267, 6, 32, 32, 2), y: (4267, 1, 32, 32, 2)
+
+    # 2021-04-18 12:48:17,434 - INFO - train	x: (15120, 6, 32, 32, 2),y: (15120, 1, 32, 32, 2),x_ext: (15120, 6, 76),y_ext: (15120, 76)
+    # 2021-04-18 12:48:17,435 - INFO - eval	x: (1344, 6, 32, 32, 2),y: (1344, 1, 32, 32, 2),x_ext: (1344, 6, 76),y_ext: (1344, 76)
+    # 2021-04-18 12:48:17,435 - INFO - test	x: (16464, 6, 32, 32, 2),y: (16464, 1, 32, 32, 2),x_ext: (16464, 6, 76),y_ext: (16464, 76)
+
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self._scaler = self.data_feature.get('scaler')
         self.adj_mx = self.data_feature.get('adj_mx')
         self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature.get('feature_dim', 2)  # 这种情况下不包括外部数据的维度
+        self.feature_dim = self.data_feature.get('feature_dim', 2)  # 这种情况下包括外部数据的维度
         self.ext_dim = self.data_feature.get('ext_dim', 1)
-        self.output_dim = self.data_feature.get('output_dim', 2)  # feature_dim = output_dim
+        self.output_dim = self.data_feature.get('output_dim', 2)
         self.len_row = self.data_feature.get('len_row', 32)
         self.len_column = self.data_feature.get('len_column', 32)
-        self.len_closeness = self.data_feature.get('len_closeness', 4)
-        self.len_period = self.data_feature.get('len_period', 2)
-        self.len_trend = self.data_feature.get('len_trend', 0)
         self._logger = getLogger()
 
         self.nb_residual_unit = config.get('nb_residual_unit', 12)
         self.bn = config.get('batch_norm', False)
+        self.input_window = config.get('input_window', 1)
+        self.output_window = config.get('output_window', 1)
         self.device = config.get('device', torch.device('cpu'))
         self.relu = torch.relu
         self.tanh = torch.tanh
 
-        if self.len_closeness > 0:
-            self.c_way = self.make_one_way(in_channels=self.len_closeness * self.feature_dim)
-
-        if self.len_period > 0:
-            self.p_way = self.make_one_way(in_channels=self.len_period * self.feature_dim)
-
-        if self.len_trend > 0:
-            self.t_way = self.make_one_way(in_channels=self.len_trend * self.feature_dim)
+        self.model = nn.Sequential(OrderedDict([
+            ('conv1', conv3x3(in_channels=self.input_window * self.output_dim, out_channels=64)),
+            ('ResUnits', ResUnits(ResidualUnit, nb_filter=64, repetations=self.nb_residual_unit, bn=self.bn)),
+            ('relu', nn.ReLU()),
+            ('conv2', conv3x3(in_channels=64, out_channels=2)),
+            ('FusionLayer', TrainableEltwiseLayer(n=self.output_dim, h=self.len_row,
+                                                  w=self.len_column, device=self.device))
+        ]))
 
         # Operations of external component
         if self.ext_dim > 0:
@@ -115,66 +122,57 @@ class STResNet(AbstractTrafficStateModel):
                 ('relu2', nn.ReLU()),
             ]))
 
-    def make_one_way(self, in_channels):
-        return nn.Sequential(OrderedDict([
-            ('conv1', conv3x3(in_channels=in_channels, out_channels=64)),
-            ('ResUnits', ResUnits(ResidualUnit, nb_filter=64, repetations=self.nb_residual_unit, bn=self.bn)),
-            ('relu', nn.ReLU()),
-            ('conv2', conv3x3(in_channels=64, out_channels=2)),
-            ('FusionLayer', TrainableEltwiseLayer(n=self.output_dim, h=self.len_row,
-                                                  w=self.len_column, device=self.device))
-        ]))
-
     def forward(self, batch):
-        inputs = batch['X']  # (batch_size, T_c+T_p+T_t, len_row, len_column, feature_dim)
-        input_ext = batch['y_ext']  # (batch_size, ext_dim)
+        inputs = batch['X'][:, :, :, :, :self.output_dim]  # (batch_size, input_window, len_row, len_column, output_dim)
+        input_ext = batch['X'][:, -1, 0, 0, self.output_dim:]  # (batch_size, ext_dim)
+        # print(inputs.shape, input_ext.shape)
         batch_size, len_time, len_row, len_column, input_dim = inputs.shape
         assert len_row == self.len_row
         assert len_column == self.len_column
-        assert len_time == self.len_closeness + self.len_period + self.len_trend
-        assert input_dim == self.feature_dim
+        assert len_time == self.input_window
+        assert input_dim == self.output_dim
 
-        # Three-way Convolution
-        # parameter-matrix-based fusion
-        main_output = 0
-        if self.len_closeness > 0:
-            begin_index = 0
-            end_index = begin_index + self.len_closeness
-            input_c = inputs[:, begin_index:end_index, :, :, :]
-            input_c = input_c.view(-1, self.len_closeness * self.feature_dim, self.len_row, self.len_column)
-            out_c = self.c_way(input_c)
-            main_output += out_c
-        if self.len_period > 0:
-            begin_index = self.len_closeness
-            end_index = begin_index + self.len_period
-            input_p = inputs[:, begin_index:end_index, :, :, :]
-            input_p = input_p.view(-1, self.len_period * self.feature_dim, self.len_row, self.len_column)
-            out_p = self.p_way(input_p)
-            main_output += out_p
-        if self.len_trend > 0:
-            begin_index = self.len_closeness + self.len_period
-            end_index = begin_index + self.len_trend
-            input_t = inputs[:, begin_index:end_index, :, :, :]
-            input_t = input_t.view(-1, self.len_trend * self.feature_dim, self.len_row, self.len_column)
-            out_t = self.t_way(input_t)
-            main_output += out_t
+        inputs = inputs.contiguous().view(-1, self.input_window * self.output_dim,
+                                          self.len_row, self.len_column).to(self.device)
+        output = self.model(inputs)
+        # print('output', output.shape)
 
         # fusing with external component
         if self.ext_dim > 0:
+            # print('4', input_ext.shape)
+            input_ext = input_ext.contiguous().view(-1, self.ext_dim)
+            # print('3', input_ext.shape)
             external_output = self.external_ops(input_ext)
+            # print('2', external_output.shape)
             external_output = self.relu(external_output)
-            external_output = external_output.view(-1, self.feature_dim, self.len_row, self.len_column)
-            main_output += external_output
-        main_output = self.tanh(main_output)
-        main_output = main_output.view(batch_size, 1, len_row, len_column, self.output_dim)
-        return main_output
+            # print('1', external_output.shape)
+            external_output = external_output.view(-1, self.output_dim, self.len_row, self.len_column)
+            # print('external_output', external_output.shape)
+            output += external_output
+        output = self.tanh(output)
+        output = output.view(batch_size, 1, len_row, len_column, self.output_dim)
+        return output  # (batch_size, 1, len_row, len_column, output_dim)
 
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
+        # print(y_true.shape, y_predicted.shape)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true)
 
     def predict(self, batch):
-        return self.forward(batch)
+        # 多步预测
+        x = batch['X']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y = batch['y']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y_preds = []
+        x_ = x.clone()
+        for i in range(self.output_window):
+            batch_tmp = {'X': x_}
+            y_ = self.forward(batch_tmp)  # (batch_size, 1, len_row, len_column, output_dim)
+            y_preds.append(y_.clone())
+            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
+                y_ = torch.cat([y_, y[:, i:i + 1, :, :, self.output_dim:]], dim=-1)
+            x_ = torch.cat([x_[:, 1:, :, :, :], y_], dim=1)
+        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, len_row, len_column, output_dim)
+        return y_preds
