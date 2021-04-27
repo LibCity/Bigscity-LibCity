@@ -416,7 +416,7 @@ class ACFM(AbstractTrafficStateModel):
         self.device = config.get('device', torch.device('cpu'))
 
         self.resnn = ResNN(
-            in_channels=2 * self.len_seq,
+            in_channels=self.feature_dim * self.len_seq,
             out_channels=self.lstm_channels * self.len_seq,
             inter_channels=self.res_nbfilter,
             repetation=self.res_repetation,
@@ -446,14 +446,15 @@ class ACFM(AbstractTrafficStateModel):
             seq_len=self.len_local
         )
 
-        self.concat_conv_t = ConcatConv(
-            in_channels1=2 * self.len_global,
-            in_channels2=self.lstm_channels * self.len_global,
-            out_channels=self.lstm_channels * self.len_global,
-            inter_channels=self.lstm_channels,
-            relu_conv=True,
-            seq_len=self.len_global
-        )
+        if self.len_global > 0:
+            self.concat_conv_t = ConcatConv(
+                in_channels1=2 * self.len_global,
+                in_channels2=self.lstm_channels * self.len_global,
+                out_channels=self.lstm_channels * self.len_global,
+                inter_channels=self.lstm_channels,
+                relu_conv=True,
+                seq_len=self.len_global
+            )
 
         self.conv_lstm_c = ConvLSTM(
             in_channels=self.lstm_channels,
@@ -525,18 +526,17 @@ class ACFM(AbstractTrafficStateModel):
         features_c = features[:, :self.lstm_channels * self.len_local]
         attention_c = self.concat_conv_c(features_c, hidden_list_c)
         phase_c = features_c * (1 + attention_c)
+        pred_c = self.conv_lstm_c(phase_c)  # (batch_size, 2, h, w)
 
         # (batch_size, lstm_channels * (len_seq - len_local), h, w)
-        hidden_list_t = hidden_list[:, self.lstm_channels * self.len_local:]
-        features_t = features[:, self.lstm_channels * self.len_local:]
-        attention_t = self.concat_conv_t(features_t, hidden_list_t)
-        phase_t = features_t * (1 + attention_t)
-
-        # (batch_size, lstm_channels * len_seq, h, w)
-        self.spatial_attention = torch.cat([attention_c, attention_t], 1)
-
-        pred_c = self.conv_lstm_c(phase_c)  # (batch_size, 2, h, w)
-        pred_t = self.conv_lstm_t(phase_t)  # (batch_size, 2, h, w)
+        if self.len_global > 0:
+            hidden_list_t = hidden_list[:, self.lstm_channels * self.len_local:]
+            features_t = features[:, self.lstm_channels * self.len_local:]
+            attention_t = self.concat_conv_t(features_t, hidden_list_t)
+            phase_t = features_t * (1 + attention_t)
+            pred_t = self.conv_lstm_t(phase_t)  # (batch_size, 2, h, w)
+        else:
+            pred_t = torch.zeros((batch_size, self.output_dim, self.len_row, self.len_column)).to(self.device)
 
         if self.ext_dim > 0:
             time_aware = self.time_aware_extnn(y_ext)  # (batch_size, 1)
@@ -547,7 +547,10 @@ class ACFM(AbstractTrafficStateModel):
             time_aware_t = self.time_aware_t.view(-1, 1, 1, 1)  # (batch_size, 1, 1, 1)
             pred = time_aware_c * pred_c + time_aware_t * pred_t  # (batch_size, 2, h, w)
         else:
-            pred = 0.5 * pred_c + 0.5 * pred_t
+            if self.len_global > 0:
+                pred = 0.5 * pred_c + 0.5 * pred_t
+            else:
+                pred = pred_c
 
         h = torch.tanh(pred)  # (64, 2, h, w)
         h = h.view(batch_size, 1, len_row, len_column, self.output_dim)
