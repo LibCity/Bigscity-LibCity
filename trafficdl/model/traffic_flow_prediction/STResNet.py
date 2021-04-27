@@ -81,9 +81,9 @@ class STResNet(AbstractTrafficStateModel):
         self._scaler = self.data_feature.get('scaler')
         self.adj_mx = self.data_feature.get('adj_mx')
         self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.feature_dim = self.data_feature.get('feature_dim', 2)
+        self.feature_dim = self.data_feature.get('feature_dim', 2)  # 这种情况下不包括外部数据的维度
         self.ext_dim = self.data_feature.get('ext_dim', 1)
-        self.output_dim = self.data_feature.get('output_dim', 2)
+        self.output_dim = self.data_feature.get('output_dim', 2)  # feature_dim = output_dim
         self.len_row = self.data_feature.get('len_row', 32)
         self.len_column = self.data_feature.get('len_column', 32)
         self.len_closeness = self.data_feature.get('len_closeness', 4)
@@ -111,7 +111,7 @@ class STResNet(AbstractTrafficStateModel):
             self.external_ops = nn.Sequential(OrderedDict([
                 ('embd', nn.Linear(self.ext_dim, 10, bias=True)),
                 ('relu1', nn.ReLU()),
-                ('fc', nn.Linear(10, self.feature_dim * self.len_row * self.len_column, bias=True)),
+                ('fc', nn.Linear(10, self.output_dim * self.len_row * self.len_column, bias=True)),
                 ('relu2', nn.ReLU()),
             ]))
 
