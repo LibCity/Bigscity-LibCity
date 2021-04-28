@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator, ensure_dir
 from trafficdl.model import loss
+from functools import partial
 
 
 class TrafficStateExecutor(AbstractExecutor):
@@ -182,88 +183,43 @@ class TrafficStateExecutor(AbstractExecutor):
         如果该参数为none，则需要使用模型自定义的loss函数
         注意，loss函数应该接收`Batch`对象作为输入，返回对应的loss(torch.tensor)
         """
-        self._logger.info('You select `{}` as train loss function.'.format(self.train_loss.lower()))
-        if self.train_loss.lower() == 'mae':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mae_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'mse':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mse_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'rmse':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_rmse_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'mape':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mape_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'masked_mae':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mae_torch(y_predicted, y_true, 0)
-        elif self.train_loss.lower() == 'masked_mse':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mse_torch(y_predicted, y_true, 0)
-        elif self.train_loss.lower() == 'masked_rmse':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_rmse_torch(y_predicted, y_true, 0)
-        elif self.train_loss.lower() == 'masked_mape':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mape_torch(y_predicted, y_true, 0)
-        elif self.train_loss.lower() == 'r2':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.r2_score_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'evar':
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.explained_variance_score_torch(y_predicted, y_true)
-        elif self.train_loss.lower() == 'none':
-            func = None
+        if self.train_loss.lower() == 'none':
             self._logger.warning('Received none train loss func and will use the loss func defined in the model.')
-        else:
-            def func(batch):
-                y_true = batch['y']
-                y_predicted = self.model.predict(batch)
-                y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-                y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-                return loss.masked_mse_torch(y_predicted, y_true)
+            return None
+        if self.train_loss.lower() not in ['mae', 'mse', 'rmse', 'mape', 'masked_mae',
+                                           'masked_mse', 'masked_rmse', 'masked_mape', 'r2', 'evar']:
             self._logger.warning('Received unrecognized train loss function, set default mae loss func.')
+        else:
+            self._logger.info('You select `{}` as train loss function.'.format(self.train_loss.lower()))
+
+        def func(batch):
+            y_true = batch['y']
+            y_predicted = self.model.predict(batch)
+            y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+            y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+            if self.train_loss.lower() == 'mae':
+                lf = loss.masked_mae_torch
+            elif self.train_loss.lower() == 'mse':
+                lf = loss.masked_mse_torch
+            elif self.train_loss.lower() == 'rmse':
+                lf = loss.masked_rmse_torch
+            elif self.train_loss.lower() == 'mape':
+                lf = loss.masked_mape_torch
+            elif self.train_loss.lower() == 'masked_mae':
+                lf = partial(loss.masked_mae_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_mse':
+                lf = partial(loss.masked_mse_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_rmse':
+                lf = partial(loss.masked_rmse_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_mape':
+                lf = partial(loss.masked_mape_torch, null_val=0)
+            elif self.train_loss.lower() == 'r2':
+                lf = loss.r2_score_torch
+            elif self.train_loss.lower() == 'evar':
+                lf = loss.explained_variance_score_torch
+            else:
+                lf = loss.masked_mae_torch
+            return lf(y_predicted, y_true)
         return func
 
     def evaluate(self, test_dataloader):
