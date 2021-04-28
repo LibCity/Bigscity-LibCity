@@ -3,7 +3,7 @@ from trafficdl.model.trajectory_loc_prediction import DeepMove, RNN, FPMC, \
 from trafficdl.model.traffic_speed_prediction import DCRNN, STGCN, GWNET, \
     MTGNN, TGCLSTM, TGCN, TemplateTSP, RNN, AutoEncoder, Seq2Seq
 from trafficdl.model.traffic_flow_prediction import AGCRN, ASTGCN, MSTGCN, \
-    ACFM, STResNet
+    ACFM, STResNet, ToGCN
 
 __all__ = [
     "AGCRN",
@@ -26,5 +26,6 @@ __all__ = [
     "LSTPM",
     "STRNN",
     "TemplateTLP",
-    "SERM"
+    "SERM",
+    "ToGCN",
 ]
