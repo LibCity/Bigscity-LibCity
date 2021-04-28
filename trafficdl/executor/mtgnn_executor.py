@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import os
 from ray import tune
-
+from trafficdl.model import loss
+from functools import partial
 from trafficdl.executor.traffic_state_executor import TrafficStateExecutor
 
 
@@ -13,6 +14,72 @@ class MTGNNExecutor(TrafficStateExecutor):
         self.step_size2 = self.config.get('step_size2', 100)
         self.num_nodes = self.model.get_data_feature().get('num_nodes')
         self.num_split = self.config.get('num_split', 1)
+
+    def _build_train_loss(self):
+        """
+        根据全局参数`train_loss`选择训练过程的loss函数
+        如果该参数为none，则需要使用模型自定义的loss函数
+        注意，loss函数应该接收`Batch`对象作为输入，返回对应的loss(torch.tensor)
+        """
+        if self.train_loss.lower() == 'none':
+            self._logger.warning('Received none train loss func and will use the loss func defined in the model.')
+            return None
+        if self.train_loss.lower() not in ['mae', 'mse', 'rmse', 'mape', 'masked_mae',
+                                           'masked_mse', 'masked_rmse', 'masked_mape', 'r2', 'evar']:
+            self._logger.warning('Received unrecognized train loss function, set default mae loss func.')
+        else:
+            self._logger.info('You select `{}` as train loss function.'.format(self.train_loss.lower()))
+
+        def func(batch, idx=None, batches_seen=None):
+            if idx is not None:
+                idx = torch.tensor(idx).to(self.model.device)
+                tx = batch['X'][:, :, idx, :].clone()  # 避免batch[X]被修改 下一次idx索引就不对了
+                y_true = batch['y'][:, :, idx, :]
+                batch_new = {'X': tx}
+                y_predicted = self.model.predict(batch_new, idx)
+            else:
+                y_true = batch['y']
+                y_predicted = self.model.predict(batch)
+            y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+            y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+
+            if self.train_loss.lower() == 'mae':
+                lf = loss.masked_mae_torch
+            elif self.train_loss.lower() == 'mse':
+                lf = loss.masked_mse_torch
+            elif self.train_loss.lower() == 'rmse':
+                lf = loss.masked_rmse_torch
+            elif self.train_loss.lower() == 'mape':
+                lf = loss.masked_mape_torch
+            elif self.train_loss.lower() == 'masked_mae':
+                lf = partial(loss.masked_mae_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_mse':
+                lf = partial(loss.masked_mse_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_rmse':
+                lf = partial(loss.masked_rmse_torch, null_val=0)
+            elif self.train_loss.lower() == 'masked_mape':
+                lf = partial(loss.masked_mape_torch, null_val=0)
+            elif self.train_loss.lower() == 'r2':
+                lf = loss.r2_score_torch
+            elif self.train_loss.lower() == 'evar':
+                lf = loss.explained_variance_score_torch
+            else:
+                lf = loss.masked_mae_torch
+
+            if self.model.training:
+                if batches_seen % self.model.step_size == 0 and self.model.task_level < self.model.output_window:
+                    self.model.task_level += 1
+                    self._logger.info('Training: task_level increase from {} to {}'.format(
+                        self.model.task_level - 1, self.model.task_level))
+                    self._logger.info('Current batches_seen is {}'.format(batches_seen))
+                if self.model.use_curriculum_learning:
+                    return lf(y_predicted[:, :self.model.task_level, :, :],
+                              y_true[:, :self.model.task_level, :, :])
+                else:
+                    return lf(y_predicted, y_true)
+            else:
+                return lf(y_predicted, y_true)
+        return func
 
     def train(self, train_dataloader, eval_dataloader):
         """
