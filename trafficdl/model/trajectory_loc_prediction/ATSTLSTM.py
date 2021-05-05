@@ -18,7 +18,8 @@ class Attn(nn.Module):
 
         super(Attn, self).__init__()
         self.sqrt_rec_size = 1. / sqrt(hidden_size)
-        self.linear = nn.Linear(in_features=hidden_size, out_features=hidden_size, bias=False)
+        # context vector
+        self.zu = nn.Linear(in_features=hidden_size, out_features=1, bias=False)
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
@@ -28,10 +29,11 @@ class Attn(nn.Module):
         Returns:
             (torch.tensor.Tensor): shape (batch, size)
         """
-        w = self.linear(x) * self.sqrt_rec_size
-        w = self.softmax(w)
-        c = w.bmm(x)
-        return c
+        w = self.zu(x) * self.sqrt_rec_size
+        w = w.permute(0, 2, 1)
+        w = self.softmax(w)  # batch_size * 1 *seq_len
+        c = torch.bmm(w, x)
+        return c.squeeze(1)
 
 
 class ATSTLSTM(AbstractModel):
@@ -64,44 +66,40 @@ class ATSTLSTM(AbstractModel):
         # Wp
         self.wp = nn.Linear(in_features=self.hidden_size, out_features=self.hidden_size, bias=False)
         self.lstm = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size)
-        self.attn = Attn(size=self.hidden_size)
+        self.attn = Attn(hidden_size=self.hidden_size)
 
     def forward(self, batch):
         # batch_size * padded_seq_len
-        loc = batch['loc']
-        dis = batch['dis']
-        tim = batch['tim']
+        loc = batch['current_loc']
+        dis = batch['current_dis']
+        tim = batch['current_tim']
         # batch_size * num_samples
         loc_neg = batch['loc_neg']
         dis_neg = batch['dis_neg']
         tim_neg = batch['tim_neg']
-        # batch_size * 1
+        # batch_size
         uid = batch['uid']
-        target_loc = batch['target_loc']
-        target_dis = batch['target_dis']
-        target_tim = batch['target_tim']
-        origin_len = batch.get_origin_len('loc')
+        # batch_size * 1
+        target_loc = batch['target_loc'].unsqueeze(1)
+        target_dis = batch['target_dis'].unsqueeze(1)
+        target_tim = batch['target_tim'].unsqueeze(1)
+        origin_len = batch.get_origin_len('current_loc')
         padded_seq_len = loc.shape[1]
         # concat all input to do embedding
         total_loc = torch.cat([loc, target_loc, loc_neg], dim=1)
-        total_dis = torch.cat([dis, target_dis, dis_neg], dim=1)
-        total_tim = torch.cat([tim, target_tim, tim_neg], dim=1)
+        total_dis = torch.cat([dis, target_dis, dis_neg], dim=1).unsqueeze(2)
+        total_tim = torch.cat([tim, target_tim, tim_neg], dim=1).unsqueeze(2)
         # embedding
         total_loc_emb = self.loc_embedding(total_loc)  # batch_size * total_len * hidden_size
         total_emb = self.wv(total_loc_emb) + self.wl(total_dis) + self.wt(total_tim)
         # split emb
         current_emb, rest_emb = torch.split(total_emb, [padded_seq_len, total_emb.shape[1] - padded_seq_len], dim=1)
         # lstm
-        pack_current_emb = pack_padded_sequence(current_emb, lengths=origin_len, enforce_sorted=False)
+        pack_current_emb = pack_padded_sequence(current_emb, lengths=origin_len, enforce_sorted=False, batch_first=True)
         lstm_out, (h_n, c_n) = self.lstm(pack_current_emb)
-        lstm_out, out_len = pad_packed_sequence(lstm_out, batch_first=True)
+        lstm_out, _ = pad_packed_sequence(lstm_out, batch_first=True)
         # attn
-        attn_out = self.attn(lstm_out)  # batch_size * padded_seq_len * hidden_size
-        # get the last time slot's attn_out
-        last_slot_index = torch.tensor(origin_len) - 1
-        last_slot_index = last_slot_index.reshape(last_slot_index.shape[0], 1, -1)
-        last_slot_index = last_slot_index.repeat(1, 1, self.hidden_size).to(self.device)
-        rn = torch.gather(attn_out, 1, last_slot_index).squeeze(1)  # batch_size *  hidden_size
+        rn = self.attn(lstm_out)  # batch_size * hidden_size
         # get user laten vec
         pu = self.user_embedding(uid)  # batch_size * hidden_size
         # first output (wn*rn + wp * pu)

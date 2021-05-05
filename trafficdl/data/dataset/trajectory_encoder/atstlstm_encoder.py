@@ -26,10 +26,6 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
                              'current_tim': 'float', 'tim_neg': 'float', 'uid': 'int',
                              'target_loc': 'int', 'target_dis': 'float', 'target_tim': 'float'
                              }
-        self.feature_max_len = {
-            'history_loc': self.config['history_len'],
-            'history_tim': self.config['history_len']
-        }
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
@@ -116,9 +112,9 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
     def gen_data_feature(self):
         loc_pad = self.loc_id
         self.pad_item = {
-            'loc': loc_pad,
-            'dis': 0.0,
-            'tim': 0.0
+            'current_loc': loc_pad,
+            'current_dis': 0.0,
+            'current_tim': 0.0
         }
         self.data_feature = {
             'loc_size': self.loc_id + 1,
