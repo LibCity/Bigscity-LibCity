@@ -36,8 +36,8 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         # 对于这种 history 模式没办法做到 batch
         if self.history_type == 'cut_off':
             # self.config['batch_size'] = 1
-            self.feature_name['history_loc'] = 'array of int'
-            self.feature_name['history_tim'] = 'array of int'
+            self.feature_dict['history_loc'] = 'array of int'
+            self.feature_dict['history_tim'] = 'array of int'
 
     def encode(self, uid, trajectories):
         """standard encoder use the same method as DeepMove
@@ -62,12 +62,12 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         for index, traj in enumerate(trajectories):
             current_loc = []
             current_tim = []
-            start_time = parse_time(traj[0][1])
+            start_time = parse_time(traj[0][2])
             # 以当天凌晨的时间作为计算 time_off 的基准
             base_time = cal_basetime(start_time, True)
             for point in traj:
-                loc = point[0]
-                now_time = parse_time(point[1])
+                loc = point[4]
+                now_time = parse_time(point[2])
                 if loc not in self.location2id:
                     self.location2id[loc] = self.loc_id
                     self.loc_id += 1

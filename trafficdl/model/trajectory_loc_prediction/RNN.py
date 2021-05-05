@@ -81,20 +81,17 @@ class RNN(AbstractModel):
         # out = out.squeeze(1)
         out, out_len = pad_packed_sequence(out, batch_first=True)
         # out = out.permute(1, 0, 2)
+        origin_len = batch.get_origin_len('current_loc')
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
+        out = torch.gather(out, 1, final_out_index).squeeze(1)  # batch_size * hidden_size
         out = F.selu(out)
         out = self.dropout(out)
 
         y = self.fc(out)
-        score = F.log_softmax(y, dim=2)  # calculate loss by NLLoss
-        # 因为是补齐了的，所以需要找到真正的 score
-        loc_len = batch.get_origin_len('current_loc')
-        for i in range(score.shape[0]):
-            if i == 0:
-                true_scores = score[i][loc_len[i] - 1].reshape(1, -1)
-            else:
-                true_scores = torch.cat(
-                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
-        return true_scores
+        score = F.log_softmax(y, dim=1)  # calculate loss by NLLoss
+        return score
 
     def predict(self, batch):
         return self.forward(batch)
