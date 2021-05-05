@@ -130,8 +130,8 @@ class PBSTrajectoryDataset(AbstractDataset):
                 if len(sessions) >= min_sessions:
                     # update counter
                     for s in sessions:
-                        for dyna_id in s:
-                            self.counter.update({traj.iloc[dyna_id]['location']: 1})
+                        for row in s:
+                            self.counter.update({row[4]: 1})
                     res[str(uid)] = sessions
         else:
             # 按照轨迹长度进行划分
@@ -151,8 +151,8 @@ class PBSTrajectoryDataset(AbstractDataset):
                 if len(sessions) >= min_sessions:
                     # update counter
                     for s in sessions:
-                        for dyna_id in s:
-                            self.counter.update({traj.iloc[dyna_id]['location']: 1})
+                        for row in s:
+                            self.counter.update({row[4]: 1})
                     res[str(uid)] = sessions
         return res
 
@@ -218,7 +218,7 @@ class PBSTrajectoryDataset(AbstractDataset):
         train_rate = self.config['train_rate']
         eval_rate = self.config['eval_rate']
         user_set = self.data['encoded_data'].keys()
-        for uid in user_set:
+        for uid in tqdm(user_set, desc="dividing data"):
             encoded_trajectories = self.data['encoded_data'][uid]
             traj_len = len(encoded_trajectories)
             # 根据 traj_len 来划分 train eval test

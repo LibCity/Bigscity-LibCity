@@ -87,11 +87,21 @@ class TrajLocPredExecutor(AbstractExecutor):
         for batch in tqdm(test_dataloader, desc="test model"):
             batch.to_tensor(device=self.config['device'])
             scores = self.model.predict(batch)
-            evaluate_input = {
-                'uid': batch['uid'].tolist(),
-                'loc_true': batch['target'].tolist(),
-                'loc_pred': scores.tolist()
-            }
+            if self.config['evaluate_method'] == 'popularity':
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': batch['target'].tolist(),
+                    'loc_pred': scores.tolist()
+                }
+            else:
+                # negative sample
+                # loc_true is always 0
+                loc_true = [0] * self.config['batch_size']
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': loc_true,
+                    'loc_pred': scores.tolist()
+                }
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
@@ -124,11 +134,21 @@ class TrajLocPredExecutor(AbstractExecutor):
             scores = model.predict(batch)
             loss = loss_func(batch)
             total_loss.append(loss.data.cpu().numpy().tolist())
-            evaluate_input = {
-                'uid': batch['uid'].tolist(),
-                'loc_true': batch['target'].tolist(),
-                'loc_pred': scores.tolist()
-            }
+            if self.config['evaluate_method'] == 'popularity':
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': batch['target'].tolist(),
+                    'loc_pred': scores.tolist()
+                }
+            else:
+                # negative sample
+                # loc_true is always 0
+                loc_true = [0] * self.config['batch_size']
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': loc_true,
+                    'loc_pred': scores.tolist()
+                }
             self.evaluator.collect(evaluate_input)
         avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
         avg_loss = np.mean(total_loss, dtype=np.float64)

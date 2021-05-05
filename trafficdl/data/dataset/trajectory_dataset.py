@@ -205,7 +205,7 @@ class TrajectoryDataset(AbstractDataset):
         train_rate = self.config['train_rate']
         eval_rate = self.config['eval_rate']
         user_set = self.data['encoded_data'].keys()
-        for uid in user_set:
+        for uid in tqdm(user_set, desc="dividing data"):
             encoded_trajectories = self.data['encoded_data'][uid]
             traj_len = len(encoded_trajectories)
             # 根据 traj_len 来划分 train eval test

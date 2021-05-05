@@ -14,6 +14,8 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         self.config = config
         self.topk = config['topk']
         self.result = {}
+        # 兼容全样本评估与负样本评估
+        self.evaluate_method = config['evaluate_method']
         self.intermediate_result = {
             'total': 0,
             'hit': 0,
@@ -36,7 +38,8 @@ class TrajLocPredEvaluator(AbstractEvaluator):
             batch (dict): contains three keys: uid, loc_true, and loc_pred.
             uid (list): 来自于 batch 中的 uid，通过索引可以确定 loc_true 与 loc_pred
                 中每一行（元素）是哪个用户的一次输入。
-            loc_true (list): 期望地点(target)，来自于 batch 中的 target
+            loc_true (list): 期望地点(target)，来自于 batch 中的 target。
+                对于负样本评估，loc_pred 中第一个点是 target 的置信度，后面的都是负样本的
             loc_pred (matrix): 实际上模型的输出，batch_size * output_dim.
         """
         if not isinstance(batch, dict):

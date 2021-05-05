@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-import time
+from datetime import datetime
 from geopy import distance
 
 from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
@@ -21,7 +21,6 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
         if self.config['window_type'] == 'time_window':
             # 对于以时间窗口切割的轨迹，最大时间编码是已知的
             self.tim_max = self.config['window_size'] - 1
-        self.history_type = self.config['history_type']
         self.feature_dict = {'current_loc': 'int', 'loc_neg': 'int',
                              'current_dis': 'float', 'dis_neg': 'float',
                              'current_tim': 'float', 'tim_neg': 'float', 'uid': 'int',
@@ -76,7 +75,7 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
                         self.loc_id += 1
                     current_loc.append(self.location2id[loc])
                     # the unit of time is second
-                    tim_interval.append(time.mktime(now_time) - time.mktime(pre_time))
+                    tim_interval.append(datetime.timestamp(now_time) - datetime.timestamp(pre_time))
                     loc_distance.append(distance.distance((pre_lat, pre_lon), (lat, lon)).kilometers)
                 pre_time = now_time
                 pre_lat = lat
