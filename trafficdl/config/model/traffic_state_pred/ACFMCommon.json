@@ -1,0 +1,28 @@
+{
+  "res_repetation": 12,
+  "res_nbfilter": 16,
+  "res_bn": true,
+  "res_split_mode": "split",
+  "first_extnn_inter_channels": 40,
+  "first_extnn_dropout": 0.5,
+  "merge_mode": "fuse",
+  "lstm_channels": 16,
+  "lstm_dropout": 0,
+
+  "scaler": "minmax11",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "external_time": true,
+
+  "max_epoch": 500,
+  "learner": "adam",
+  "learning_rate": 0.0003,
+  "lr_decay": false,
+  "clip_grad_norm": true,
+  "max_grad_norm": 0.1,
+  "use_early_stop": true,
+  "patience": 50
+}

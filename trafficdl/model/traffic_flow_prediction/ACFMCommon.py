@@ -383,7 +383,7 @@ class ResNN(nn.Module):
         return torch.cat(outputs, dim=1)
 
 
-class ACFM(AbstractTrafficStateModel):
+class ACFMCommon(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self._scaler = self.data_feature.get('scaler')
@@ -394,15 +394,7 @@ class ACFM(AbstractTrafficStateModel):
         self.output_dim = self.data_feature.get('output_dim', 2)
         self.len_row = self.data_feature.get('len_row', 32)
         self.len_column = self.data_feature.get('len_column', 32)
-        self.len_closeness = self.data_feature.get('len_closeness', 4)
-        self.len_period = self.data_feature.get('len_period', 2)
-        self.len_trend = self.data_feature.get('len_trend', 0)
         self._logger = getLogger()
-
-        self.len_seq = self.len_closeness + self.len_period + self.len_trend
-        self.cpt = [self.len_closeness, self.len_period, self.len_trend]
-        self.len_local = self.len_closeness
-        self.len_global = self.len_period + self.len_trend
 
         self.res_repetation = config.get('res_repetation', 12)
         self.res_nbfilter = config.get('res_nbfilter', 16)
@@ -413,16 +405,18 @@ class ACFM(AbstractTrafficStateModel):
         self.merge_mode = config.get('merge_mode', 'fuse')  # 'LSTM', 'fuse'
         self.lstm_channels = config.get('lstm_channels', 16)
         self.lstm_dropout = config.get('lstm_dropout', 0)
+        self.input_window = config.get('input_window', 1)
+        self.output_window = config.get('output_window', 1)
         self.device = config.get('device', torch.device('cpu'))
 
         self.resnn = ResNN(
-            in_channels=self.feature_dim * self.len_seq,
-            out_channels=self.lstm_channels * self.len_seq,
+            in_channels=self.output_dim * self.input_window,
+            out_channels=self.lstm_channels * self.input_window,
             inter_channels=self.res_nbfilter,
             repetation=self.res_repetation,
             bnmode=self.res_bn,
             splitmode=self.res_split_mode,
-            cpt=self.cpt
+            cpt=[self.input_window, 0, 0]
         )
 
         self.conv_lstm = ConvLSTM(
@@ -432,29 +426,19 @@ class ACFM(AbstractTrafficStateModel):
             lstm_channels=self.lstm_channels,
             all_hidden=True,
             mode='cpt',
-            cpt=[self.len_local, self.len_global, 0],
+            cpt=[self.input_window, 0, 0],
             dropout_rate=self.lstm_dropout,
             last_conv=False
         )
 
         self.concat_conv_c = ConcatConv(
-            in_channels1=2 * self.len_local,
-            in_channels2=self.lstm_channels * self.len_local,
-            out_channels=self.lstm_channels * self.len_local,
+            in_channels1=2 * self.input_window,
+            in_channels2=self.lstm_channels * self.input_window,
+            out_channels=self.lstm_channels * self.input_window,
             inter_channels=self.lstm_channels,
             relu_conv=True,
-            seq_len=self.len_local
+            seq_len=self.input_window
         )
-
-        if self.len_global > 0:
-            self.concat_conv_t = ConcatConv(
-                in_channels1=2 * self.len_global,
-                in_channels2=self.lstm_channels * self.len_global,
-                out_channels=self.lstm_channels * self.len_global,
-                inter_channels=self.lstm_channels,
-                relu_conv=True,
-                seq_len=self.len_global
-            )
 
         self.conv_lstm_c = ConvLSTM(
             in_channels=self.lstm_channels,
@@ -502,55 +486,43 @@ class ACFM(AbstractTrafficStateModel):
             )
 
     def forward(self, batch):
-        x = batch['X']  # (batch_size, T_c+T_p+T_t, len_row, len_column, feature_dim)
-        x_ext = batch['X_ext']  # (batch_size, T_c+T_p+T_t, ext_dim)
-        y_ext = batch['y_ext']  # (batch_size, ext_dim)
+        x = batch['X'][:, :, :, :, :self.output_dim]  # (batch_size, input_window, len_row, len_column, output_dim)
+        x_ext = batch['X'][:, :, 0, 0, self.output_dim:]  # (batch_size, input_window, ext_dim)
+        y_ext = batch['X'][:, -1, 0, 0, :self.output_dim:]  # (batch_size, ext_dim)
+
         batch_size, len_time, len_row, len_column, input_dim = x.shape
         assert len_row == self.len_row
         assert len_column == self.len_column
-        assert len_time == self.len_seq
-        assert input_dim == self.feature_dim
-        x = x.view(batch_size, len_time * input_dim, len_row, len_column).to(self.device)
+        assert len_time == self.input_window
+        assert input_dim == self.output_dim
 
-        features = self.resnn(x)   # (batch_size, lstm_channels * len_seq, h, w)
+        x = x.contiguous().view(batch_size, len_time * input_dim, len_row, len_column).to(self.device)
+
+        features = self.resnn(x)   # (batch_size, lstm_channels * input_window, h, w)
         if self.ext_dim > 0:
-            ext = self.extnn(x_ext)    # (batch_size, lstm_channels * len_seq, h, w)
-            features = features + ext  # (batch_size, lstm_channels * len_seq, h, w)
+            ext = self.extnn(x_ext)    # (batch_size, lstm_channels * input_window, h, w)
+            print('ext', ext.shape)
+            print('features', features.shape)
+            features = features + ext  # (batch_size, lstm_channels * input_window, h, w)
 
         # calc attention using Conv-LSTM
-        # (batch_size, lstm_channels * len_seq, h, w)
+        # (batch_size, lstm_channels * input_window, h, w)
         hidden_list = self.conv_lstm(features)
 
-        # (batch_size, lstm_channels * len_local, h, w)
-        hidden_list_c = hidden_list[:, :self.lstm_channels * self.len_local]
-        features_c = features[:, :self.lstm_channels * self.len_local]
+        # (batch_size, lstm_channels * input_window, h, w)
+        hidden_list_c = hidden_list[:, :self.lstm_channels * self.input_window]
+        features_c = features[:, :self.lstm_channels * self.input_window]
         attention_c = self.concat_conv_c(features_c, hidden_list_c)
         phase_c = features_c * (1 + attention_c)
         pred_c = self.conv_lstm_c(phase_c)  # (batch_size, 2, h, w)
 
-        # (batch_size, lstm_channels * (len_seq - len_local), h, w)
-        if self.len_global > 0:
-            hidden_list_t = hidden_list[:, self.lstm_channels * self.len_local:]
-            features_t = features[:, self.lstm_channels * self.len_local:]
-            attention_t = self.concat_conv_t(features_t, hidden_list_t)
-            phase_t = features_t * (1 + attention_t)
-            pred_t = self.conv_lstm_t(phase_t)  # (batch_size, 2, h, w)
-        else:
-            pred_t = torch.zeros((batch_size, self.output_dim, self.len_row, self.len_column)).to(self.device)
-
         if self.ext_dim > 0:
             time_aware = self.time_aware_extnn(y_ext)  # (batch_size, 1)
             self.time_aware_c = torch.sigmoid(time_aware)       # (batch_size, 1)
-            self.time_aware_t = torch.sigmoid(-1 * time_aware)  # (batch_size, 1)
-            # time_aware_c + time_aware_t = 1 (sigmoid函数导致)
             time_aware_c = self.time_aware_c.view(-1, 1, 1, 1)  # (batch_size, 1, 1, 1)
-            time_aware_t = self.time_aware_t.view(-1, 1, 1, 1)  # (batch_size, 1, 1, 1)
-            pred = time_aware_c * pred_c + time_aware_t * pred_t  # (batch_size, 2, h, w)
+            pred = time_aware_c * pred_c  # (batch_size, 2, h, w)
         else:
-            if self.len_global > 0:
-                pred = 0.5 * pred_c + 0.5 * pred_t
-            else:
-                pred = pred_c
+            pred = pred_c
 
         h = torch.tanh(pred)  # (64, 2, h, w)
         h = h.view(batch_size, 1, len_row, len_column, self.output_dim)
@@ -564,38 +536,18 @@ class ACFM(AbstractTrafficStateModel):
         return loss.masked_mse_torch(y_predicted, y_true)
 
     def predict(self, batch):
-        return self.forward(batch)
+        # 多步预测
+        x = batch['X']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y = batch['y']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y_preds = []
+        x_ = x.clone()
+        for i in range(self.output_window):
+            batch_tmp = {'X': x_}
+            y_ = self.forward(batch_tmp)  # (batch_size, 1, len_row, len_column, output_dim)
+            y_preds.append(y_.clone())
+            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
+                y_ = torch.cat([y_, y[:, i:i + 1, :, :, self.output_dim:]], dim=-1)
+            x_ = torch.cat([x_[:, 1:, :, :, :], y_], dim=1)
+        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, len_row, len_column, output_dim)
+        return y_preds
 
-    """
-    bast parameter:
-    TaxiBJ:
-    res_repetation = 12
-    res_nbfilter = 16
-    res_bn = True
-    res_split_mode = 'split'  # 'split', 'split-chans', 'cpt', 'concat', 'none'
-    first_extnn_inter_channels = 40
-    first_extnn_dropout = 0.5
-    merge_mode = 'fuse'  # 'LSTM', 'fuse'
-    lstm_channels = 16
-    lstm_dropout = 0
-    BikeNYC:
-    res_repetation = 2
-    res_nbfilter = 16
-    res_bn = True
-    res_split_mode = 'split'  # 'split', 'split-chans', 'cpt', 'concat', 'none'
-    first_extnn_inter_channels = 30
-    first_extnn_dropout = 0.5
-    merge_mode = 'fuse'  # 'LSTM', 'fuse'
-    lstm_channels = 16
-    lstm_dropout = 0.5
-    TaxiNYC:
-    res_repetation = 4
-    res_nbfilter = 32
-    res_bn = True
-    res_split_mode = 'split'  # 'split', 'split-chans', 'cpt', 'concat', 'none'
-    first_extnn_inter_channels = 40
-    first_extnn_dropout = 0.5
-    merge_mode = 'fuse'  # 'LSTM', 'fuse'
-    lstm_channels = 16
-    lstm_dropout = 0
-    """
