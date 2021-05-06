@@ -64,8 +64,11 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         self.result[recall_key] = recall
         if 'F1' in self.metrics:
             f1_key = 'F1@{}'.format(self.topk)
-            self.result[f1_key] = (2 * precision * recall) / (precision +
-                                                              recall)
+            if precision + recall == 0:
+                self.result[f1_key] = 0.0
+            else:
+                self.result[f1_key] = (2 * precision * recall) / (precision +
+                                                                  recall)
         if 'MRR' in self.metrics:
             mrr_key = 'MRR@{}'.format(self.topk)
             self.result[mrr_key] = self.intermediate_result['rank'] \
