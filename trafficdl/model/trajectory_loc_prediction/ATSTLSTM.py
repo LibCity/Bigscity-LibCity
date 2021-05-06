@@ -123,7 +123,7 @@ class ATSTLSTM(AbstractModel):
 
         score = self.predict(batch)
         # 这里需要对 score 进行一个归一化，不然 loss 会变成 inf
-        score = normalize(score, dim=2)
+        score = normalize(score, dim=1)
         score_pos, score_neg = torch.split(score, [1, score.shape[1] - 1], dim=1)
         # score_pos is batch_size * 1
         # score_neg is batch_size * num_samples
