@@ -4,6 +4,7 @@ import torch.optim as optim
 import numpy as np
 import os
 from logging import getLogger
+from tqdm import tqdm
 
 from trafficdl.executor.abstract_executor import AbstractExecutor
 from trafficdl.utils import get_evaluator
@@ -30,21 +31,14 @@ class TrajLocPredExecutor(AbstractExecutor):
         metrics = {}
         metrics['accuracy'] = []
         metrics['loss'] = []
-        train_total_batch = len(train_dataloader.dataset) / \
-            train_dataloader.batch_size
-        eval_total_batch = len(eval_dataloader.dataset) / \
-            eval_dataloader.batch_size
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
-            self.model, avg_loss = self.run(
-                train_dataloader, self.model,
-                self.config['learning_rate'], self.config['clip'],
-                train_total_batch, self.config['verbose'])
+            self.model, avg_loss = self.run(train_dataloader, self.model,
+                                            self.config['learning_rate'], self.config['clip'])
             self._logger.info('==>Train Epoch:{:4d} Loss:{:.5f} learning_rate:{}'.format(
                 epoch, avg_loss, lr))
             # eval stage
-            avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model,
-                                                            eval_total_batch, self.config['verbose'])
+            avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model)
             self._logger.info('==>Eval Acc:{:.5f} Eval Loss:{:.5f}'.format(avg_eval_acc, avg_eval_loss))
             metrics['accuracy'].append(avg_eval_acc)
             metrics['loss'].append(avg_eval_loss)
@@ -90,30 +84,32 @@ class TrajLocPredExecutor(AbstractExecutor):
     def evaluate(self, test_dataloader):
         self.model.train(False)
         self.evaluator.clear()
-        test_total_batch = len(test_dataloader.dataset) / \
-            test_dataloader.batch_size
-        cnt = 0
-        for batch in test_dataloader:
+        for batch in tqdm(test_dataloader, desc="test model"):
             batch.to_tensor(device=self.config['device'])
             scores = self.model.predict(batch)
-            evaluate_input = {
-                'uid': batch['uid'].tolist(),
-                'loc_true': batch['target'].tolist(),
-                'loc_pred': scores.tolist()
-            }
-            cnt += 1
-            if cnt % self.config['verbose'] == 0:
-                self._logger.info('finish batch {}/{}'.format(cnt, test_total_batch))
+            if self.config['evaluate_method'] == 'popularity':
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': batch['target'].tolist(),
+                    'loc_pred': scores.tolist()
+                }
+            else:
+                # negative sample
+                # loc_true is always 0
+                loc_true = [0] * self.config['batch_size']
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': loc_true,
+                    'loc_pred': scores.tolist()
+                }
             self.evaluator.collect(evaluate_input)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def run(self, data_loader, model, lr, clip, total_batch,
-            verbose):
+    def run(self, data_loader, model, lr, clip):
         model.train(True)
         total_loss = []
-        cnt = 0
         loss_func = self.loss_func or model.calculate_loss
-        for batch in data_loader:
+        for batch in tqdm(data_loader, desc="train model"):
             # one batch, one step
             self.optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
@@ -125,31 +121,34 @@ class TrajLocPredExecutor(AbstractExecutor):
             except:
                 pass
             self.optimizer.step()
-            cnt += 1
-            if cnt % verbose == 0:
-                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
         avg_loss = np.mean(total_loss, dtype=np.float64)
         return model, avg_loss
 
-    def _valid_epoch(self, data_loader, model, total_batch, verbose):
+    def _valid_epoch(self, data_loader, model):
         model.train(False)
         self.evaluator.clear()
-        cnt = 0
         total_loss = []
         loss_func = self.loss_func or model.calculate_loss
-        for batch in data_loader:
+        for batch in tqdm(data_loader, desc="validate model"):
             batch.to_tensor(device=self.config['device'])
             scores = model.predict(batch)
             loss = loss_func(batch)
             total_loss.append(loss.data.cpu().numpy().tolist())
-            evaluate_input = {
-                'uid': batch['uid'].tolist(),
-                'loc_true': batch['target'].tolist(),
-                'loc_pred': scores.tolist()
-            }
-            cnt += 1
-            if cnt % verbose == 0:
-                self._logger.info('finish batch {}/{}'.format(cnt, total_batch))
+            if self.config['evaluate_method'] == 'popularity':
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': batch['target'].tolist(),
+                    'loc_pred': scores.tolist()
+                }
+            else:
+                # negative sample
+                # loc_true is always 0
+                loc_true = [0] * self.config['batch_size']
+                evaluate_input = {
+                    'uid': batch['uid'].tolist(),
+                    'loc_true': loc_true,
+                    'loc_pred': scores.tolist()
+                }
             self.evaluator.collect(evaluate_input)
         avg_acc = self.evaluator.evaluate()[self.metrics]  # 随便选一个就行
         avg_loss = np.mean(total_loss, dtype=np.float64)

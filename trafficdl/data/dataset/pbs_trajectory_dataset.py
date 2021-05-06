@@ -2,32 +2,32 @@ import os
 import json
 import pandas as pd
 import math
-from tqdm import tqdm
 import importlib
+import numpy as np
 from logging import getLogger
-
+from collections import Counter
+from tqdm import tqdm
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.data.utils import generate_dataloader
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'window_type', 'window_size', 'min_checkins']
 
-
-class TrajectoryDataset(AbstractDataset):
+class PBSTrajectoryDataset(AbstractDataset):
+    """popularity based negative sampling
+    weighted random sampling based on np.random.choice
+    """
 
     def __init__(self, config):
         self.config = config
         self.cache_file_folder = './trafficdl/cache/dataset_cache/'
-        self.cut_data_cache = './trafficdl/cache/dataset_cache/cut_traj'
-        for param in parameter_list:
-            self.cut_data_cache += '_' + str(self.config[param])
-        self.cut_data_cache += '.json'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.data = None
         # 加载 encoder
         self.encoder = self.get_encoder()
+        self.num_samples = self.config['num_samples']
         self.pad_item = None  # 因为若是使用缓存, pad_item 是记录在缓存文件中的而不是 encoder
         self.logger = getLogger()
+        self.counter = Counter()
 
     def get_data(self):
         """
@@ -41,17 +41,7 @@ class TrajectoryDataset(AbstractDataset):
                 self.pad_item = self.data['pad_item']
                 f.close()
             else:
-                if os.path.exists(self.cut_data_cache):
-                    f = open(self.cut_data_cache, 'r')
-                    cut_data = json.load(f)
-                    f.close()
-                else:
-                    cut_data = self.cutter_filter()
-                    if not os.path.exists(self.cache_file_folder):
-                        os.makedirs(self.cache_file_folder)
-                    with open(self.cut_data_cache, 'w') as f:
-                        json.dump(cut_data, f)
-                self.logger.info('finish cut data')
+                cut_data = self.cutter_filter()
                 encoded_data = self.encode_traj(cut_data)
                 self.data = encoded_data
                 self.pad_item = self.encoder.pad_item
@@ -102,6 +92,7 @@ class TrajectoryDataset(AbstractDataset):
         filter_location = group_location[group_location['time'] > self.config['min_checkins']]
         location_index = filter_location.index.tolist()
         traj = traj[traj['location'].isin(location_index)]
+
         user_set = pd.unique(traj['entity_id'])
         res = {}
         min_session_len = self.config['min_session_len']
@@ -137,6 +128,10 @@ class TrajectoryDataset(AbstractDataset):
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
+                    # update counter
+                    for s in sessions:
+                        for row in s:
+                            self.counter.update({row[4]: 1})
                     res[str(uid)] = sessions
         else:
             # 按照轨迹长度进行划分
@@ -154,6 +149,10 @@ class TrajectoryDataset(AbstractDataset):
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
+                    # update counter
+                    for s in sessions:
+                        for row in s:
+                            self.counter.update({row[4]: 1})
                     res[str(uid)] = sessions
         return res
 
@@ -169,8 +168,8 @@ class TrajectoryDataset(AbstractDataset):
                     ]
                 }
                 trajectory1 = [
-                    checkin_record,
-                    checkin_record,
+                    dyna_id,
+                    dyna_id,
                     .....
                 ]
 
@@ -182,9 +181,23 @@ class TrajectoryDataset(AbstractDataset):
                     encoded_data: {uid: encoded_trajectories}
                 }
         """
+        # build sample weight
+        popularity = []
+        weight = []
+        for key, cnt in tqdm(self.counter.most_common(), desc='calculating popularity weight'):
+            popularity.append(key)
+            weight.append(cnt)
+        popularity = np.array(popularity)
+        weight = np.array(weight) / np.sum(weight)
+
         encoded_data = {}
-        for uid in tqdm(data, desc="encoding trajectory"):
-            encoded_data[uid] = self.encoder.encode(int(uid), data[uid])
+        for uid in tqdm(data, desc='encoding trajectory'):
+            # generate negative samples
+            total_negative_samples = []
+            for i in range(len(data[uid])):
+                neg = np.random.choice(popularity, size=self.num_samples, replace=False, p=weight)
+                total_negative_samples.append(neg)
+            encoded_data[uid] = self.encoder.encode(int(uid), data[uid], total_negative_samples)
         self.encoder.gen_data_feature()
         return {
             'data_feature': self.encoder.data_feature,

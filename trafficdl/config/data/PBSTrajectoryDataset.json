@@ -9,7 +9,7 @@
     "cache_dataset": true,
     "train_rate": 0.6,
     "eval_rate": 0.2,
-    "history_type": "splice",
     "window_type": "time_window",
-    "traj_encoder": "StandardTrajectoryEncoder"
+    "traj_encoder": "StandardTrajectoryEncoder",
+    "num_samples": 100
 }
