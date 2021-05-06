@@ -5,6 +5,7 @@ import torch
 from math import sqrt
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
+from torch.nn.functional import normalize
 
 
 class Attn(nn.Module):
@@ -106,6 +107,7 @@ class ATSTLSTM(AbstractModel):
         first_part = self.wn(rn) + self.wp(pu)  # batch_size * hidden_size
         first_part = first_part.unsqueeze(2)  # batch_size * hidden_size * 1
         output = torch.bmm(rest_emb, first_part).squeeze(2)  # batch_size * (num_samples+1)
+
         return output
 
     def predict(self, batch):
@@ -120,8 +122,10 @@ class ATSTLSTM(AbstractModel):
         """
 
         score = self.predict(batch)
+        # 这里需要对 score 进行一个归一化，不然 loss 会变成 inf
+        score = normalize(score, dim=2)
         score_pos, score_neg = torch.split(score, [1, score.shape[1] - 1], dim=1)
         # score_pos is batch_size * 1
         # score_neg is batch_size * num_samples
-        loss = torch.sum(torch.log(torch.add(torch.exp(torch.sub(score_neg, score_pos)), 1)))
+        loss = -(score_pos - score_neg).sigmoid().log().sum()
         return loss
