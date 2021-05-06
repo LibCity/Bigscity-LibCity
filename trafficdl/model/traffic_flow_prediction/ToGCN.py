@@ -26,8 +26,6 @@ class GraphConvolution(nn.Module):
 
     def forward(self, x, A):
         x = torch.einsum("ijk, kl->ijl", [x, self.weight])
-        # print('A.shape=', A.shape)
-        # print('x.shape=', x.shape)
         x = torch.einsum("ij, kjl->kil", [A, x])
         x = x + self.bias
 
@@ -35,10 +33,10 @@ class GraphConvolution(nn.Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, device):
+    def __init__(self, input_size, hidden_size, output_size, device, extra_dim):
         super(GCN, self).__init__()
-        self.gcn1 = GraphConvolution(input_size, hidden_size, device)
-        self.gcn2 = GraphConvolution(hidden_size, output_size, device)
+        self.gcn1 = GraphConvolution(input_size * extra_dim, hidden_size, device)
+        self.gcn2 = GraphConvolution(hidden_size, output_size * extra_dim, device)
         # self.gcn = GraphConvolution(input_size, output_size)
 
     def forward(self, x, A):
@@ -53,11 +51,11 @@ class GCN(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size, device):
+    def __init__(self, input_size, hidden_size, device, extra_dim):
         super(Encoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.gcn = GCN(input_size=1, hidden_size=128, output_size=1, device=device)
+        self.gcn = GCN(input_size=1, hidden_size=128, output_size=1, device=device, extra_dim=extra_dim)
         self.lstm = nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
@@ -71,9 +69,9 @@ class Encoder(nn.Module):
         # gcn_in = x.view((batch_size * timestep, -1))
         # gcn_out = self.gcn(gcn_in, A)
         # encoder_in = gcn_out.view((batch_size, timestep, -1))
-        gcn_in = x.view((x.size(0), x.size(1), 1))
+        gcn_in = x.view((x.size(0), x.size(1), -1))
         gcn_out = self.gcn(gcn_in, A)
-        encoder_in = gcn_out.view((x.size(0), 1, x.size(1)))
+        encoder_in = gcn_out.reshape((x.size(0), 1, -1))
         encoder_out, encoder_states = self.lstm(encoder_in, hidden)
 
         return encoder_out, encoder_states
@@ -83,13 +81,13 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, device):
+    def __init__(self, input_size, hidden_size, output_size, device, extra_dim):
         super(Decoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.lstm = nn.LSTM(
-            input_size=self.input_size,
+            input_size=self.input_size * extra_dim,
             hidden_size=self.hidden_size,
             num_layers=2,
             batch_first=True,
@@ -129,6 +127,7 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.output_dim=', self.output_dim)
         self._scaler = self.data_feature.get('scaler')
         # print('self._scaler', self._scaler)
+
         # get model config
         self.hidden_size = config.get('hidden_size', 128)
         # print('self.hidden_size=', self.hidden_size)
@@ -136,23 +135,31 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.decoder_t=', self.decoder_t)
         self.teacher_forcing_ratio = config.get('teacher_forcing_ratio', 0.5)
         # print('self.teacher_forcing_ratio=', self.teacher_forcing_ratio)
+        self.load_external = config.get('load_external')
+        self.add_time_in_day = config.get('add_time_in_day')
+        self.add_day_in_week = config.get('add_day_in_week')
         # init logger
         self._logger = getLogger()
         # define the model structure
-        self.encoder = Encoder(self.num_nodes * self.feature_dim, self.hidden_size, self.device)
-        self.decoder = Decoder(self.num_nodes * self.output_dim,
-                               self.hidden_size, self.num_nodes * self.output_dim, self.device)
+        extra_dim = 1
+        if self.load_external:
+            if self.add_time_in_day:
+                extra_dim += 1
+            if self.add_day_in_week:
+                extra_dim += 1
+        self.encoder = Encoder(self.num_nodes * self.feature_dim, self.hidden_size, self.device, extra_dim)
+        self.decoder = Decoder(self.num_nodes,
+                               self.hidden_size, self.num_nodes * self.output_dim, self.device, extra_dim)
         if self.device == 'cuda':
             self.encoder.cuda()
             self.decoder.cuda()
 
     def forward(self, batch):
-        input_tensor = batch['X']
-        target_tensor = batch['y']
-
+        input_tensor = batch['X']  # (batch_size, input_window, feature_size, ?)
+        target_tensor = batch['y']  # (batch_size, input_window, feature_size, ?)
         timestep_1 = input_tensor.shape[1]  # Length of input time interval (10 min each)
         timestep_2 = target_tensor.shape[1]  # Length of output time interval (10 min each)
-
+        # print('timestep_2.size():', timestep_2)
         # Encode history flow map
         encoder_hidden = None
         for ei in range(timestep_1):
@@ -177,17 +184,14 @@ class ToGCN(AbstractTrafficStateModel):
             for di in range(timestep_2):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
                 decoder_outputs.append(decoder_output)
-                decoder_input = target_tensor[:, di]
+                decoder_input = target_tensor[:, di].clone()
         else:
             for di in range(timestep_2):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
                 decoder_outputs.append(decoder_output)
                 decoder_input = decoder_output
-
         y_preds = torch.stack(decoder_outputs, dim=1)  # multi-step prediction
         y_preds = y_preds.unsqueeze(3)
-        # print('decoder_outputs[0].shape=', decoder_outputs[0].shape)
-        # print('y_preds.shape=', y_preds.shape)
         return y_preds
 
     def predict(self, batch):
@@ -200,6 +204,4 @@ class ToGCN(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         # call the mask_mae loss function defined in `loss.py`
-        # print(y_true.shape)
-        # print(y_predicted.shape)
-        return loss.masked_mse_torch(y_predicted, y_true, 0)
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
