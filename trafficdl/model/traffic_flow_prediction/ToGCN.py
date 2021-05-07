@@ -35,8 +35,8 @@ class GraphConvolution(nn.Module):
 class GCN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, device):
         super(GCN, self).__init__()
-        self.gcn1 = GraphConvolution(input_size, hidden_size, device).to(device)
-        self.gcn2 = GraphConvolution(hidden_size, output_size, device).to(device)
+        self.gcn1 = GraphConvolution(input_size, hidden_size, device)
+        self.gcn2 = GraphConvolution(hidden_size, output_size, device)
         # self.gcn = GraphConvolution(input_size, output_size)
 
     def forward(self, x, A):
@@ -55,14 +55,14 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.gcn = GCN(input_size=feature_size, hidden_size=128, output_size=1, device=device).to(device)
+        self.gcn = GCN(input_size=feature_size, hidden_size=128, output_size=1, device=device)
         self.lstm = nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=2,
             batch_first=True,
             dropout=0.5
-        ).to(device)
+        )
         self.device = device
 
     def forward(self, x, A, hidden=None):
@@ -93,7 +93,7 @@ class Decoder(nn.Module):
             num_layers=2,
             batch_first=True,
             dropout=0.5
-        ).to(device)
+        )
         self.dense = nn.Linear(self.hidden_size, self.output_size)
         self.device = device
 
