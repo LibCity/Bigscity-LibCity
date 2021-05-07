@@ -15,8 +15,8 @@ class GraphConvolution(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         self.weight = nn.Parameter(torch.zeros((input_size, output_size), device=device, dtype=dtype),
-                                   requires_grad=True).to(device)
-        self.bias = nn.Parameter(torch.zeros(output_size, device=device, dtype=dtype), requires_grad=True).to(device)
+                                   requires_grad=True)
+        self.bias = nn.Parameter(torch.zeros(output_size, device=device, dtype=dtype), requires_grad=True)
         self.init_parameters()
 
     def init_parameters(self):
@@ -75,7 +75,6 @@ class Encoder(nn.Module):
         x = self.gcn(x, A)
         encoder_in = x.reshape((x.size(0), 1, -1))
         encoder_out, encoder_states = self.lstm(encoder_in, hidden)
-        # print('encoder_out:', encoder_out.shape)
         return encoder_out, encoder_states
 
     def init_hidden(self, x):
@@ -100,8 +99,6 @@ class Decoder(nn.Module):
 
     def forward(self, x, hidden=None):
         x = x.view(x.size(0), 1, -1)
-        #     print('x.shape:', x.shape)
-        #        print("hidden.shape:", hidden.shape)
         x, decoder_states = self.lstm(x, hidden)
         x = x.view(x.size(0), -1)
         # x = F.relu(x)
@@ -141,17 +138,17 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.teacher_forcing_ratio=', self.teacher_forcing_ratio)
 
         # define the model structure
-        self.encoder = Encoder(self.num_nodes, self.feature_dim, self.hidden_size, self.device).to(self.device)
+        self.encoder = Encoder(self.num_nodes, self.feature_dim, self.hidden_size, self.device)
         self.decoder = Decoder(self.num_nodes * self.output_dim,
-                               self.hidden_size, self.num_nodes * self.output_dim, self.device).to(self.device)
-        self.linear = nn.Linear(in_features=self.feature_dim, out_features=self.output_dim).to(self.device)
+                               self.hidden_size, self.num_nodes * self.output_dim, self.device)
+        self.linear = nn.Linear(in_features=self.feature_dim, out_features=self.output_dim)
 
     def forward(self, batch):
-        input_tensor = batch['X']  # (batch_size, input_window, feature_size, ?)
-        target_tensor = batch['y']  # (batch_size, input_window, feature_size, ?)
+        input_tensor = batch['X']
+        target_tensor = batch['y']
         timestep_1 = input_tensor.shape[1]  # Length of input time interval (10 min each)
         timestep_2 = target_tensor.shape[1]  # Length of output time interval (10 min each)
-        # print('timestep_2.size():', timestep_2)
+
         # Encode history flow map
         encoder_hidden = None
         for ei in range(timestep_1):
@@ -165,7 +162,7 @@ class ToGCN(AbstractTrafficStateModel):
             decoder_input = self.linear(input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone().detach())
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
-        decoder_input = self.linear(input_tensor[:, timestep_1 - 1].clone().detach())
+        decoder_input = self.linear(input_tensor[:, timestep_1 - 1].clone())
 
         # Teacher forcing mechanism.
         if random.random() < self.teacher_forcing_ratio:
