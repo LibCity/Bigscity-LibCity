@@ -6,7 +6,7 @@ from trafficdl.model.traffic_flow_prediction.STResNet import STResNet
 from trafficdl.model.traffic_flow_prediction.STResNetCommon import STResNetCommon
 from trafficdl.model.traffic_flow_prediction.ACFMCommon import ACFMCommon
 from trafficdl.model.traffic_flow_prediction.ASTGCNCommon import ASTGCNCommon
-
+from trafficdl.model.traffic_flow_prediction.ToGCN import ToGCN
 __all__ = [
     "AGCRN",
     "ASTGCN",
@@ -15,5 +15,6 @@ __all__ = [
     "STResNet",
     "STResNetCommon",
     "ACFMCommon",
-    "ASTGCNCommon"
+    "ASTGCNCommon",
+    "ToGCN",
 ]
