@@ -1,11 +1,11 @@
 from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from logging import getLogger
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from trafficdl.model import loss
 import math
 import random
+
 dtype = torch.float
 
 
@@ -15,8 +15,8 @@ class GraphConvolution(nn.Module):
         self.input_size = input_size
         self.output_size = output_size
         self.weight = nn.Parameter(torch.zeros((input_size, output_size), device=device, dtype=dtype),
-                                   requires_grad=True)
-        self.bias = nn.Parameter(torch.zeros(output_size, device=device, dtype=dtype), requires_grad=True)
+                                   requires_grad=True).to(device)
+        self.bias = nn.Parameter(torch.zeros(output_size, device=device, dtype=dtype), requires_grad=True).to(device)
         self.init_parameters()
 
     def init_parameters(self):
@@ -33,10 +33,10 @@ class GraphConvolution(nn.Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, device, extra_dim):
+    def __init__(self, input_size, hidden_size, output_size, device):
         super(GCN, self).__init__()
-        self.gcn1 = GraphConvolution(input_size * extra_dim, hidden_size, device)
-        self.gcn2 = GraphConvolution(hidden_size, output_size * extra_dim, device)
+        self.gcn1 = GraphConvolution(input_size, hidden_size, device).to(device)
+        self.gcn2 = GraphConvolution(hidden_size, output_size, device).to(device)
         # self.gcn = GraphConvolution(input_size, output_size)
 
     def forward(self, x, A):
@@ -51,29 +51,31 @@ class GCN(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size, hidden_size, device, extra_dim):
+    def __init__(self, input_size, feature_size, hidden_size, device):
         super(Encoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.gcn = GCN(input_size=1, hidden_size=128, output_size=1, device=device, extra_dim=extra_dim)
+        self.gcn = GCN(input_size=feature_size, hidden_size=128, output_size=1, device=device).to(device)
         self.lstm = nn.LSTM(
             input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=2,
             batch_first=True,
-            dropout=0.5)
+            dropout=0.5
+        ).to(device)
         self.device = device
 
     def forward(self, x, A, hidden=None):
+        # print('encoder_in:', x.shape)
         # batch_size, timestep, N = x.size()
         # gcn_in = x.view((batch_size * timestep, -1))
         # gcn_out = self.gcn(gcn_in, A)
         # encoder_in = gcn_out.view((batch_size, timestep, -1))
-        gcn_in = x.view((x.size(0), x.size(1), -1))
-        gcn_out = self.gcn(gcn_in, A)
-        encoder_in = gcn_out.reshape((x.size(0), 1, -1))
+        x = x.view((x.size(0), x.size(1), -1))
+        x = self.gcn(x, A)
+        encoder_in = x.reshape((x.size(0), 1, -1))
         encoder_out, encoder_states = self.lstm(encoder_in, hidden)
-
+        # print('encoder_out:', encoder_out.shape)
         return encoder_out, encoder_states
 
     def init_hidden(self, x):
@@ -81,27 +83,30 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, device, extra_dim):
+    def __init__(self, input_size, hidden_size, output_size, device):
         super(Decoder, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.lstm = nn.LSTM(
-            input_size=self.input_size * extra_dim,
+            input_size=self.input_size,
             hidden_size=self.hidden_size,
             num_layers=2,
             batch_first=True,
-            dropout=0.5)
+            dropout=0.5
+        ).to(device)
         self.dense = nn.Linear(self.hidden_size, self.output_size)
         self.device = device
 
     def forward(self, x, hidden=None):
-        x_view = x.view(x.size(0), 1, -1)
-        x_a, decoder_states = self.lstm(x_view, hidden)
-        x_a_view = x_a.view(x_a.size(0), -1)
+        x = x.view(x.size(0), 1, -1)
+        #     print('x.shape:', x.shape)
+        #        print("hidden.shape:", hidden.shape)
+        x, decoder_states = self.lstm(x, hidden)
+        x = x.view(x.size(0), -1)
         # x = F.relu(x)
-        x_b = self.dense(x_a_view)
-        decoder_out = F.relu(x_b)
+        x = self.dense(x)
+        decoder_out = F.relu(x)
 
         return decoder_out, decoder_states
 
@@ -118,15 +123,14 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.device=', self.device)
         self.adj_mx = torch.tensor(self.data_feature.get('adj_mx'), device=self.device)
         # print('self.adj_mx=', self.adj_mx)
-        # print('self.adj_mx.shape=', self.adj_mx.shape)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         # print('self.num_nodes=', self.num_nodes)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         # print('self.feature_dim=', self.feature_dim)
         self.output_dim = self.data_feature.get('output_dim', 1)
         # print('self.output_dim=', self.output_dim)
-        self._scaler = self.data_feature.get('scaler')
-        # print('self._scaler', self._scaler)
+        # self._scaler = self.data_feature.get('scaler')
+        # # print('self._scaler', self._scaler)
 
         # get model config
         self.hidden_size = config.get('hidden_size', 128)
@@ -135,24 +139,12 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.decoder_t=', self.decoder_t)
         self.teacher_forcing_ratio = config.get('teacher_forcing_ratio', 0.5)
         # print('self.teacher_forcing_ratio=', self.teacher_forcing_ratio)
-        self.load_external = config.get('load_external')
-        self.add_time_in_day = config.get('add_time_in_day')
-        self.add_day_in_week = config.get('add_day_in_week')
-        # init logger
-        self._logger = getLogger()
+
         # define the model structure
-        extra_dim = 1
-        if self.load_external:
-            if self.add_time_in_day:
-                extra_dim += 1
-            if self.add_day_in_week:
-                extra_dim += 1
-        self.encoder = Encoder(self.num_nodes * self.feature_dim, self.hidden_size, self.device, extra_dim)
+        self.encoder = Encoder(self.num_nodes, self.feature_dim, self.hidden_size, self.device).to(self.device)
         self.decoder = Decoder(self.num_nodes,
-                               self.hidden_size, self.num_nodes * self.output_dim, self.device, extra_dim)
-        if self.device == 'cuda':
-            self.encoder.cuda()
-            self.decoder.cuda()
+                               self.hidden_size, self.num_nodes * self.output_dim, self.device).to(self.device)
+        self.linear = nn.Linear(in_features=self.feature_dim, out_features=self.output_dim).to(self.device)
 
     def forward(self, batch):
         input_tensor = batch['X']  # (batch_size, input_window, feature_size, ?)
@@ -168,11 +160,13 @@ class ToGCN(AbstractTrafficStateModel):
 
         # Decode to predict future flow map
         decoder_hidden = encoder_hidden
+
         for di in range(self.decoder_t):
-            decoder_input = input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone().detach()
+            decoder_input = self.linear(input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone().detach())
+
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
-        decoder_input = input_tensor[:, timestep_1 - 1].clone().detach()
+        decoder_input = self.linear(input_tensor[:, timestep_1 - 1].clone().detach())
 
         # Teacher forcing mechanism.
         if random.random() < self.teacher_forcing_ratio:
@@ -184,7 +178,7 @@ class ToGCN(AbstractTrafficStateModel):
             for di in range(timestep_2):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
                 decoder_outputs.append(decoder_output)
-                decoder_input = target_tensor[:, di].clone()
+                decoder_input = self.linear(target_tensor[:, di].clone())
         else:
             for di in range(timestep_2):
                 decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
