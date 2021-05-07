@@ -159,7 +159,7 @@ class ToGCN(AbstractTrafficStateModel):
         decoder_hidden = encoder_hidden
 
         for di in range(self.decoder_t):
-            decoder_input = self.linear(input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone().detach())
+            decoder_input = self.linear(input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone())
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
         decoder_input = self.linear(input_tensor[:, timestep_1 - 1].clone())
