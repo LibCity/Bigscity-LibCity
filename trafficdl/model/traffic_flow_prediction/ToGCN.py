@@ -142,7 +142,7 @@ class ToGCN(AbstractTrafficStateModel):
 
         # define the model structure
         self.encoder = Encoder(self.num_nodes, self.feature_dim, self.hidden_size, self.device).to(self.device)
-        self.decoder = Decoder(self.num_nodes,
+        self.decoder = Decoder(self.num_nodes * self.output_dim,
                                self.hidden_size, self.num_nodes * self.output_dim, self.device).to(self.device)
         self.linear = nn.Linear(in_features=self.feature_dim, out_features=self.output_dim).to(self.device)
 
@@ -163,7 +163,6 @@ class ToGCN(AbstractTrafficStateModel):
 
         for di in range(self.decoder_t):
             decoder_input = self.linear(input_tensor[:, timestep_1 - (self.decoder_t - di) - 1].clone().detach())
-
             decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
         decoder_input = self.linear(input_tensor[:, timestep_1 - 1].clone().detach())
