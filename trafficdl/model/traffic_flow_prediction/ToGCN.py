@@ -129,8 +129,8 @@ class ToGCN(AbstractTrafficStateModel):
         # print('self.feature_dim=', self.feature_dim)
         self.output_dim = self.data_feature.get('output_dim', 1)
         # print('self.output_dim=', self.output_dim)
-        # self._scaler = self.data_feature.get('scaler')
-        # # print('self._scaler', self._scaler)
+        self._scaler = self.data_feature.get('scaler')
+        # print('self._scaler', self._scaler)
 
         # get model config
         self.hidden_size = config.get('hidden_size', 128)
