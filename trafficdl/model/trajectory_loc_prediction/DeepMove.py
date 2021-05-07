@@ -1,7 +1,3 @@
-# coding: utf-8
-from __future__ import print_function
-from __future__ import division
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,30 +26,23 @@ class Attn(nn.Module):
             self.other = nn.Parameter(torch.FloatTensor(self.hidden_size))
 
     def forward(self, out_state, history):
-        seq_len = history.size()[1]
-        state_len = out_state.size()[1]
-        batch_size = history.size()[0]
-        attn_energies = torch.zeros(
-            batch_size, state_len, seq_len).to(self.device)
-        for i in range(state_len):
-            for j in range(seq_len):
-                for k in range(batch_size):
-                    attn_energies[k, i, j] = self.score(
-                        out_state[k][i], history[k][j])
-        return F.softmax(attn_energies, dim=2)
+        """[summary]
 
-    def score(self, hidden, encoder_output):
+        Args:
+            out_state (tensor): batch_size * state_len * hidden_size
+            history (tensor): batch_size * history_len * hiddden_size
+
+        Returns:
+            [tensor]: (batch_size, state_len, history_len)
+        """
         if self.method == 'dot':
-            energy = hidden.dot(encoder_output)
-            return energy
+            history = history.permute(0, 2, 1)  # batch_size * hidden_size * history_len
+            attn_energies = torch.bmm(out_state, history)
         elif self.method == 'general':
-            energy = self.attn(encoder_output)
-            energy = hidden.dot(energy)
-            return energy
-        elif self.method == 'concat':
-            energy = self.attn(torch.cat((hidden, encoder_output)))
-            energy = self.other.dot(energy)
-            return energy
+            history = self.attn(history)
+            history = history.permute(0, 2, 1)
+            attn_energies = torch.bmm(out_state, history)
+        return F.softmax(attn_energies, dim=2)
 
 
 class DeepMove(AbstractModel):
@@ -161,18 +150,17 @@ class DeepMove(AbstractModel):
         context = attn_weights.bmm(hidden_history)
         # batch_size * state_len * 2 x input_size
         out = torch.cat((hidden_state, context), 2)
+        # 因为是补齐了的，所以需要找到真正的 out
+        origin_len = batch.get_origin_len('current_loc')
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, 2*self.hidden_size).to(self.device)
+        out = torch.gather(out, 1, final_out_index).squeeze(1)  # batch_size * (2*hidden_size)
         out = self.dropout(out)
 
-        y = self.fc_final(out)  # batch_size * state_len * loc_size
-        score = F.log_softmax(y, dim=2)
-        # 因为是补齐了的，所以需要找到真正的 score
-        for i in range(score.shape[0]):
-            if i == 0:
-                true_scores = score[i][loc_len[i] - 1].reshape(1, -1)
-            else:
-                true_scores = torch.cat(
-                    (true_scores, score[i][loc_len[i] - 1].reshape(1, -1)), 0)
-        return true_scores
+        y = self.fc_final(out)  # batch_size * loc_size
+        score = F.log_softmax(y, dim=1)
+        return score
 
     def predict(self, batch):
         return self.forward(batch)

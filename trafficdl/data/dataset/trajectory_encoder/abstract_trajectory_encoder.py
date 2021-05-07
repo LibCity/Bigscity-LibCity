@@ -39,7 +39,7 @@ class AbstractTrajectoryEncoder(object):
         self.data_feature = {}
         self.cache_file_name = ''
 
-    def encode(self, uid, trajectories):
+    def encode(self, uid, trajectories, negative_sample=None):
         """Encode trajectories of user uid.
 
         Args:
@@ -48,8 +48,8 @@ class AbstractTrajectoryEncoder(object):
             a sequence of spatiotemporal point. The spatiotemporal point is represented by
             a tuple. Thus, a trajectory is represented by a list of tuples. For example:
                 trajectory1 = [
-                    (location ID, timestamp, timezone_offset_in_minutes),
-                    (location ID, timestamp, timezone_offset_in_minutes),
+                    dyna_id,
+                    dyna_id,
                     .....
                 ]
             Every spatiotemporal tuple contains all useful information in a record of the Raw
@@ -57,13 +57,15 @@ class AbstractTrajectoryEncoder(object):
             are represented as:
                 [
                     [ # trajectory1
-                        (location ID, timestamp, timezone_offset_in_minutes),
-                        (location ID, timestamp, timezone_offset_in_minutes),
+                        dyna_id,
+                        dyna_id,
                         ...
                     ],
                     trajectory2,
                     ...
                 ]
+            negative_sample (list): the sampled negative POI list. This param only will be used in
+                negative-sampled rank situation.
 
         Returns:
             list: The return value of this function is the list of encoded trajectories.

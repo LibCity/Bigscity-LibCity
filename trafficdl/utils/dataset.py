@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 
-def parse_time(time_in, timezone_offset_in_minute):
+def parse_time(time_in, timezone_offset_in_minute=0):
     """
     将 json 中 time_format 格式的 time 转化为 local datatime
     """
