@@ -29,14 +29,8 @@ class GraphConvolution(Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input, adjT):
-        # print('input.shape:', input.shape)
-        # print('self.weight.shape:', self.weight.shape)
         support = torch.einsum("ijkl, jm->imkl", [input, self.weight])
-
-        # print('adjT.shape:', adjT.shape)
-        # print('support.shape:', support.shape)
         output = torch.einsum("ij, bkjl->bkil", [adjT, support])
-        # print('output.shape:', output.shape)
         if self.bias is not None:
             return output + self.bias
         else:
@@ -78,8 +72,6 @@ class CONVGCN(AbstractTrafficStateModel):
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
 
-        # self.gc11 = GCN(30, 16, 15)
-        # self.gc12 = GCN(30, 16, 15)
         self.gc = GCN(self.input_window, self.hidden_size, self.conv_depth * self.conv_height, self.device)
         self.Conv = nn.Conv3d(
             in_channels=self.num_nodes,
@@ -99,16 +91,7 @@ class CONVGCN(AbstractTrafficStateModel):
         for i in range(self.num_nodes):
             adj_new[i, i] = 1
         x = batch['X']
-        # print(x.shape)
-        '''
-        in1 = x[:, :, :, 0]
-        in2 = x[:, :, :, 1]  # why 2
-        out1 = self.gc11(in1, adj_new)
-        out1 = torch.reshape(out1, (out1.shape[0], self.num_nodes, 5, 3, 1)).detach().numpy()
-        out2 = self.gc12(in2, adj_new)
-        out2 = torch.reshape(out2, (out2.shape[0], self.num_nodes, 5, 3, 1)).detach().numpy()
-        out = np.concatenate([out1, out2], axis=4)
-        '''
+
         out = self.gc(x, adj_new)
         # print('gc_output:', out.shape)
         out = torch.reshape(
