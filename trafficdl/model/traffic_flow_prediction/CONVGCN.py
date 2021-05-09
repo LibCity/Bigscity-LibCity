@@ -16,7 +16,7 @@ class GraphConvolution(Module):
         self.out_features = out_features
         self.weight = Parameter(torch.FloatTensor(in_features, out_features).to(device))  # FloatTensor建立tensor
         if bias:
-            self.bias = Parameter(torch.FloatTensor(out_features)).to(device)
+            self.bias = Parameter(torch.FloatTensor(1, out_features, 1, 1)).to(device)
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
@@ -28,33 +28,15 @@ class GraphConvolution(Module):
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
 
-    def forward(self, input, adj):
-        '''
-        support = []
-        for i in range(input.shape[0]):
-            print(input[0].shape)
-            print(self.weight.shape)
-            temp = torch.mm(input[i], self.weight)  # mat mult
-            temp = temp.detach().numpy()
-            support.append(temp)
-        support = torch.Tensor(support)
-        '''
+    def forward(self, input, adjT):
         # print('input.shape:', input.shape)
         # print('self.weight.shape:', self.weight.shape)
-        support = torch.einsum("ijkm, ml->ijkl", [input, self.weight])
-        adjT = adj
-        '''
-        # output = torch.spmm(adjT, support)
-        output = []
-        for i in range(support.shape[0]):
-            temp = torch.spmm(adjT, support[i])
-            temp = temp.detach().numpy()
-            output.append(temp)
-        output = torch.Tensor(output)
-        '''
+        support = torch.einsum("ijkl, jm->imkl", [input, self.weight])
+
         # print('adjT.shape:', adjT.shape)
         # print('support.shape:', support.shape)
         output = torch.einsum("ij, bkjl->bkil", [adjT, support])
+        # print('output.shape:', output.shape)
         if self.bias is not None:
             return output + self.bias
         else:
@@ -89,18 +71,16 @@ class CONVGCN(AbstractTrafficStateModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)  # 网格个数
         self.feature_dim = self.data_feature.get('feature_dim', 1)  # 输入维度
         self.output_dim = self.data_feature.get('output_dim', 1)  # 输出维度
-        # self.len_row = self.data_feature.get('len_row', 1)  # 网格行数
-        # self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
         # self._logger = getLogger()
-        self.magic_num1 = config.get('magic_num1', 5)  # TODO
-        self.magic_num2 = config.get('magic_num2', 3)  # TODO
+        self.conv_depth = config.get('conv_depth', 5)
+        self.conv_height = config.get('conv_height', 3)
         self.hidden_size = config.get('hidden_size', 16)
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
 
         # self.gc11 = GCN(30, 16, 15)
         # self.gc12 = GCN(30, 16, 15)
-        self.gc = GCN(self.feature_dim, self.hidden_size, self.magic_num1 * self.magic_num2, self.device)
+        self.gc = GCN(self.input_window, self.hidden_size, self.conv_depth * self.conv_height, self.device)
         self.Conv = nn.Conv3d(
             in_channels=self.num_nodes,
             out_channels=self.num_nodes,
@@ -109,9 +89,8 @@ class CONVGCN(AbstractTrafficStateModel):
             padding=(1, 1, 1)
         )
         self.relu = nn.ReLU()
-        # self.pool = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
         self.fc = nn.Linear(
-            self.num_nodes * self.magic_num1 * self.magic_num2 * self.input_window,
+            self.num_nodes * self.conv_depth * self.conv_height * self.feature_dim,
             self.num_nodes * self.output_window * self.output_dim
         )
 
@@ -134,14 +113,13 @@ class CONVGCN(AbstractTrafficStateModel):
         # print('gc_output:', out.shape)
         out = torch.reshape(
             out,
-            (out.shape[0], self.num_nodes, self.magic_num1, self.magic_num2, -1)
+            (-1, self.num_nodes, self.conv_depth, self.conv_height, self.feature_dim)
         )
         # print('conv_in:', out.shape)
         out = self.relu(self.Conv(out))
         # print('conv_out:', out.shape)
-        # out = self.pool(out)
-        # print('pool_out:', out.shape)
-        out = out.view(-1, self.num_nodes * self.magic_num1 * self.magic_num2 * self.input_window)
+
+        out = out.view(-1, self.num_nodes * self.conv_depth * self.conv_height * self.feature_dim)
         out = self.fc(out)
         out = torch.reshape(out, [-1, self.output_window, self.num_nodes, self.output_dim])
         return out
