@@ -10,13 +10,13 @@ from torch.nn.modules.module import Module
 
 
 class GraphConvolution(Module):
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, device, bias=True):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = Parameter(torch.FloatTensor(in_features, out_features))  # FloatTensor建立tensor
+        self.weight = Parameter(torch.FloatTensor(in_features, out_features).to(device))  # FloatTensor建立tensor
         if bias:
-            self.bias = Parameter(torch.FloatTensor(out_features))
+            self.bias = Parameter(torch.FloatTensor(out_features)).to(device)
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
@@ -67,11 +67,11 @@ class GraphConvolution(Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, device):
         super(GCN, self).__init__()
 
-        self.gc1 = GraphConvolution(input_size, hidden_size)
-        self.gc2 = GraphConvolution(hidden_size, output_size)
+        self.gc1 = GraphConvolution(input_size, hidden_size, device)
+        self.gc2 = GraphConvolution(hidden_size, output_size, device)
 
     def forward(self, x, adj):
         x = F.relu(self.gc1(x, adj))
@@ -89,25 +89,31 @@ class CONVGCN(AbstractTrafficStateModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)  # 网格个数
         self.feature_dim = self.data_feature.get('feature_dim', 1)  # 输入维度
         self.output_dim = self.data_feature.get('output_dim', 1)  # 输出维度
-        self.len_row = self.data_feature.get('len_row', 1)  # 网格行数 TODO unused
-        self.len_column = self.data_feature.get('len_column', 1)  # 网格列数 TODO unused
+        # self.len_row = self.data_feature.get('len_row', 1)  # 网格行数
+        # self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
         # self._logger = getLogger()
-        self.magic_num1 = config.get('magic_num1', 5)  # TODO magic number
-        self.magic_num2 = config.get('hidden_size', 3)  # TODO magic number
+        self.magic_num1 = config.get('magic_num1', 5)  # TODO
+        self.magic_num2 = config.get('magic_num2', 3)  # TODO
         self.hidden_size = config.get('hidden_size', 16)
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
 
         # self.gc11 = GCN(30, 16, 15)
         # self.gc12 = GCN(30, 16, 15)
-        self.gc = GCN(self.feature_dim, self.hidden_size, self.magic_num1 * self.magic_num2)
-        self.Conv = nn.Conv3d(in_channels=self.num_nodes, out_channels=self.num_nodes, kernel_size=3, stride=(1, 1, 1),
-                              padding=(1, 1, 1))
+        self.gc = GCN(self.feature_dim, self.hidden_size, self.magic_num1 * self.magic_num2, self.device)
+        self.Conv = nn.Conv3d(
+            in_channels=self.num_nodes,
+            out_channels=self.num_nodes,
+            kernel_size=3,
+            stride=(1, 1, 1),
+            padding=(1, 1, 1)
+        )
         self.relu = nn.ReLU()
         # self.pool = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
         self.fc = nn.Linear(
             self.num_nodes * self.magic_num1 * self.magic_num2 * self.input_window,
-            self.num_nodes * self.output_window * self.output_dim)
+            self.num_nodes * self.output_window * self.output_dim
+        )
 
     def forward(self, batch):
         adj_new = self.adj_mx
