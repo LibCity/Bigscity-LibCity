@@ -83,7 +83,7 @@ class ConvST(nn.Module):
         assert x.shape[1] == self.dim_in
         res_input = self.align(x)  # (B, dim_out, T, num_nodes)
         padding = torch.zeros(batch_size, self.dim_in, self.kt - 1, num_nodes).to(self.device)
-git         # extract spatial-temporal relationships at the same time
+        # extract spatial-temporal relationships at the same time
         x = torch.cat((x, padding), dim=2)
         # inputs.shape = [B, dim_in, len_time+kt-1, N]
         x = torch.stack([x[:, :, i:i + self.kt, :] for i in range(0, len_time)], dim=2)
