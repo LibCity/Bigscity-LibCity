@@ -1,0 +1,23 @@
+{
+  "window": 3,
+  "dim_out": 32,
+  "ks": 3,
+
+  "scaler": "minmax01",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+  "use_row_column": false,
+
+  "max_epoch": 150,
+  "learner": "adam",
+  "learning_rate" : 0.0007,
+  "lr_epsilon" : 1e-7,
+  "lr_beta1" : 0.8,
+  "lr_beta2" : 0.999,
+  "lr_decay": false,
+  "clip_grad_norm": false,
+  "use_early_stop": false
+}
