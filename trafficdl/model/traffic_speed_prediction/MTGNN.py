@@ -336,6 +336,7 @@ class MTGNN(AbstractTrafficStateModel):
         self.adj_mx = self.data_feature.get('adj_mx')
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
+        self.num_batches = self.data_feature.get('num_batches', 1)
 
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
@@ -362,6 +363,10 @@ class MTGNN(AbstractTrafficStateModel):
 
         self.use_curriculum_learning = config.get('use_curriculum_learning', False)
         self.step_size = config.get('step_size1', 2500)
+        self.max_epoch = config.get('max_epoch', 100)
+        if self.max_epoch * self.num_batches < self.step_size * self.output_window:
+            self._logger.warning('Parameter `step_size1` is too big with {} epochs and '
+                                 'the model cannot be trained for all time steps.'.format(self.max_epoch))
         self.task_level = config.get('task_level', 0)
         self.idx = torch.arange(self.num_nodes).to(self.device)
 
