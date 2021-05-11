@@ -71,6 +71,7 @@ class TrafficStateDataset(AbstractDataset):
         self.feature_dim = 0
         self.ext_dim = 0
         self.num_nodes = 0
+        self.num_batches = 0
         self._logger = getLogger()
         if os.path.exists(self.data_path + self.geo_file + '.geo'):
             self._load_geo()
@@ -891,6 +892,7 @@ class TrafficStateDataset(AbstractDataset):
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name,
                                 self.batch_size, self.num_workers, pad_with_last_sample=self.pad_with_last_sample)
+        self.num_batches = len(self.train_dataloader)
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
 
     def get_data_feature(self):

@@ -177,4 +177,5 @@ class ASTGCNDataset(TrafficStatePointDataset):
                 "output_dim": self.output_dim, "ext_dim": self.ext_dim,
                 "len_closeness": self.len_closeness * self.output_window,
                 "len_period": self.len_period * self.output_window,
-                "len_trend": self.len_trend * self.output_window}
+                "len_trend": self.len_trend * self.output_window,
+                "num_batches": self.num_batches}

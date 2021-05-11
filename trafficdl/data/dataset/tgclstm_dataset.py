@@ -54,4 +54,5 @@ class TGCLSTMDataset(TrafficStatePointDataset):
         """
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "FFR": self.FFR,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
-                "output_dim": self.output_dim, "ext_dim": self.ext_dim}
+                "output_dim": self.output_dim, "ext_dim": self.ext_dim,
+                "num_batches": self.num_batches}
