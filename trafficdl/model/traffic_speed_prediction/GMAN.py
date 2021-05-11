@@ -392,12 +392,7 @@ class GMAN(AbstractTrafficStateModel):
         y_predicted = self.predict(batch)  # (batch_size, output_length, num_nodes, output_dim)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        null_val = 0.0
-        return loss.masked_mse_torch(y_predicted, y_true, null_val)
+        return loss.masked_mse_torch(y_predicted, y_true, 0.0)
 
     def predict(self, batch):
-        x = batch['X']  # (batch_size, input_length, num_nodes, feature_dim)
-        y = batch['y']  # (batch_size, output_length, num_nodes, feature_dim)
-        batch_tmp = {'X': x.clone(), 'y': y.clone()}
-        y_preds = self.forward(batch_tmp)  # (batch_size, output_length, num_nodes, output_dim)
-        return y_preds
+        return self.forward(batch)  # (batch_size, output_length, num_nodes, output_dim)

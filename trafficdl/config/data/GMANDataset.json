@@ -13,6 +13,5 @@
   "output_window": 12,
   "add_time_in_day": true,
   "add_day_in_week": false,
-  "D": 64,
-  "points_per_hour": 12
+  "D": 64
 }

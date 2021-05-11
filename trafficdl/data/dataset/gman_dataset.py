@@ -93,7 +93,6 @@ class Graph():
             alias_nodes[node] = alias_setup(normalized_probs)
 
         alias_edges = {}
-        triads = {}
 
         if is_directed:
             for edge in G.edges():
@@ -112,7 +111,8 @@ class Graph():
 def alias_setup(probs):
     '''
     Compute utility lists for non-uniform sampling from discrete distributions.
-    Refer to https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
+    Refer to
+    https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
     for details
     '''
     K = len(probs)
@@ -168,7 +168,7 @@ class GMANDataset(TrafficStatePointDataset):
     def __init__(self, config):
         super().__init__(config)
         self.D = self.config.get('D', 64)
-        self.points_per_hour = self.config.get('points_per_hour', 12)
+        self.points_per_hour = 3600 // self.time_intervals
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.SE_config = {'is_directed': True, 'p': 2, 'q': 1, 'num_walks': 100,
                           'walk_length': 80, 'dimensions': self.D, 'window_size': 10,
@@ -180,7 +180,6 @@ class GMANDataset(TrafficStatePointDataset):
         self.SE_cache_file = os.path.join('./trafficdl/cache/dataset_cache/',
                                           'SE_based_{}.txt'.format(str(self.dataset) + '_' + self.SE_config_str))
         self._generate_SE()
-
 
     def _generate_SE(self):
         #   SE: [N, D]([N, K * d])
