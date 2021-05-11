@@ -6,7 +6,8 @@ from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
+from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, \
+    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
 
 
 class TrafficStateDataset(AbstractDataset):
@@ -832,6 +833,9 @@ class TrafficStateDataset(AbstractDataset):
             scaler = MinMax11Scaler(
                 maxx=max(x_train.max(), y_train.max()), minn=min(x_train.min(), y_train.min()))
             self._logger.info('MinMax11Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
+        elif scaler_type == "log":
+            scaler = LogScaler()
+            self._logger.info('LogScaler')
         elif scaler_type == "none":
             scaler = NoneScaler()
             self._logger.info('NoneScaler')

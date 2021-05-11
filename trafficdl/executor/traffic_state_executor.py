@@ -42,6 +42,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self.lr_beta1 = self.config.get('lr_beta1', 0.9)
         self.lr_beta2 = self.config.get('lr_beta2', 0.999)
         self.lr_betas = (self.lr_beta1, self.lr_beta2)
+        self.lr_alpha = self.config.get('lr_alpha', 0.99)
         self.lr_epsilon = self.config.get('lr_epsilon', 1e-8)
         self.lr_momentum = self.config.get('lr_momentum', 0)
         self.lr_decay = self.config.get('lr_decay', False)
@@ -135,11 +136,15 @@ class TrafficStateExecutor(AbstractExecutor):
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
                                          eps=self.lr_epsilon, betas=self.lr_betas, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sgd':
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=self.lr_momentum)
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate,
+                                        momentum=self.lr_momentum, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'adagrad':
-            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.learning_rate,
+                                            eps=self.lr_epsilon, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'rmsprop':
-            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate,
+                                            alpha=self.lr_alpha, eps=self.lr_epsilon,
+                                            momentum=self.lr_momentum, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sparse_adam':
             optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate)
         else:
