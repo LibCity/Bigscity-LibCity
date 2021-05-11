@@ -11,7 +11,10 @@ from trafficdl.utils import ensure_dir
 主要功能是定义了一种根据原始交通状态数据计算邻接矩阵的方法，并且保存了计算好的邻接矩阵
 当然，采用框架预定义的根据距离定义邻接矩阵的方法也是可以的
 因此STG2Seq模型也支持基础的TrafficStatePointDataset、TrafficStateGridDataset
-因此，STG2SeqDataset即可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
+STG2SeqDataset既可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
+修改成TrafficStateGridDataset时，只需要修改：
+1.TrafficStatePointDataset-->TrafficStateGridDataset
+2.self.use_row_column = False, 可以加到self.parameters_str中
 """
 
 
