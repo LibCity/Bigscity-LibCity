@@ -146,7 +146,8 @@ class TrafficStateExecutor(AbstractExecutor):
                                             alpha=self.lr_alpha, eps=self.lr_epsilon,
                                             momentum=self.lr_momentum, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sparse_adam':
-            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate,
+                                               eps=self.lr_epsilon, betas=self.lr_betas)
         else:
             self._logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
