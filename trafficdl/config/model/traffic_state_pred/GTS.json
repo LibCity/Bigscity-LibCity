@@ -1,0 +1,31 @@
+{
+  "rnn_units": 64,
+  "kernal_size": 10,
+  "max_diffusion_step": 3,
+  "filter_type": "dual_random_walk",
+  "cl_decay_steps": 2000,
+  "use_curriculum_learning": true,
+  "epoch_use_regularization": 200,
+  "num_rnn_layers" :1,
+  "temperature": 0.5,
+  "embedding_dim": 100,
+
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+
+  "max_epoch": 200,
+  "learner": "adam",
+  "learning_rate": 0.01,
+  "lr_decay": true,
+  "lr_scheduler": "multisteplr",
+  "lr_decay_ratio": 0.1,
+  "steps": [20, 30, 40],
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 100
+}
