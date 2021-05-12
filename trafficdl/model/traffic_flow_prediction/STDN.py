@@ -43,11 +43,6 @@ class CBAAttention(nn.Module):
 
 class STDN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-        """
-        构造模型
-        :param config: 源于各种配置的配置字典
-        :param data_feature: 从数据集Dataset类的`get_data_feature()`接口返回的必要的数据相关的特征
-        """
         super(STDN, self).__init__(config, data_feature)
         self.lstm_seq_len = config.get('input_window', 7)
         self.feature_vec_len = self.data_feature.get('feature_vec_len', 160)
@@ -212,11 +207,6 @@ class STDN(AbstractTrafficStateModel):
         self.pred_volume = nn.Tanh().to(self.device)
 
     def forward(self, batch):
-        """
-        调用模型计算这个batch输入对应的输出，nn.Module必须实现的接口
-        :param batch: 输入数据，类字典，可以按字典的方法取数据
-        :return:
-        """
         flatten_att_nbhd_inputs = modify_input(batch['flatten_att_nbhd_inputs'])
         flatten_att_flow_inputs = modify_input(batch['flatten_att_flow_inputs'])
         att_lstm_inputs = modify_input(batch['att_lstm_inputs'])
@@ -314,11 +304,6 @@ class STDN(AbstractTrafficStateModel):
         return self.pred_volume(lstm_all)
 
     def calculate_loss(self, batch):
-        """
-        输入一个batch的数据，返回训练过程这个batch数据的loss，也就是需要定义一个loss函数。
-        :param batch: 输入数据，类字典，可以按字典的方法取数据
-        :return: training loss (tensor)
-        """
         y_true = batch['y']
         y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
@@ -327,10 +312,4 @@ class STDN(AbstractTrafficStateModel):
         return res
 
     def predict(self, batch):
-        """
-        输入一个batch的数据，返回对应的预测值，一般应该是**多步预测**的结果
-        一般会调用上边定义的forward()方法
-        :param batch: 输入数据，类字典，可以按字典的方法取数据
-        :return: predict result of this batch (tensor)
-        """
         return self.forward(batch).reshape(-1, self.output_window, self.len_row, self.len_column, self.output_dim)

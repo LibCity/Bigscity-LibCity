@@ -18,7 +18,8 @@ class STDNDataset(TrafficStateDataset):
         self.att_lstm_seq_len = self.config.get('att_lstm_seq_len', 3)
         self.hist_feature_daynum = self.config.get('hist_feature_daynum', 7)
         self.last_feature_num = self.config.get('last_feature_num', 48)
-        self.timeslot_daynum = 48
+        self.points_per_hour = 3600 // self.time_intervals
+        self.timeslot_daynum = self.points_per_hour * 24
         self.cnn_nbhd_size = self.config.get('cnn_nbhd_size', 3)
         self.nbhd_size = self.config.get('nbhd_size', 2)
         self.scaler = None
