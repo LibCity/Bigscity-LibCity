@@ -39,7 +39,12 @@ class TrafficStateExecutor(AbstractExecutor):
         self.learner = self.config.get('learner', 'adam')
         self.learning_rate = self.config.get('learning_rate', 0.01)
         self.weight_decay = self.config.get('weight_decay', 0)
+        self.lr_beta1 = self.config.get('lr_beta1', 0.9)
+        self.lr_beta2 = self.config.get('lr_beta2', 0.999)
+        self.lr_betas = (self.lr_beta1, self.lr_beta2)
+        self.lr_alpha = self.config.get('lr_alpha', 0.99)
         self.lr_epsilon = self.config.get('lr_epsilon', 1e-8)
+        self.lr_momentum = self.config.get('lr_momentum', 0)
         self.lr_decay = self.config.get('lr_decay', False)
         self.lr_scheduler_type = self.config.get('lr_scheduler', 'multisteplr')
         self.lr_decay_ratio = self.config.get('lr_decay_ratio', 0.1)
@@ -129,15 +134,20 @@ class TrafficStateExecutor(AbstractExecutor):
         self._logger.info('You select `{}` optimizer.'.format(self.learner.lower()))
         if self.learner.lower() == 'adam':
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,
-                                         eps=self.lr_epsilon, weight_decay=self.weight_decay)
+                                         eps=self.lr_epsilon, betas=self.lr_betas, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sgd':
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate,
+                                        momentum=self.lr_momentum, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'adagrad':
-            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.learning_rate,
+                                            eps=self.lr_epsilon, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'rmsprop':
-            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.RMSprop(self.model.parameters(), lr=self.learning_rate,
+                                            alpha=self.lr_alpha, eps=self.lr_epsilon,
+                                            momentum=self.lr_momentum, weight_decay=self.weight_decay)
         elif self.learner.lower() == 'sparse_adam':
-            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate)
+            optimizer = torch.optim.SparseAdam(self.model.parameters(), lr=self.learning_rate,
+                                               eps=self.lr_epsilon, betas=self.lr_betas)
         else:
             self._logger.warning('Received unrecognized optimizer, set default Adam optimizer')
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate,

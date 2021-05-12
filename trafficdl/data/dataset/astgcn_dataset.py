@@ -2,6 +2,16 @@ import os
 import numpy as np
 
 from trafficdl.data.dataset import TrafficStatePointDataset
+# from trafficdl.data.dataset import TrafficStateGridDataset
+
+
+"""
+主要功能是根据C P T三段数据产生输入数据
+ASTGCNDataset既可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
+修改成TrafficStateGridDataset时，只需要修改：
+1.TrafficStatePointDataset-->TrafficStateGridDataset
+2.self.use_row_column = False, 可以加到self.parameters_str中
+"""
 
 
 class ASTGCNDataset(TrafficStatePointDataset):
@@ -167,4 +177,5 @@ class ASTGCNDataset(TrafficStatePointDataset):
                 "output_dim": self.output_dim, "ext_dim": self.ext_dim,
                 "len_closeness": self.len_closeness * self.output_window,
                 "len_period": self.len_period * self.output_window,
-                "len_trend": self.len_trend * self.output_window}
+                "len_trend": self.len_trend * self.output_window,
+                "num_batches": self.num_batches}

@@ -76,14 +76,6 @@ class TrainableEltwiseLayer(nn.Module):
 
 
 class STResNetCommon(AbstractTrafficStateModel):
-    # 2021-04-26 10:09:03,657 - INFO - train	x: (14935, 6, 32, 32, 2), y: (14935, 1, 32, 32, 2)
-    # 2021-04-26 10:09:03,658 - INFO - eval	x: (2134, 6, 32, 32, 2), y: (2134, 1, 32, 32, 2)
-    # 2021-04-26 10:09:03,658 - INFO - test	x: (4267, 6, 32, 32, 2), y: (4267, 1, 32, 32, 2)
-
-    # 2021-04-18 12:48:17,434 - INFO - train	x: (15120, 6, 32, 32, 2),y: (15120, 1, 32, 32, 2),x_ext: (15120, 6, 76),y_ext: (15120, 76)
-    # 2021-04-18 12:48:17,435 - INFO - eval	x: (1344, 6, 32, 32, 2),y: (1344, 1, 32, 32, 2),x_ext: (1344, 6, 76),y_ext: (1344, 76)
-    # 2021-04-18 12:48:17,435 - INFO - test	x: (16464, 6, 32, 32, 2),y: (16464, 1, 32, 32, 2),x_ext: (16464, 6, 76),y_ext: (16464, 76)
-
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self._scaler = self.data_feature.get('scaler')

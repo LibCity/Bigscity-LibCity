@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class Scaler:
     """
     归一化接口
@@ -106,3 +109,19 @@ class MinMax11Scaler(Scaler):
 
     def inverse_transform(self, data):
         return ((data + 1.) / 2.) * (self.max - self.min) + self.min
+
+
+class LogScaler(Scaler):
+    """
+    Log scaler
+    x = log(x+eps)
+    """
+
+    def __init__(self, eps=0.999):
+        self.eps = eps
+
+    def transform(self, data):
+        return np.log(data + self.eps)
+
+    def inverse_transform(self, data):
+        return np.exp(data) - self.eps

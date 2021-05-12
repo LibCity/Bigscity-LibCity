@@ -1,0 +1,23 @@
+{
+  "batch_size": 1,
+  "cache_dataset": true,
+  "num_workers": 0,
+  "pad_with_last_sample": true,
+  "train_rate": 0.6,
+  "eval_rate": 0.2,
+  "load_external": false,
+  "normal_external": false,
+  "input_window": 7,
+  "output_window": 1,
+  "output_dim": 2,
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+
+  "att_lstm_num": 3,
+  "att_lstm_seq_len": 3,
+  "hist_feature_daynum": 7,
+  "last_feature_num": 48,
+  "cnn_nbhd_size": 3,
+  "nbhd_size": 2,
+  "flow_type": 4
+}

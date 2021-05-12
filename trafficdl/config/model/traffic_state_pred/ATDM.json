@@ -1,0 +1,23 @@
+{
+  "hidden_size": 64,
+  "past_t": 3,
+  "dropout": 0.2,
+
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+
+  "max_epoch": 100,
+  "learner": "rmsprop",
+  "learning_rate": 0.001,
+  "lr_decay": true,
+  "lr_scheduler": "reducelronplateau",
+  "lr_patience": 10,
+  "lr_momentum": 0.9,
+  "clip_grad_norm": false,
+  "use_early_stop": true,
+  "patience": 50
+}

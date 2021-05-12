@@ -6,7 +6,8 @@ from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
+from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, \
+    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
 
 
 class TrafficStateDataset(AbstractDataset):
@@ -70,6 +71,7 @@ class TrafficStateDataset(AbstractDataset):
         self.feature_dim = 0
         self.ext_dim = 0
         self.num_nodes = 0
+        self.num_batches = 0
         self._logger = getLogger()
         if os.path.exists(self.data_path + self.geo_file + '.geo'):
             self._load_geo()
@@ -832,6 +834,9 @@ class TrafficStateDataset(AbstractDataset):
             scaler = MinMax11Scaler(
                 maxx=max(x_train.max(), y_train.max()), minn=min(x_train.min(), y_train.min()))
             self._logger.info('MinMax11Scaler max: ' + str(scaler.max) + ', min: ' + str(scaler.min))
+        elif scaler_type == "log":
+            scaler = LogScaler()
+            self._logger.info('LogScaler')
         elif scaler_type == "none":
             scaler = NoneScaler()
             self._logger.info('NoneScaler')
@@ -887,6 +892,7 @@ class TrafficStateDataset(AbstractDataset):
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name,
                                 self.batch_size, self.num_workers, pad_with_last_sample=self.pad_with_last_sample)
+        self.num_batches = len(self.train_dataloader)
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
 
     def get_data_feature(self):

@@ -6,7 +6,7 @@ from trafficdl.utils.dataset import parse_time, cal_basetime, cal_timeoff, \
 from trafficdl.utils.argument_list import general_arguments, str2bool, \
     str2float, hyper_arguments
 from trafficdl.utils.normalization import Scaler, NoneScaler, NormalScaler, \
-    StandardScaler, MinMax01Scaler, MinMax11Scaler
+    StandardScaler, MinMax01Scaler, MinMax11Scaler, LogScaler
 
 __all__ = [
     "get_executor",
@@ -33,5 +33,6 @@ __all__ = [
     "NormalScaler",
     "StandardScaler",
     "MinMax01Scaler",
-    "MinMax11Scaler"
+    "MinMax11Scaler",
+    "LogScaler"
 ]
