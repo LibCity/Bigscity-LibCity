@@ -61,7 +61,7 @@ class TATT_1(nn.Module):
         nn.init.xavier_uniform_(self.v)
         self.bn = BatchNorm1d(tem_size)
         self.c_in = c_in
-        self.tem_size=tem_size
+        self.tem_size = tem_size
 
     def forward(self, seq):
         # print('seq.shape:', seq.shape)  # [64, 32, 10, 8] [64, 32, 10, 6]
@@ -309,7 +309,7 @@ class HGCN(AbstractTrafficStateModel):
 
     def get_input_cluster(self, input):
         # 得到batch的shape
-        batch_size, input_length, num_nodes, feature_dim = input.shape[0], input.shape[1], input.shape[2], input.shape[
+        batch_size, input_length, feature_dim = input.shape[0], input.shape[1], input.shape[
             3]
         # 初始化batch_cluster
         input_cluster = torch.zeros([batch_size, input_length, self.cluster_nodes, feature_dim], dtype=torch.float,
