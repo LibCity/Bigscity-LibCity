@@ -10,6 +10,7 @@ from trafficdl.model.traffic_speed_prediction.AutoEncoder import AutoEncoder
 from trafficdl.model.traffic_speed_prediction.TemplateTSP import TemplateTSP
 from trafficdl.model.traffic_speed_prediction.ATDM import ATDM
 from trafficdl.model.traffic_speed_prediction.GMAN import GMAN
+from trafficdl.model.traffic_speed_prediction.GTS import GTS
 
 __all__ = [
     "DCRNN",
@@ -22,6 +23,7 @@ __all__ = [
     "Seq2Seq",
     "AutoEncoder",
     "MTGNN",
-    "ATDM"
-    "GMAN"
+    "ATDM",
+    "GMAN",
+    "GTS"
 ]
