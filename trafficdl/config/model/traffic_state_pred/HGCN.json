@@ -10,13 +10,11 @@
   "channels": 32,
   "skip_channels": 256,
   "end_channels": 512,
-  "kernel_size": 2,
-  "K": 3,
-  "Kt": 3,
 
 
   "add_time_in_day": true,
   "load_external": false,
   "input_window": 12,
-  "output_window": 12
+  "output_window": 12,
+  "output_dim": 1
 }
