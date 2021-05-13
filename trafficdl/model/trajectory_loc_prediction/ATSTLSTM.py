@@ -74,7 +74,7 @@ class ATSTLSTM(AbstractModel):
         loc = batch['current_loc']
         dis = batch['current_dis']
         tim = batch['current_tim']
-        # batch_size * num_samples
+        # batch_size * neg_samples
         loc_neg = batch['loc_neg']
         dis_neg = batch['dis_neg']
         tim_neg = batch['tim_neg']
@@ -106,7 +106,7 @@ class ATSTLSTM(AbstractModel):
         # first output (wn*rn + wp * pu)
         first_part = self.wn(rn) + self.wp(pu)  # batch_size * hidden_size
         first_part = first_part.unsqueeze(2)  # batch_size * hidden_size * 1
-        output = torch.bmm(rest_emb, first_part).squeeze(2)  # batch_size * (num_samples+1)
+        output = torch.bmm(rest_emb, first_part).squeeze(2)  # batch_size * (neg_samples+1)
 
         return output
 
@@ -126,6 +126,6 @@ class ATSTLSTM(AbstractModel):
         score = normalize(score, dim=1)
         score_pos, score_neg = torch.split(score, [1, score.shape[1] - 1], dim=1)
         # score_pos is batch_size * 1
-        # score_neg is batch_size * num_samples
+        # score_neg is batch_size * neg_samples
         loss = -(score_pos - score_neg).sigmoid().log().sum()
         return loss

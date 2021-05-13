@@ -23,6 +23,9 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                              'current_loc': 'int', 'current_tim': 'int', 'dilated_rnn_input_index': 'no_pad_int',
                              'history_avg_distance': 'no_pad_float',
                              'target': 'int', 'uid': 'int'}
+        if config['evaluate_method'] == 'sample':
+            self.feature_dict['neg_loc'] = 'int'
+            parameter_list.append('neg_samples')
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
@@ -32,7 +35,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.config['dataset'], self.config['dataset']))
         self.time_checkin_set = defaultdict(set)
 
-    def encode(self, uid, trajectories):
+    def encode(self, uid, trajectories, negative_sample=None):
         """standard encoder use the same method as DeepMove
 
         Recode poi id. Encode timestamp with its hour.
@@ -100,6 +103,14 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             trace.append(history_avg_distance)
             trace.append(target)
             trace.append(uid)
+            if negative_sample is not None:
+                neg_loc = []
+                for neg in negative_sample[index]:
+                    if neg not in self.location2id:
+                        self.location2id[neg] = self.loc_id
+                        self.loc_id += 1
+                    neg_loc.append(self.location2id[neg])
+                trace.append(neg_loc)
             encoded_trajectories.append(trace)
             history_loc.append(current_loc)
             history_tim.append(current_tim)

@@ -24,7 +24,7 @@ class PBSTrajectoryDataset(AbstractDataset):
         self.data = None
         # 加载 encoder
         self.encoder = self.get_encoder()
-        self.num_samples = self.config['num_samples']
+        self.neg_samples = self.config['neg_samples']
         self.pad_item = None  # 因为若是使用缓存, pad_item 是记录在缓存文件中的而不是 encoder
         self.logger = getLogger()
         self.counter = Counter()
@@ -195,7 +195,7 @@ class PBSTrajectoryDataset(AbstractDataset):
             # generate negative samples
             total_negative_samples = []
             for i in range(len(data[uid])):
-                neg = np.random.choice(popularity, size=self.num_samples, replace=False, p=weight)
+                neg = np.random.choice(popularity, size=self.neg_samples, replace=False, p=weight)
                 total_negative_samples.append(neg)
             encoded_data[uid] = self.encoder.encode(int(uid), data[uid], total_negative_samples)
         self.encoder.gen_data_feature()
