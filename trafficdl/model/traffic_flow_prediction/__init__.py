@@ -9,6 +9,8 @@ from trafficdl.model.traffic_flow_prediction.ASTGCNCommon import ASTGCNCommon
 from trafficdl.model.traffic_flow_prediction.ToGCN import ToGCN
 from trafficdl.model.traffic_flow_prediction.CONVGCN import CONVGCN
 from trafficdl.model.traffic_flow_prediction.STDN import STDN
+from trafficdl.model.traffic_flow_prediction.STSGCN import STSGCN
+
 __all__ = [
     "AGCRN",
     "ASTGCN",
@@ -21,4 +23,5 @@ __all__ = [
     "ToGCN",
     "CONVGCN",
     "STDN",
+    "STSGCN"
 ]
