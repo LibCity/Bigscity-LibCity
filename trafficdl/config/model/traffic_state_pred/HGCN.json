@@ -15,6 +15,5 @@
   "add_time_in_day": true,
   "load_external": false,
   "input_window": 12,
-  "output_window": 12,
-  "output_dim": 1
+  "output_window": 12
 }
