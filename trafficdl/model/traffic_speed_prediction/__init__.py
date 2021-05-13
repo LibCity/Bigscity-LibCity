@@ -11,6 +11,7 @@ from trafficdl.model.traffic_speed_prediction.TemplateTSP import TemplateTSP
 from trafficdl.model.traffic_speed_prediction.ATDM import ATDM
 from trafficdl.model.traffic_speed_prediction.GMAN import GMAN
 from trafficdl.model.traffic_speed_prediction.GTS import GTS
+from trafficdl.model.traffic_speed_prediction.HGCN import HGCN
 
 __all__ = [
     "DCRNN",
@@ -25,5 +26,6 @@ __all__ = [
     "MTGNN",
     "ATDM",
     "GMAN",
-    "GTS"
+    "GTS",
+    "HGCN",
 ]
