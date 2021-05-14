@@ -10,6 +10,7 @@ from trafficdl.model.traffic_speed_prediction.AutoEncoder import AutoEncoder
 from trafficdl.model.traffic_speed_prediction.TemplateTSP import TemplateTSP
 from trafficdl.model.traffic_speed_prediction.ATDM import ATDM
 from trafficdl.model.traffic_speed_prediction.GMAN import GMAN
+from trafficdl.model.traffic_speed_prediction.STAGGCN import STAGGCN
 from trafficdl.model.traffic_speed_prediction.GTS import GTS
 from trafficdl.model.traffic_speed_prediction.HGCN import HGCN
 
@@ -28,4 +29,5 @@ __all__ = [
     "GMAN",
     "GTS",
     "HGCN",
+    "STAGGCN"
 ]
