@@ -1,0 +1,26 @@
+{
+  "graph_dim": 32,
+  "tcn_dim": [10],
+  "atten_head": 5,
+  "choice": [1,1,1],
+
+  "scaler": "standard",
+  "load_external": false,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+  "load_from_local": true,
+
+  "max_epoch": 100,
+  "learner": "sgd",
+  "learning_rate": 0.001,
+  "lr_momentum": 0.9,
+  "lr_decay": true,
+  "lr_scheduler": "multisteplr",
+  "lr_decay_ratio": 0.5,
+  "steps": [5, 20, 50],
+  "clip_grad_norm": false,
+  "use_early_stop": true,
+  "patience": 50
+}
