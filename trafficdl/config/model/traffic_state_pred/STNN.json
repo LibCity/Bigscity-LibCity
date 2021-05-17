@@ -1,0 +1,18 @@
+{
+  "batch_size": 64,
+  "num_rnn_layers": 2,
+  "rnn_units": 64,
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.01,
+  "mode": "refine",
+  "nhid": 0,
+  "nlayers": 1,
+  "dropout_f": 0.1,
+  "dropout_d": 0.1,
+  "activation": "tanh",
+  "input_window": 12,
+  "output_window": 12,
+  "add_time_in_day": true,
+  "load_external": false
+}
