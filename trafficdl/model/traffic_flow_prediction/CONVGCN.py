@@ -29,8 +29,14 @@ class GraphConvolution(Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input, adjT):
+        # print('input.shape:', input.shape)
+        # print('self.weight.shape:', self.weight.shape)
         support = torch.einsum("ijkl, jm->imkl", [input, self.weight])
-        output = torch.einsum("ij, bkjl->bkil", [adjT, support])
+        # print('support.shape:', support.shape)
+        # print('adjT.shape:', adjT.shape)
+        output = torch.einsum("ak, ijkl->ijal", [adjT, support])
+        # print('output.shape:', output.shape)
+        # print('self.bias.shape:', self.bias.shape)
         if self.bias is not None:
             return output + self.bias
         else:
@@ -60,19 +66,26 @@ class CONVGCN(AbstractTrafficStateModel):
         super().__init__(config, data_feature)
         self.device = config.get('device', torch.device('cpu'))
 
-        self._scaler = self.data_feature.get('scaler')  # 用于数据归一化
-        self.adj_mx = torch.tensor(self.data_feature.get('adj_mx'), device=self.device)  # 邻接矩阵
-        self.num_nodes = self.data_feature.get('num_nodes', 1)  # 网格个数
+        self._scaler = self.data_feature.get('scaler')
+        self.adj_mx = torch.tensor(self.data_feature.get('adj_mx'), device=self.device)
+        self.num_nodes = self.data_feature.get('num_nodes', 1)
+        for i in range(self.num_nodes):
+            self.adj_mx[i, i] = 1
         self.feature_dim = self.data_feature.get('feature_dim', 1)  # 输入维度
         self.output_dim = self.data_feature.get('output_dim', 1)  # 输出维度
         # self._logger = getLogger()
         self.conv_depth = config.get('conv_depth', 5)
         self.conv_height = config.get('conv_height', 3)
         self.hidden_size = config.get('hidden_size', 16)
-        self.input_window = config.get('input_window', 1)
+        self.time_lag = config.get('time_lag', 1)
         self.output_window = config.get('output_window', 1)
 
-        self.gc = GCN(self.input_window, self.hidden_size, self.conv_depth * self.conv_height, self.device)
+        self.gc = GCN(
+            (self.time_lag-1) * 3,
+            self.hidden_size,
+            self.conv_depth * self.conv_height,
+            self.device
+        )
         self.Conv = nn.Conv3d(
             in_channels=self.num_nodes,
             out_channels=self.num_nodes,
@@ -87,12 +100,10 @@ class CONVGCN(AbstractTrafficStateModel):
         )
 
     def forward(self, batch):
-        adj_new = self.adj_mx
-        for i in range(self.num_nodes):
-            adj_new[i, i] = 1
+
         x = batch['X']
 
-        out = self.gc(x, adj_new)
+        out = self.gc(x, self.adj_mx)
         # print('gc_output:', out.shape)
         out = torch.reshape(
             out,
@@ -117,4 +128,4 @@ class CONVGCN(AbstractTrafficStateModel):
         # print('size of y_predict:', y_predicted.shape)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        return loss.masked_mse_torch(y_predicted, y_true, 0)
