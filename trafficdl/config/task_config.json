@@ -175,7 +175,7 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "CONVGCN": {
-            "dataset_class": "TrafficStatePointDataset",
+            "dataset_class": "CONVGCNDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
