@@ -129,10 +129,12 @@ time_checkin_set = defaultdict(set)
 with open('./lstpm_test_data.json', 'r') as f:
     encoded_data = json.load(f)
 
-config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', None, {"history_type": 'cut_off',
+config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', None, {"history_type": 'cut_off', "gpu_id": 2,
                                                                          "metrics": ["Recall", "NDCG"], "topk": 5})
 dataset = get_dataset(config)
-dataset.data = encoded_data
+dataset.data = {
+    'encoded_data': encoded_data
+}
 dataset.pad_item = pad_item
 train_data, eval_data, test_data = dataset.divide_data()
 train_data, eval_data, test_data = generate_dataloader(train_data, eval_data, test_data,
