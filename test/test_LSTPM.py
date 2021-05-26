@@ -2,12 +2,13 @@ from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
 from trafficdl.utils import get_executor, get_model, get_logger
 from trafficdl.data.utils import generate_dataloader
-from geopy import distance
+# from geopy import distance
+from math import radians, cos, sin, asin, sqrt
 import numpy as np
 import pickle
 from collections import defaultdict
 from tqdm import tqdm
-import json
+# import json
 f = open('./raw_data/foursquare_cut_one_day.pkl', 'rb')
 data = pickle.load(f)
 # 要把它的数据放到 Batch 里面
@@ -34,6 +35,16 @@ pad_item = {
 }
 
 
+def geodistance(lat1, lng1, lat2, lng2):
+    lng1, lat1, lng2, lat2 = map(radians, [float(lng1), float(lat1), float(lng2), float(lat2)])
+    dlon = lng2-lng1
+    dlat = lat2-lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    distance = 2*asin(sqrt(a))*6371*1000
+    distance = round(distance/1000, 3)
+    return distance
+
+
 def _create_dilated_rnn_input(current_loc):
     current_loc.reverse()
     sequence_length = len(current_loc)
@@ -45,7 +56,7 @@ def _create_dilated_rnn_input(current_loc):
         distance_row_explicit = []
         for target in poi_before:
             lon, lat = vid_lookup[target][1], vid_lookup[target][0]
-            distance_row_explicit.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
+            distance_row_explicit.append(geodistance(lat_cur, lon_cur, lat, lon))
         index_closet = np.argmin(distance_row_explicit).item()
         # reverse back
         session_dilated_rnn_input_index[sequence_length - i - 1] = sequence_length - 2 - index_closet - i
@@ -59,7 +70,7 @@ def _gen_distance_matrix(current_loc, history_loc_central):
     now_loc = current_loc[-1]
     lon_cur, lat_cur = vid_lookup[now_loc][1], vid_lookup[now_loc][0]
     for central in history_loc_central:
-        history_avg_distance.append(distance.distance(central, (lat_cur, lon_cur)).kilometers)
+        history_avg_distance.append(geodistance(central[0], central[1], lat_cur, lon_cur))
     return history_avg_distance
 
 
@@ -85,6 +96,9 @@ for uid in tqdm(user_set, desc="encoding data"):
         for p in current_session:
             current_loc.append(p[0])
             current_tim.append(p[1])
+            if p[1] > tim_max:
+                print('tim overleaf error')
+                break
             if p[1] not in time_checkin_set:
                 time_checkin_set[p[1]] = set()
             time_checkin_set[p[1]].add(p[0])
@@ -137,14 +151,14 @@ for i in range(tim_max+1):
             sim_matrix[j][i] = jaccard_ij
 
 
-with open('./lstpm_test_data.json', 'w') as f:
-    json.dump({
-        'encoded_data': encoded_data,
-        'sim_matrix': sim_matrix
-    }, f)
+# with open('./lstpm_test_data.json', 'w') as f:
+#     json.dump({
+#         'encoded_data': encoded_data,
+#         'sim_matrix': sim_matrix
+#     }, f)
 
 
-config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', other_args={"history_type": 'cut_off', "gpu_id": 2,
+config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', other_args={"history_type": 'cut_off', "gpu_id": 0,
                                                                               "metrics": ["Recall", "NDCG"], "topk": 5})
 logger = get_logger(config)
 dataset = get_dataset(config)
@@ -168,6 +182,8 @@ data_feature = {
 }
 
 model = get_model(config, data_feature)
+# batch = train_data.__iter__().__next__()
+# batch.to_tensor(config['device'])
 executor = get_executor(config, model)
 executor.train(train_data, eval_data)
 executor.evaluate(test_data)

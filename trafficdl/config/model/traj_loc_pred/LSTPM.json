@@ -1,10 +1,10 @@
 {
-    "hidden_size": 600,
+    "hidden_size": 500,
     "emb_size": 500,
     "dropout": 0.8,
     "window_size": 24,
     "window_type": "time_window",
-    "learning_rate": 0.001,
+    "learning_rate": 0.0001,
     "L2": 1e-6,
     "batch_size": 32,
     "max_epoch": 20
