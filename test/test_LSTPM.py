@@ -1,6 +1,6 @@
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from trafficdl.utils import get_executor, get_model, get_logger
 from trafficdl.data.utils import generate_dataloader
 from geopy import distance
 import numpy as np
@@ -131,6 +131,7 @@ with open('./lstpm_test_data.json', 'r') as f:
 
 config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', other_args={"history_type": 'cut_off', "gpu_id": 2,
                                                                               "metrics": ["Recall", "NDCG"], "topk": 5})
+logger = get_logger(config)
 dataset = get_dataset(config)
 dataset.data = {
     'encoded_data': encoded_data
