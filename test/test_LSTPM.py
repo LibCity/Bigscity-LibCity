@@ -1,135 +1,192 @@
-import os
-import torch
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
-from trafficdl.utils.dataset import parseCoordinate
-from geopy import distance
+from trafficdl.utils import get_executor, get_model, get_logger
+from trafficdl.data.utils import generate_dataloader
+# from geopy import distance
+from math import radians, cos, sin, asin, sqrt
 import numpy as np
-import torch.nn.functional as F
+import pickle
+from collections import defaultdict
+from tqdm import tqdm
+# import json
+f = open('./raw_data/foursquare_cut_one_day.pkl', 'rb')
+data = pickle.load(f)
+# 要把它的数据放到 Batch 里面
+"""
+data_neural: {
+    uid: {
+        sessions: {
+            session_id: [
+                [loc, tim]
+            ]
+        }
+    }
+}
 
-config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', None, {"history_type": 'cut_off'})
+vid_lookup 来进行距离的计算，所以还是在这里完成 encode 操作吧
+"""
+data_neural = data['data_neural']
+user_set = data['data_neural'].keys()
+vid_lookup = data['vid_lookup']
+tim_max = 47
+pad_item = {
+    'current_loc': 9296,
+    'current_tim': tim_max+1
+}
+
+
+def geodistance(lat1, lng1, lat2, lng2):
+    lng1, lat1, lng2, lat2 = map(radians, [float(lng1), float(lat1), float(lng2), float(lat2)])
+    dlon = lng2-lng1
+    dlat = lat2-lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    distance = 2*asin(sqrt(a))*6371*1000
+    distance = round(distance/1000, 3)
+    return distance
+
+
+def _create_dilated_rnn_input(current_loc):
+    current_loc.reverse()
+    sequence_length = len(current_loc)
+    session_dilated_rnn_input_index = [0] * sequence_length
+    for i in range(sequence_length - 1):
+        current_poi = current_loc[i]
+        poi_before = current_loc[i + 1:]
+        lon_cur, lat_cur = vid_lookup[current_poi][1], vid_lookup[current_poi][0]
+        distance_row_explicit = []
+        for target in poi_before:
+            lon, lat = vid_lookup[target][1], vid_lookup[target][0]
+            distance_row_explicit.append(geodistance(lat_cur, lon_cur, lat, lon))
+        index_closet = np.argmin(distance_row_explicit).item()
+        # reverse back
+        session_dilated_rnn_input_index[sequence_length - i - 1] = sequence_length - 2 - index_closet - i
+    current_loc.reverse()
+    return session_dilated_rnn_input_index
+
+
+def _gen_distance_matrix(current_loc, history_loc_central):
+    # 使用 profile 计算当前位置与历史轨迹中心点之间的距离
+    history_avg_distance = []  # history_session_count
+    now_loc = current_loc[-1]
+    lon_cur, lat_cur = vid_lookup[now_loc][1], vid_lookup[now_loc][0]
+    for central in history_loc_central:
+        dis = geodistance(central[0], central[1], lat_cur, lon_cur)
+        if dis < 1:
+            dis = 1
+        history_avg_distance.append(dis)
+    return history_avg_distance
+
+
+encoded_data = {}
+
+feature_dict = {'history_loc': 'array of int', 'history_tim': 'array of int',
+                'current_loc': 'int', 'current_tim': 'int', 'dilated_rnn_input_index': 'no_pad_int',
+                'history_avg_distance': 'no_pad_float',
+                'target': 'int', 'uid': 'int'}
+
+time_checkin_set = defaultdict(set)
+
+for uid in tqdm(user_set, desc="encoding data"):
+    history_loc = []
+    history_tim = []
+    history_loc_central = []
+    encoded_trajectories = []
+    sessions = data_neural[uid]['sessions']
+    for session_id in sessions.keys():
+        current_session = sessions[session_id]
+        current_loc = []
+        current_tim = []
+        for p in current_session:
+            current_loc.append(p[0])
+            current_tim.append(p[1])
+            if p[1] > tim_max:
+                print('tim overleaf error')
+                break
+            if p[1] not in time_checkin_set:
+                time_checkin_set[p[1]] = set()
+            time_checkin_set[p[1]].add(p[0])
+        if session_id == 0:
+            history_loc.append(current_loc)
+            history_tim.append(current_tim)
+            lon = []
+            lat = []
+            for poi in current_loc:
+                lon_cur = vid_lookup[poi][1]
+                lat_cur = vid_lookup[poi][0]
+                lon.append(lon_cur)
+                lat.append(lat_cur)
+            history_loc_central.append((np.mean(lat), np.mean(lon)))
+            continue
+        trace = []
+        target = current_loc[-1]
+        dilated_rnn_input_index = _create_dilated_rnn_input(current_loc[:-1])
+        history_avg_distance = _gen_distance_matrix(current_loc[:-1], history_loc_central)
+        trace.append(history_loc.copy())
+        trace.append(history_tim.copy())
+        trace.append(current_loc[:-1])
+        trace.append(current_tim[:-1])
+        trace.append(dilated_rnn_input_index)
+        trace.append(history_avg_distance)
+        trace.append(target)
+        trace.append(uid)
+        encoded_trajectories.append(trace)
+        history_loc.append(current_loc)
+        history_tim.append(current_tim)
+        # calculate current_loc
+        lon = []
+        lat = []
+        for poi in current_loc:
+            lon_cur, lat_cur = vid_lookup[poi][1], vid_lookup[poi][0]
+            lon.append(lon_cur)
+            lat.append(lat_cur)
+        history_loc_central.append((np.mean(lat), np.mean(lon)))
+    encoded_data[str(uid)] = encoded_trajectories
+
+sim_matrix = np.zeros((tim_max+1, tim_max+1))
+for i in range(tim_max+1):
+    sim_matrix[i][i] = 1
+    for j in range(i+1, tim_max+1):
+        set_i = time_checkin_set[i]
+        set_j = time_checkin_set[j]
+        if len(set_i | set_j) != 0:
+            jaccard_ij = len(set_i & set_j) / len(set_i | set_j)
+            sim_matrix[i][j] = jaccard_ij
+            sim_matrix[j][i] = jaccard_ij
+
+
+# with open('./lstpm_test_data.json', 'w') as f:
+#     json.dump({
+#         'encoded_data': encoded_data,
+#         'sim_matrix': sim_matrix
+#     }, f)
+
+
+config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', other_args={"history_type": 'cut_off', "gpu_id": 0,
+                                                                              "metrics": ["Recall", "NDCG"], "topk": 5})
+logger = get_logger(config)
 dataset = get_dataset(config)
-train_data, valid_data, test_data = dataset.get_data()
-data_feature = dataset.get_data_feature()
-batch = valid_data.__iter__().__next__()
+dataset.data = {
+    'encoded_data': encoded_data
+}
+dataset.pad_item = pad_item
+train_data, eval_data, test_data = dataset.divide_data()
+train_data, eval_data, test_data = generate_dataloader(train_data, eval_data, test_data,
+                                                       feature_dict, config['batch_size'],
+                                                       config['num_workers'], pad_item,
+                                                       {})
+
+data_feature = {
+    'loc_size': 9297,
+    'tim_size': tim_max + 2,
+    'uid_size': 934,
+    'loc_pad': 9296,
+    'tim_pad': tim_max + 1,
+    'tim_sim_matrix': sim_matrix.tolist()
+}
+
 model = get_model(config, data_feature)
-self = model.to(config['device'])
-batch.to_tensor(config['device'])
-# batch['current_loc'] = torch.load('current_loc.pt')
-# batch['current_tim'] = torch.load('current_tim.pt')
-# batch['history_loc'] = torch.load('history_loc.pt')
-# batch['history_tim'] = torch.load('history_tim.pt')
-# batch['uid'] = torch.load('uid.pt')
-# batch['target'] = torch.load('target.pt')
-# self.load_state_dict(torch.load('model_state.m'))
-logp_seq = self.forward(batch)
-# executor = get_executor(config, model)
-
-'''
-batch_size = batch['current_loc'].shape[0]
-pad_loc = torch.LongTensor([batch.pad_item['current_loc']] * batch_size).unsqueeze(1).to(self.device)
-pad_tim = torch.LongTensor([batch.pad_item['current_tim']] * batch_size).unsqueeze(1).to(self.device)
-expand_current_loc = torch.cat([batch['current_loc'], pad_loc], dim=1)
-expand_current_tim = torch.cat([batch['current_tim'], pad_tim], dim=1)
-origin_len = batch.get_origin_len('current_loc').copy()
-for i in range(batch_size):
-    origin_len[i] += 1
-    expand_current_loc[i][origin_len[i] - 1] = batch['target'][i]
-
-item_vectors = expand_current_loc
-sequence_size = item_vectors.size()[1]
-items = self.item_emb(item_vectors)
-item_vectors = item_vectors.tolist()
-x = items # batch_size * sequence * embedding
-x = x.transpose(0, 1)
-h1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
-c1 = torch.zeros(1, batch_size, self.hidden_size).to(self.device)
-out, (h1, c1) = self.lstmcell(x, (h1, c1))
-out = out.transpose(0, 1)#batch_size * sequence_length * embedding_dim
-x1 = items
-user_batch = np.array(batch['uid'].cpu())
-y_list = []
-out_hie = []
-ii = 0
-current_session_input_dilated_rnn_index = self._create_dilated_rnn_input(expand_current_loc[ii].tolist(), origin_len[ii])
-hiddens_current = x1[ii]
-dilated_lstm_outs_h = []
-dilated_lstm_outs_c = []
-for index_dilated in range(len(current_session_input_dilated_rnn_index)):
-    index_dilated_explicit = current_session_input_dilated_rnn_index[index_dilated]
-    hidden_current = hiddens_current[index_dilated].unsqueeze(0)
-    if index_dilated == 0:
-        h = torch.zeros(1, self.hidden_size).to(self.device)
-        c = torch.zeros(1, self.hidden_size).to(self.device)
-        (h, c) = self.dilated_rnn(hidden_current, (h, c))
-        dilated_lstm_outs_h.append(h)
-        dilated_lstm_outs_c.append(c)
-    else:
-        (h, c) = self.dilated_rnn(hidden_current, (dilated_lstm_outs_h[index_dilated_explicit], dilated_lstm_outs_c[index_dilated_explicit]))
-        dilated_lstm_outs_h.append(h)
-        dilated_lstm_outs_c.append(c)
-
-dilated_lstm_outs_h.append(hiddens_current[len(current_session_input_dilated_rnn_index):])
-dilated_out = torch.cat(dilated_lstm_outs_h, dim = 0).unsqueeze(0)
-out_hie.append(dilated_out)
-user_id_current = user_batch[ii]
-current_session_timid = expand_current_tim[ii].tolist()[:origin_len[ii]-1] # 不包含我 pad 的那个点
-current_session_poiid = item_vectors[ii][:len(current_session_timid)]
-current_session_embed = out[ii] # sequence_len * embedding_size
-sequence_length = origin_len[ii]
-current_session_represent_list = []
-for iii in range(sequence_length-1):
-    current_session_represent = torch.sum(current_session_embed * current_session_mask, dim=0).unsqueeze(0)/sum(current_session_mask)
-    current_session_represent_list.append(current_session_represent)
-
-current_session_represent = torch.cat(current_session_represent_list, dim = 0)
-list_for_sessions = []
-list_for_avg_distance = []
-h2 = torch.zeros(1, 1, self.hidden_size).to(self.device)###whole sequence
-c2 = torch.zeros(1, 1, self.hidden_size).to(self.device)
-for jj in range(len(batch['history_loc'][ii])):
-    sequence = batch['history_loc'][ii][jj]
-    sequence_emb = self.item_emb(sequence).unsqueeze(1) # sequence_len * 1 * embedding_size 
-    sequence = sequence.tolist()
-    sequence_emb, (h2, c2) = self.lstmcell_history(sequence_emb, (h2, c2))
-    sequence_tim_id = batch['history_tim'][ii][jj].tolist()
-    jaccard_sim_row = torch.FloatTensor(self.tim_sim_matrix[current_session_timid]).to(self.device) # 相当于自己做了一个 tim 的表征
-    jaccard_sim_expicit = jaccard_sim_row[:,sequence_tim_id]
-    # 使用 profile 计算局部距离矩阵
-    distance_matrix = []
-    for origin in current_session_poiid:
-        lon_cur, lat_cur = parseCoordinate(self.poi_profile.iloc[origin]['coordinates'])
-        distance_row = []
-        for target in sequence:
-            lon, lat = parseCoordinate(self.poi_profile.iloc[target]['coordinates'])
-            distance_row.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
-        distance_matrix.append(distance_row)
-    distance_row_expicit = torch.FloatTensor(distance_matrix).to(self.device)
-    # distance_row = self.poi_distance_matrix[current_session_poiid]
-    # distance_row_expicit = torch.FloatTensor(distance_row[:,sequence]).to(self.device)
-    distance_row_expicit_avg = torch.mean(distance_row_expicit, dim = 1)
-    jaccard_sim_expicit_last = F.softmax(jaccard_sim_expicit, dim = 1)
-    hidden_sequence_for_current1 = torch.mm(jaccard_sim_expicit_last, sequence_emb.squeeze(1))
-    hidden_sequence_for_current =  hidden_sequence_for_current1
-    list_for_sessions.append(hidden_sequence_for_current.unsqueeze(0))
-    list_for_avg_distance.append(distance_row_expicit_avg.unsqueeze(0))
-
-avg_distance = torch.cat(list_for_avg_distance, dim = 0).transpose(0,1)
-sessions_represent = torch.cat(list_for_sessions, dim=0).transpose(0,1) ##current_items * history_session_length * embedding_size
-current_session_represent = current_session_represent.unsqueeze(2) ### current_items * embedding_size * 1
-sims = F.softmax(sessions_represent.bmm(current_session_represent).squeeze(2), dim = 1).unsqueeze(1) ##==> current_items * 1 * history_session_length
-out_y_current =torch.selu(self.linear1(sims.bmm(sessions_represent).squeeze(1)))
-##############layer_2
-#layer_2_current = (lambda*out_y_current + (1-lambda)*current_session_embed[:sequence_length-1]).unsqueeze(2) #lambda from [0.1-0.9] better performance
-# layer_2_current = (out_y_current + current_session_embed[:sequence_length-1]).unsqueeze(2)##==>current_items * embedding_size * 1
-layer_2_current = (0.5 *out_y_current + 0.5 * current_session_embed[:sequence_length - 1]).unsqueeze(2)
-layer_2_sims =  F.softmax(sessions_represent.bmm(layer_2_current).squeeze(2) * 1.0/avg_distance, dim = 1).unsqueeze(1)##==>>current_items * 1 * history_session_length
-out_layer_2 = layer_2_sims.bmm(sessions_represent).squeeze(1)
-out_y_current_padd = torch.FloatTensor(sequence_size - sequence_length + 1, self.emb_size).zero_().to(self.device) # TODO: 感觉他这个是把 target 当成 current 的最后一个点了，有点问题
-out_layer_2_list = []
-out_layer_2_list.append(out_layer_2)
-out_layer_2_list.append(out_y_current_padd)
-out_layer_2 = torch.cat(out_layer_2_list,dim = 0).unsqueeze(0)
-y_list.append(out_layer_2)
-'''
+# batch = train_data.__iter__().__next__()
+# batch.to_tensor(config['device'])
+executor = get_executor(config, model)
+executor.train(train_data, eval_data)
+executor.evaluate(test_data)

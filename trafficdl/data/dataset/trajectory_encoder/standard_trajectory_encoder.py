@@ -23,6 +23,9 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
                              'current_loc': 'int', 'current_tim': 'int',
                              'target': 'int', 'target_tim': 'int', 'uid': 'int'
                              }
+        if config['evaluate_method'] == 'sample':
+            self.feature_dict['neg_loc'] = 'int'
+            parameter_list.append('neg_samples')
         self.feature_max_len = {
             'history_loc': self.config['history_len'],
             'history_tim': self.config['history_len']
@@ -39,7 +42,7 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
             self.feature_dict['history_loc'] = 'array of int'
             self.feature_dict['history_tim'] = 'array of int'
 
-    def encode(self, uid, trajectories):
+    def encode(self, uid, trajectories, negative_sample=None):
         """standard encoder use the same method as DeepMove
 
         Recode poi id. Encode timestamp with its hour.
@@ -96,6 +99,14 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
             trace.append(target)
             trace.append(target_tim)
             trace.append(uid)
+            if negative_sample is not None:
+                neg_loc = []
+                for neg in negative_sample[index]:
+                    if neg not in self.location2id:
+                        self.location2id[neg] = self.loc_id
+                        self.loc_id += 1
+                    neg_loc.append(self.location2id[neg])
+                trace.append(neg_loc)
             encoded_trajectories.append(trace)
             if self.history_type == 'splice':
                 history_loc += current_loc

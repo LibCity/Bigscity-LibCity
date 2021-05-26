@@ -7,7 +7,7 @@ from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder impor
 from trafficdl.utils import parse_time, parse_coordinate
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_type',
-                  'window_size', 'min_checkins', 'num_samples']
+                  'window_size', 'min_checkins', 'neg_samples']
 
 
 class AtstlstmEncoder(AbstractTrajectoryEncoder):

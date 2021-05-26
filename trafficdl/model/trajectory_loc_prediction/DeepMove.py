@@ -58,6 +58,7 @@ class DeepMove(AbstractModel):
         self.attn_type = config['attn_type']
         self.device = config['device']
         self.rnn_type = config['rnn_type']
+        self.evaluate_method = config['evaluate_method']
 
         self.emb_loc = nn.Embedding(
             self.loc_size, self.loc_emb_size,
@@ -163,7 +164,12 @@ class DeepMove(AbstractModel):
         return score
 
     def predict(self, batch):
-        return self.forward(batch)
+        score = self.forward(batch)
+        if self.evaluate_method == 'sample':
+            # build pos_neg_inedx
+            pos_neg_index = torch.cat((batch['target'].unsqueeze(1), batch['neg_loc']), dim=1)
+            score = torch.gather(score, 1, pos_neg_index)
+        return score
 
     def calculate_loss(self, batch):
         criterion = nn.NLLLoss().to(self.device)

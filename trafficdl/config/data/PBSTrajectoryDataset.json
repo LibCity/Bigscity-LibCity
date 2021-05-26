@@ -11,5 +11,6 @@
     "eval_rate": 0.2,
     "window_type": "time_window",
     "traj_encoder": "StandardTrajectoryEncoder",
-    "num_samples": 100
+    "neg_samples": 100,
+    "history_type": "splice"
 }
