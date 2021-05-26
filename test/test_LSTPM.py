@@ -70,7 +70,10 @@ def _gen_distance_matrix(current_loc, history_loc_central):
     now_loc = current_loc[-1]
     lon_cur, lat_cur = vid_lookup[now_loc][1], vid_lookup[now_loc][0]
     for central in history_loc_central:
-        history_avg_distance.append(geodistance(central[0], central[1], lat_cur, lon_cur))
+        dis = geodistance(central[0], central[1], lat_cur, lon_cur)
+        if dis < 1:
+            dis = 1
+        history_avg_distance.append(dis)
     return history_avg_distance
 
 
