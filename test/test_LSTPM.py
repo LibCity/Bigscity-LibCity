@@ -6,7 +6,7 @@ from geopy import distance
 import numpy as np
 import pickle
 from collections import defaultdict
-# from tqdm import tqdm
+from tqdm import tqdm
 import json
 f = open('./raw_data/foursquare_cut_one_day.pkl', 'rb')
 data = pickle.load(f)
@@ -63,7 +63,7 @@ def _gen_distance_matrix(current_loc, history_loc_central):
     return history_avg_distance
 
 
-# encoded_data = {}
+encoded_data = {}
 
 feature_dict = {'history_loc': 'array of int', 'history_tim': 'array of int',
                 'current_loc': 'int', 'current_tim': 'int', 'dilated_rnn_input_index': 'no_pad_int',
@@ -72,62 +72,77 @@ feature_dict = {'history_loc': 'array of int', 'history_tim': 'array of int',
 
 time_checkin_set = defaultdict(set)
 
-# for uid in tqdm(user_set, desc="encoding data"):
-#     history_loc = []
-#     history_tim = []
-#     history_loc_central = []
-#     encoded_trajectories = []
-#     sessions = data_neural[uid]['sessions']
-#     for session_id in sessions.keys():
-#         current_session = sessions[session_id]
-#         current_loc = []
-#         current_tim = []
-#         for p in current_session:
-#             current_loc.append(p[0])
-#             current_tim.append(p[1])
-#             if p[1] not in time_checkin_set:
-#                 time_checkin_set[p[1]] = set()
-#             time_checkin_set[p[1]].add(p[0])
-#         if session_id == 0:
-#             history_loc.append(current_loc)
-#             history_tim.append(current_tim)
-#             lon = []
-#             lat = []
-#             for poi in current_loc:
-#                 lon_cur = vid_lookup[poi][1]
-#                 lat_cur = vid_lookup[poi][0]
-#                 lon.append(lon_cur)
-#                 lat.append(lat_cur)
-#             history_loc_central.append((np.mean(lat), np.mean(lon)))
-#             continue
-#         trace = []
-#         target = current_loc[-1]
-#         dilated_rnn_input_index = _create_dilated_rnn_input(current_loc[:-1])
-#         history_avg_distance = _gen_distance_matrix(current_loc[:-1], history_loc_central)
-#         trace.append(history_loc.copy())
-#         trace.append(history_tim.copy())
-#         trace.append(current_loc[:-1])
-#         trace.append(current_tim[:-1])
-#         trace.append(dilated_rnn_input_index)
-#         trace.append(history_avg_distance)
-#         trace.append(target)
-#         trace.append(uid)
-#         encoded_trajectories.append(trace)
-#         history_loc.append(current_loc)
-#         history_tim.append(current_tim)
-#         # calculate current_loc
-#         lon = []
-#         lat = []
-#         for poi in current_loc:
-#             lon_cur, lat_cur = vid_lookup[poi][1], vid_lookup[poi][0]
-#             lon.append(lon_cur)
-#             lat.append(lat_cur)
-#         history_loc_central.append((np.mean(lat), np.mean(lon)))
-#     encoded_data[str(uid)] = encoded_trajectories
+for uid in tqdm(user_set, desc="encoding data"):
+    history_loc = []
+    history_tim = []
+    history_loc_central = []
+    encoded_trajectories = []
+    sessions = data_neural[uid]['sessions']
+    for session_id in sessions.keys():
+        current_session = sessions[session_id]
+        current_loc = []
+        current_tim = []
+        for p in current_session:
+            current_loc.append(p[0])
+            current_tim.append(p[1])
+            if p[1] not in time_checkin_set:
+                time_checkin_set[p[1]] = set()
+            time_checkin_set[p[1]].add(p[0])
+        if session_id == 0:
+            history_loc.append(current_loc)
+            history_tim.append(current_tim)
+            lon = []
+            lat = []
+            for poi in current_loc:
+                lon_cur = vid_lookup[poi][1]
+                lat_cur = vid_lookup[poi][0]
+                lon.append(lon_cur)
+                lat.append(lat_cur)
+            history_loc_central.append((np.mean(lat), np.mean(lon)))
+            continue
+        trace = []
+        target = current_loc[-1]
+        dilated_rnn_input_index = _create_dilated_rnn_input(current_loc[:-1])
+        history_avg_distance = _gen_distance_matrix(current_loc[:-1], history_loc_central)
+        trace.append(history_loc.copy())
+        trace.append(history_tim.copy())
+        trace.append(current_loc[:-1])
+        trace.append(current_tim[:-1])
+        trace.append(dilated_rnn_input_index)
+        trace.append(history_avg_distance)
+        trace.append(target)
+        trace.append(uid)
+        encoded_trajectories.append(trace)
+        history_loc.append(current_loc)
+        history_tim.append(current_tim)
+        # calculate current_loc
+        lon = []
+        lat = []
+        for poi in current_loc:
+            lon_cur, lat_cur = vid_lookup[poi][1], vid_lookup[poi][0]
+            lon.append(lon_cur)
+            lat.append(lat_cur)
+        history_loc_central.append((np.mean(lat), np.mean(lon)))
+    encoded_data[str(uid)] = encoded_trajectories
+
+sim_matrix = np.zeros((tim_max+1, tim_max+1))
+for i in range(tim_max+1):
+    sim_matrix[i][i] = 1
+    for j in range(i+1, tim_max+1):
+        set_i = time_checkin_set[i]
+        set_j = time_checkin_set[j]
+        if len(set_i | set_j) != 0:
+            jaccard_ij = len(set_i & set_j) / len(set_i | set_j)
+            sim_matrix[i][j] = jaccard_ij
+            sim_matrix[j][i] = jaccard_ij
 
 
-with open('./lstpm_test_data.json', 'r') as f:
-    encoded_data = json.load(f)
+with open('./lstpm_test_data.json', 'w') as f:
+    json.dump({
+        'encoded_data': encoded_data,
+        'sim_matrix': sim_matrix
+    }, f)
+
 
 config = ConfigParser('traj_loc_pred', 'LSTPM', 'foursquare_tky', other_args={"history_type": 'cut_off', "gpu_id": 2,
                                                                               "metrics": ["Recall", "NDCG"], "topk": 5})
@@ -143,16 +158,6 @@ train_data, eval_data, test_data = generate_dataloader(train_data, eval_data, te
                                                        config['num_workers'], pad_item,
                                                        {})
 
-sim_matrix = np.zeros((tim_max+1, tim_max+1))
-for i in range(tim_max+1):
-    sim_matrix[i][i] = 1
-    for j in range(i+1, tim_max+1):
-        set_i = time_checkin_set[i]
-        set_j = time_checkin_set[j]
-        if len(set_i | set_j) != 0:
-            jaccard_ij = len(set_i & set_j) / len(set_i | set_j)
-            sim_matrix[i][j] = jaccard_ij
-            sim_matrix[j][i] = jaccard_ij
 data_feature = {
     'loc_size': 9297,
     'tim_size': tim_max + 2,
