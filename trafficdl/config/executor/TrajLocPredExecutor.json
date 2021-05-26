@@ -12,5 +12,6 @@
     "load_best_epoch": true,
     "hyper_tune": false,
     "optimizer": "adam",
-    "early_stop_lr": 9e-6
+    "early_stop_lr": 9e-6,
+    "debug": false
 }

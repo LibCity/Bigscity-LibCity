@@ -107,7 +107,8 @@ class TrajLocPredExecutor(AbstractExecutor):
 
     def run(self, data_loader, model, lr, clip):
         model.train(True)
-        torch.autograd.set_detect_anomaly(True)
+        if self.config['debug']:
+            torch.autograd.set_detect_anomaly(True)
         total_loss = []
         loss_func = self.loss_func or model.calculate_loss
         for batch in tqdm(data_loader, desc="train model"):
@@ -115,7 +116,10 @@ class TrajLocPredExecutor(AbstractExecutor):
             self.optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
             loss = loss_func(batch)
-            with torch.autograd.detect_anomaly():
+            if self.config['debug']:
+                with torch.autograd.detect_anomaly():
+                    loss.backward()
+            else:
                 loss.backward()
             total_loss.append(loss.data.cpu().numpy().tolist())
             try:

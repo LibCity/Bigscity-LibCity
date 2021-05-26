@@ -1,13 +1,23 @@
 import os
 import pandas as pd
 import numpy as np
-from geopy import distance
+import math
 from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
 from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.utils.dataset import parse_coordinate
 from collections import defaultdict
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size', 'min_checkins']
+
+
+def geodistance(lat1, lng1, lat2, lng2):
+    lng1, lat1, lng2, lat2 = map(math.radians, [float(lng1), float(lat1), float(lng2), float(lat2)])
+    dlon = lng2-lng1
+    dlat = lat2-lat1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    distance = 2*math.asin(math.sqrt(a))*6371*1000
+    distance = round(distance/1000, 3)
+    return distance
 
 
 class LstpmEncoder(AbstractTrajectoryEncoder):
@@ -167,7 +177,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             for target in poi_before:
                 lon, lat = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
                                             == self.id2location[target]].iloc[0]['coordinates'])
-                distance_row_explicit.append(distance.distance((lat_cur, lon_cur), (lat, lon)).kilometers)
+                distance_row_explicit.append(geodistance(lat_cur, lon_cur, lat, lon))
             index_closet = np.argmin(distance_row_explicit).item()
             # reverse back
             session_dilated_rnn_input_index[sequence_length - i - 1] = sequence_length - 2 - index_closet - i
@@ -181,5 +191,8 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         lon_cur, lat_cur = parse_coordinate(self.poi_profile.loc[self.poi_profile['geo_id']
                                             == self.id2location[now_loc]].iloc[0]['coordinates'])
         for central in history_loc_central:
-            history_avg_distance.append(distance.distance(central, (lat_cur, lon_cur)).kilometers)
+            dis = geodistance(central[0], central[1], lat_cur, lon_cur)
+            if dis < 1:
+                dis = 1
+            history_avg_distance.append(dis)
         return history_avg_distance
