@@ -3,12 +3,12 @@ import json
 import pandas as pd
 import math
 import numpy as np
-
+from tqdm import tqdm
 from trafficdl.data.dataset import AbstractDataset
 from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
 from trafficdl.data.utils import generate_dataloader
 
-allow_dataset = ['foursquare_tky', 'foursquare_nyk']
+allow_dataset = ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']
 WORD_VEC_PATH = './raw_data/word_vec/glove.twitter.27B.50d.txt'
 parameters = ['dataset', 'min_session_len', 'min_sessions', 'time_window_size']
 
@@ -152,13 +152,12 @@ class SermTrajectoryDataset(AbstractDataset):
         useful_uid = 0  # 因为有些用户会被我们删除掉，所以需要对 uid 进行重新编号
         useful_loc = {}  # loc 同理
         loc_id = 0
-        for uid in user_set:
+        for uid in tqdm(user_set, desc='cut and filter'):
             usr_traj = traj[traj['entity_id'] == uid]
             sessions = []  # 存放该用户所有的 session
             session = []  # 单条轨迹
             # 这里还是使用当地时间吧
-            start_time = parse_time(usr_traj.iloc[0]['time'], int(
-                usr_traj.iloc[0]['timezone_offset_in_minutes']))
+            start_time = parse_time(usr_traj.iloc[0]['time'])
             base_time = cal_basetime(start_time, base_zero)
             for index, row in usr_traj.iterrows():
                 if index == 0:
@@ -166,7 +165,7 @@ class SermTrajectoryDataset(AbstractDataset):
                     # 处理第一个点的语义信息
                     useful_words_list = []
                     if self.config['dataset'] in ['foursquare_tky',
-                                                  'foursquare_nyk']:
+                                                  'foursquare_nyk', 'foursquare_serm']:
                         # TODO: 这种硬编码可能不太好
                         words = poi.iloc[row['location']
                                          ]['venue_category_name'].split(' ')
@@ -182,13 +181,12 @@ class SermTrajectoryDataset(AbstractDataset):
                     session.append([row['location'], time_code,
                                     useful_words_list])
                 else:
-                    now_time = parse_time(row['time'], int(
-                        row['timezone_offset_in_minutes']))
+                    now_time = parse_time(row['time'])
                     time_off = cal_timeoff(now_time, base_time)
                     # 处理语义
                     useful_words_list = []
                     if self.config['dataset'] in ['foursquare_tky',
-                                                  'foursquare_nyk']:
+                                                  'foursquare_nyk', 'foursquare_serm']:
                         # TODO: 这种硬编码可能不太好
                         words = poi.iloc[row['location']
                                          ]['venue_category_name'].split(' ')
@@ -271,7 +269,7 @@ class SermTrajectoryDataset(AbstractDataset):
         word_index = self.data['word_index']
         text_size = self.data['text_size']
         word_one_hot_matrix = np.eye(text_size)
-        for u in user_set:
+        for u in tqdm(user_set, desc='encoding'):
             sessions = self.data['data'][u]
             sessions_len = len(sessions)
             # 根据 sessions_len 来划分 train eval test
