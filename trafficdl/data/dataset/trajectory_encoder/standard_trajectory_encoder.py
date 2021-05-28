@@ -78,25 +78,27 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
                     history_loc.append(current_loc)
                     history_tim.append(current_tim)
                 continue
-            trace = []
-            target = current_loc[-1]
-            target_tim = current_tim[-1]
-            trace.append(history_loc.copy())
-            trace.append(history_tim.copy())
-            trace.append(current_loc[:-1])
-            trace.append(current_tim[:-1])
-            trace.append(target)
-            trace.append(target_tim)
-            trace.append(uid)
-            if negative_sample is not None:
-                neg_loc = []
-                for neg in negative_sample[index]:
-                    if neg not in self.location2id:
-                        self.location2id[neg] = self.loc_id
-                        self.loc_id += 1
-                    neg_loc.append(self.location2id[neg])
-                trace.append(neg_loc)
-            encoded_trajectories.append(trace)
+            # 一条轨迹可以产生多条训练数据，根据第一个点预测第二个点，前两个点预测第三个点....
+            for i in range(len(current_loc) - 1):
+                trace = []
+                target = current_loc[i+1]
+                target_tim = current_tim[i+1]
+                trace.append(history_loc.copy())
+                trace.append(history_tim.copy())
+                trace.append(current_loc[:i+1])
+                trace.append(current_tim[:i+1])
+                trace.append(target)
+                trace.append(target_tim)
+                trace.append(uid)
+                if negative_sample is not None:
+                    neg_loc = []
+                    for neg in negative_sample[index]:
+                        if neg not in self.location2id:
+                            self.location2id[neg] = self.loc_id
+                            self.loc_id += 1
+                        neg_loc.append(self.location2id[neg])
+                    trace.append(neg_loc)
+                encoded_trajectories.append(trace)
             if self.history_type == 'splice':
                 history_loc += current_loc
                 history_tim += current_tim

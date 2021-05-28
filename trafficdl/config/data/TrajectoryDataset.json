@@ -7,8 +7,8 @@
     "batch_size": 20,
     "num_workers": 0,
     "cache_dataset": true,
-    "train_rate": 0.6,
-    "eval_rate": 0.2,
+    "train_rate": 0.7,
+    "eval_rate": 0.1,
     "history_type": "splice",
     "cut_method": "time_interval",
     "traj_encoder": "StandardTrajectoryEncoder"
