@@ -116,11 +116,11 @@ class TrajectoryDataset(AbstractDataset):
                 usr_traj = traj[traj['entity_id'] == uid]
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
-                prev_time = None
                 for index, row in usr_traj.iterrows():
                     now_time = parse_time(row['time'])
                     if index == 0:
                         session.append(row.tolist())
+                        prev_time = now_time
                     else:
                         time_off = cal_timeoff(now_time, prev_time)
                         if time_off < window_size and time_off >= 0 and len(session) < max_session_len:
