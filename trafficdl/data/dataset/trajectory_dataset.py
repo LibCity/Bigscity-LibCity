@@ -7,10 +7,11 @@ import importlib
 from logging import getLogger
 
 from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
+from trafficdl.utils import parse_time, cal_timeoff
 from trafficdl.data.utils import generate_dataloader
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'window_type', 'window_size', 'min_checkins']
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', "max_session_len",
+                  'cut_method', 'window_size', 'min_checkins']
 
 
 class TrajectoryDataset(AbstractDataset):
@@ -105,52 +106,57 @@ class TrajectoryDataset(AbstractDataset):
         user_set = pd.unique(traj['entity_id'])
         res = {}
         min_session_len = self.config['min_session_len']
+        max_session_len = self.config['max_session_len']
         min_sessions = self.config['min_sessions']
         window_size = self.config['window_size']
-        window_type = self.config['window_type']
-        if window_type == 'time_window':
+        cut_method = self.config['cut_method']
+        if cut_method == 'time_interval':
             # 按照时间窗口进行切割
-            base_zero = window_size > 12
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
                 usr_traj = traj[traj['entity_id'] == uid]
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
-                # 这里还是使用当地时间吧
-                start_time = parse_time(usr_traj.iloc[0]['time'])
-                base_time = cal_basetime(start_time, base_zero)
+                prev_time = None
                 for index, row in usr_traj.iterrows():
+                    now_time = parse_time(row['time'])
                     if index == 0:
-                        assert start_time.hour - base_time.hour < window_size
                         session.append(row.tolist())
                     else:
-                        now_time = parse_time(row['time'])
-                        time_off = cal_timeoff(now_time, base_time)
-                        if time_off < window_size and time_off >= 0:
+                        time_off = cal_timeoff(now_time, prev_time)
+                        if time_off < window_size and time_off >= 0 and len(session) < max_session_len:
                             session.append(row.tolist())
                         else:
                             if len(session) >= min_session_len:
                                 sessions.append(session)
                             session = []
-                            start_time = now_time
-                            base_time = cal_basetime(start_time, base_zero)
                             session.append(row.tolist())
+                    prev_time = now_time
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
                     res[str(uid)] = sessions
         else:
-            # 按照轨迹长度进行划分
+            # 将同一天的 check-in 划为一条轨迹
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
                 usr_traj = traj[traj['entity_id'] == uid]
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
+                prev_date = None
                 for index, row in usr_traj.iterrows():
-                    if len(session) < window_size:
+                    now_time = parse_time(row['time'])
+                    now_date = now_time.day()
+                    if index == 0:
                         session.append(row.tolist())
                     else:
-                        sessions.append(session)
-                        session = []
-                        session.append(row.tolist())
+                        if prev_date == now_date and len(session) < max_session_len:
+                            # 还是同一天
+                            session.append(row.tolist())
+                        else:
+                            if len(session) >= min_session_len:
+                                sessions.append(session)
+                            session = []
+                            session.append(row.tolist())
+                    prev_date = now_date
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:

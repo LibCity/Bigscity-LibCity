@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import math
 from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
-from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
+from trafficdl.utils import parse_time
 from trafficdl.utils.dataset import parse_coordinate
 from collections import defaultdict
 
@@ -69,9 +69,6 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
         for index, traj in enumerate(trajectories):
             current_loc = []
             current_tim = []
-            start_time = parse_time(traj[0][2])
-            # 以当天凌晨的时间作为计算 time_off 的基准
-            base_time = cal_basetime(start_time, True)
             for point in traj:
                 loc = point[4]
                 now_time = parse_time(point[2])
@@ -80,9 +77,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                     self.id2location[self.loc_id] = loc
                     self.loc_id += 1
                 current_loc.append(self.location2id[loc])
-                time_code = int(cal_timeoff(now_time, base_time))
-                if now_time.weekday() in [5, 6]:
-                    time_code += 24
+                time_code = self._time_encode(now_time)
                 current_tim.append(time_code)
                 if time_code not in self.time_checkin_set:
                     self.time_checkin_set[time_code] = set()
@@ -196,3 +191,9 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                 dis = 1
             history_avg_distance.append(dis)
         return history_avg_distance
+
+    def _time_encode(self, time):
+        if time.weekday() in [0, 1, 2, 3, 4]:
+            return time.hour
+        else:
+            return time.hour + 24

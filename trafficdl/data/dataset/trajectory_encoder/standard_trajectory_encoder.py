@@ -1,9 +1,9 @@
 import os
 
 from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
-from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
+from trafficdl.utils import parse_time
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_type',
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'cut_method',
                   'window_size', 'history_type', 'min_checkins']
 
 
@@ -14,10 +14,7 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         self.uid = 0
         self.location2id = {}  # 因为原始数据集中的部分 loc id 不会被使用到因此这里需要重新编码一下
         self.loc_id = 0
-        self.tim_max = 0  # 记录最大的时间编码
-        if self.config['window_type'] == 'time_window':
-            # 对于以时间窗口切割的轨迹，最大时间编码是已知的
-            self.tim_max = self.config['window_size'] - 1
+        self.tim_max = 47  # 时间编码方式得改变
         self.history_type = self.config['history_type']
         self.feature_dict = {'history_loc': 'int', 'history_tim': 'int',
                              'current_loc': 'int', 'current_tim': 'int',
@@ -26,10 +23,6 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         if config['evaluate_method'] == 'sample':
             self.feature_dict['neg_loc'] = 'int'
             parameter_list.append('neg_samples')
-        self.feature_max_len = {
-            'history_loc': self.config['history_len'],
-            'history_tim': self.config['history_len']
-        }
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
@@ -65,9 +58,6 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
         for index, traj in enumerate(trajectories):
             current_loc = []
             current_tim = []
-            start_time = parse_time(traj[0][2])
-            # 以当天凌晨的时间作为计算 time_off 的基准
-            base_time = cal_basetime(start_time, True)
             for point in traj:
                 loc = point[4]
                 now_time = parse_time(point[2])
@@ -75,9 +65,8 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
                     self.location2id[loc] = self.loc_id
                     self.loc_id += 1
                 current_loc.append(self.location2id[loc])
-                time_code = int(cal_timeoff(now_time, base_time))
-                if time_code > self.tim_max:
-                    self.tim_max = time_code
+                # 采用工作日编码到0-23，休息日编码到24-47
+                time_code = self._time_encode(now_time)
                 current_tim.append(time_code)
             # 完成当前轨迹的编码，下面进行输入的形成
             if index == 0:
@@ -139,3 +128,9 @@ class StandardTrajectoryEncoder(AbstractTrajectoryEncoder):
             'loc_pad': loc_pad,
             'tim_pad': tim_pad
         }
+
+    def _time_encode(self, time):
+        if time.weekday() in [0, 1, 2, 3, 4]:
+            return time.hour
+        else:
+            return time.hour + 24
