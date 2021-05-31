@@ -80,7 +80,7 @@ class SERM(AbstractModel):
         tim = batch['current_tim']
         user = batch['uid']
         text = batch['text']
-        max_len = batch['current_loc'].shape[0]
+        max_len = batch['current_loc'].shape[1]
         text_pad = np.zeros((self.text_size))
         # text 现在是 word index 的形式，还需要进行 one_hot encoding
         one_hot_text = []
@@ -95,6 +95,7 @@ class SERM(AbstractModel):
             # pad
             one_hot_text_a_slice += [text_pad] * (max_len - len(one_hot_text_a_slice))
             one_hot_text.append(np.array(one_hot_text_a_slice))  # batch_size * seq_len * text_size
+
         one_hot_text = torch.FloatTensor(one_hot_text).to(self.device)
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
