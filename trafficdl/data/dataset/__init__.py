@@ -23,6 +23,7 @@ from trafficdl.data.dataset.pbs_trajectory_dataset import PBSTrajectoryDataset
 from trafficdl.data.dataset.stdn_dataset import STDNDataset
 from trafficdl.data.dataset.hgcn_dataset import HGCNDataset
 from trafficdl.data.dataset.convgcn_dataset import CONVGCNDataset
+from trafficdl.data.dataset.reslstm_dataset import RESLSTMDataset
 
 __all__ = [
     "AbstractDataset",
@@ -44,5 +45,6 @@ __all__ = [
     "STDNDataset",
     "HGCNDataset",
     "STAGGCNDataset",
-    'CONVGCNDataset'
+    'CONVGCNDataset',
+    "RESLSTMDataset"
 ]
