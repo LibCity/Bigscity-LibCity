@@ -16,6 +16,5 @@
   "TG_in_one_day": 72,
   "TG_in_one_week": 360,
   "time_lag": 6,
-  "input_window": 5,
   "output_window": 1
 }

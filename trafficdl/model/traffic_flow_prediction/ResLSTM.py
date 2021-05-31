@@ -93,7 +93,7 @@ class ResLSTM(AbstractTrafficStateModel):
         self.output_dim = self.data_feature.get('output_dim', 2)
         self.ext_dim = self.data_feature.get('ext_dim', 11)
         self.batch_size = config.get('batch_size', 64)
-        self.input_window = config.get('input_window', 5)
+        self.time_lag = config.get('time_lag', 6)
         self.output_window = config.get('output_window', 1)
         self._logger = getLogger()
         self.device = config.get('device', torch.device('cpu'))
@@ -102,7 +102,7 @@ class ResLSTM(AbstractTrafficStateModel):
         self.conv_block2 = ConvBlock(3, self.num_nodes)
         self.conv_block3 = ConvBlock(1, self.num_nodes)
         if self.ext_dim > 0:
-            self.fc1 = nn.Linear(self.ext_dim * self.input_window, self.num_nodes)
+            self.fc1 = nn.Linear(self.ext_dim * (self.time_lag - 1), self.num_nodes)
             self.lstm1 = nn.LSTM(input_size=1, hidden_size=128, num_layers=2)
             self.lstm2 = nn.LSTM(input_size=128, hidden_size=1, num_layers=2)
             self.fc2 = nn.Linear(self.num_nodes, self.num_nodes)
@@ -122,12 +122,12 @@ class ResLSTM(AbstractTrafficStateModel):
 
     def forward(self, batch):
         input1_ = batch["X"][:, :, :, 0].permute(0, 2, 1)
-        input1_ = input1_.reshape(input1_.shape[0], self.num_nodes, self.input_window, -1)
+        input1_ = input1_.reshape(input1_.shape[0], self.num_nodes, self.time_lag - 1, -1)
         input1_ = input1_.permute(0, 3, 1, 2)
         input2_ = batch["X"][:, :, :, 1].permute(0, 2, 1)
-        input2_ = input2_.reshape(input2_.shape[0], self.num_nodes, self.input_window, -1)
+        input2_ = input2_.reshape(input2_.shape[0], self.num_nodes, self.time_lag - 1, -1)
         input2_ = input2_.permute(0, 3, 1, 2)
-        input3_ = batch["X"][:, -self.input_window:, :, 0].permute(0, 2, 1)
+        input3_ = batch["X"][:, -self.time_lag+1:, :, 0].permute(0, 2, 1)
         input3_ = torch.tensor(self.adj_mx, device=self.device, dtype=torch.float32).matmul(input3_)
         input3_ = input3_.unsqueeze(1)
 
@@ -137,7 +137,7 @@ class ResLSTM(AbstractTrafficStateModel):
 
         out = p1 + p2 + p3  # (64, 276)
         if self.ext_dim > 0:
-            input4_ = batch["X"][:, -self.input_window:, 0, -self.ext_dim:].permute(0, 2, 1)
+            input4_ = batch["X"][:, -self.time_lag + 1:, 0, -self.ext_dim:].permute(0, 2, 1)
             p4 = self.fourth_pro(input4_)
             out += p4
 
