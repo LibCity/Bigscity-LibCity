@@ -42,7 +42,7 @@ class SERM(AbstractModel):
         self.text_emb_size = len(data_feature['word_vec'][0])  # 这个受限于 word_vec 的长度
         self.hidden_size = config['hidden_size']
         self.word_one_hot_matrix = np.eye(self.text_size)
-
+        self.device = config['device']
         # Embedding layer
         self.emb_loc = nn.Embedding(num_embeddings=self.loc_size, embedding_dim=self.loc_emb_size,
                                     padding_idx=data_feature['loc_pad'])
@@ -95,7 +95,7 @@ class SERM(AbstractModel):
             # pad
             one_hot_text_a_slice += [text_pad] * (max_len - len(one_hot_text_a_slice))
             one_hot_text.append(np.array(one_hot_text_a_slice))  # batch_size * seq_len * text_size
-        one_hot_text = torch.FloatTensor(one_hot_text)
+        one_hot_text = torch.FloatTensor(one_hot_text).to(self.device)
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
         user_emb = self.emb_user(user)
