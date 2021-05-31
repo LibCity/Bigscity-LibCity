@@ -96,27 +96,29 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                     lat.append(lat_cur)
                 history_loc_central.append((np.mean(lat), np.mean(lon)))
                 continue
-            trace = []
-            target = current_loc[-1]
-            dilated_rnn_input_index = self._create_dilated_rnn_input(current_loc[:-1])
-            history_avg_distance = self._gen_distance_matrix(current_loc[:-1], history_loc_central)
-            trace.append(history_loc.copy())
-            trace.append(history_tim.copy())
-            trace.append(current_loc[:-1])
-            trace.append(current_tim[:-1])
-            trace.append(dilated_rnn_input_index)
-            trace.append(history_avg_distance)
-            trace.append(target)
-            trace.append(uid)
-            if negative_sample is not None:
-                neg_loc = []
-                for neg in negative_sample[index]:
-                    if neg not in self.location2id:
-                        self.location2id[neg] = self.loc_id
-                        self.loc_id += 1
-                    neg_loc.append(self.location2id[neg])
-                trace.append(neg_loc)
-            encoded_trajectories.append(trace)
+            # 一条轨迹可以生成多个数据点
+            for i in range(len(current_loc) - 1):
+                trace = []
+                target = current_loc[i+1]
+                dilated_rnn_input_index = self._create_dilated_rnn_input(current_loc[:i+1])
+                history_avg_distance = self._gen_distance_matrix(current_loc[:i+1], history_loc_central)
+                trace.append(history_loc.copy())
+                trace.append(history_tim.copy())
+                trace.append(current_loc[:i+1])
+                trace.append(current_tim[:i+1])
+                trace.append(dilated_rnn_input_index)
+                trace.append(history_avg_distance)
+                trace.append(target)
+                trace.append(uid)
+                if negative_sample is not None:
+                    neg_loc = []
+                    for neg in negative_sample[index]:
+                        if neg not in self.location2id:
+                            self.location2id[neg] = self.loc_id
+                            self.loc_id += 1
+                        neg_loc.append(self.location2id[neg])
+                    trace.append(neg_loc)
+                encoded_trajectories.append(trace)
             history_loc.append(current_loc)
             history_tim.append(current_tim)
             # calculate current_loc

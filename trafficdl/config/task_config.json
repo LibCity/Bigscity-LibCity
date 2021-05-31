@@ -45,10 +45,10 @@
             "traj_encoder": "StandardTrajectoryEncoder"
         },
         "SERM": {
-            "dataset_class": "SermTrajectoryDataset",
+            "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
             "evaluator": "TrajLocPredEvaluator",
-            "traj_encoder": "StandardTrajectoryEncoder"
+            "traj_encoder": "SermEncoder"
         },
         "ATSTLSTM": {
             "dataset_class": "PBSTrajectoryDataset",
