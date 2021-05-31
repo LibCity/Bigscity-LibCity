@@ -1,0 +1,20 @@
+{
+  "batch_size": 64,
+  "cache_dataset": true,
+  "num_workers": 0,
+  "pad_with_last_sample": false,
+  "train_rate": 0.7,
+  "eval_rate": 0.1,
+  "scaler": "minmax01",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "output_dim": 1,
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "TG": 15,
+  "TG_in_one_day": 72,
+  "TG_in_one_week": 360,
+  "time_lag": 6,
+  "output_window": 1
+}
