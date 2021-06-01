@@ -7,5 +7,6 @@
     "L2": 0,
     "learning_rate": 0.01,
     "max_epoch": 30,
-    "window_size": 10
+    "window_size": 10,
+    "max_session_len": 80
 }

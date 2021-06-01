@@ -7,7 +7,8 @@ from trafficdl.utils import parse_time
 from trafficdl.utils.dataset import parse_coordinate
 from collections import defaultdict
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size', 'min_checkins']
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size', 'min_checkins',
+                  'max_session_len']
 
 
 def geodistance(lat1, lng1, lat2, lng2):
