@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 from trafficdl.model.abstract_model import AbstractModel
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
@@ -40,7 +41,8 @@ class SERM(AbstractModel):
         self.text_size = data_feature['text_size']
         self.text_emb_size = len(data_feature['word_vec'][0])  # 这个受限于 word_vec 的长度
         self.hidden_size = config['hidden_size']
-
+        self.word_one_hot_matrix = np.eye(self.text_size)
+        self.device = config['device']
         # Embedding layer
         self.emb_loc = nn.Embedding(num_embeddings=self.loc_size, embedding_dim=self.loc_emb_size,
                                     padding_idx=data_feature['loc_pad'])
@@ -78,11 +80,27 @@ class SERM(AbstractModel):
         tim = batch['current_tim']
         user = batch['uid']
         text = batch['text']
+        max_len = batch['current_loc'].shape[1]
+        text_pad = np.zeros((self.text_size))
+        # text 现在是 word index 的形式，还需要进行 one_hot encoding
+        one_hot_text = []
+        for word_index in text:
+            one_hot_text_a_slice = []
+            for words in word_index:
+                if len(words) == 0:
+                    one_hot_text_a_slice.append(np.zeros((self.text_size)))
+                else:
+                    one_hot_text_a_slice.append(np.sum(self.word_one_hot_matrix[words], axis=0) /
+                                                len(words))
+            # pad
+            one_hot_text_a_slice += [text_pad] * (max_len - len(one_hot_text_a_slice))
+            one_hot_text.append(np.array(one_hot_text_a_slice))  # batch_size * seq_len * text_size
 
+        one_hot_text = torch.FloatTensor(one_hot_text).to(self.device)
         loc_emb = self.emb_loc(loc)
         tim_emb = self.emb_tim(tim)
         user_emb = self.emb_user(user)
-        text_emb = self.emb_text(text)
+        text_emb = self.emb_text(one_hot_text)
 
         # change batch*seq*emb_size to seq*batch*emb_size
         x = torch.cat([loc_emb, tim_emb, text_emb], dim=2).permute(1, 0, 2)

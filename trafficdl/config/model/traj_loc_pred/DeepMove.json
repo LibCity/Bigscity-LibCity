@@ -5,8 +5,11 @@
     "hidden_size": 500,
     "attn_type": "dot",
     "rnn_type": "LSTM",
-    "dropout_p": 0.3,
-    "learning_rate": 0.005,
-    "max_epoch": 12,
-    "optimizer": "adam"
+    "dropout_p": 0.5,
+    "learning_rate": 0.001,
+    "lr_step": 3,
+    "max_epoch": 30,
+    "optimizer": "adam",
+    "window_size": 72,
+    "max_session_len": 10
 }

@@ -2,11 +2,14 @@ import os
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
 from trafficdl.utils import get_executor, get_model
+# import pandas as pd
+
+# raw_data = pd.read_csv('./raw_data/serm_foursquare.txt', sep='', header=None)
 
 model_name = 'SERM'
 dataset_name = 'foursquare_tky'
 
-config = ConfigParser('traj_loc_pred', 'SERM', 'foursquare_tky', None, None)
+config = ConfigParser('traj_loc_pred', 'SERM', 'foursquare_serm', None, None)
 dataset = get_dataset(config)
 train_data, valid_data, test_data = dataset.get_data()
 data_feature = dataset.get_data_feature()
