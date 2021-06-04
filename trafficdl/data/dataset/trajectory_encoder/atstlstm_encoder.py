@@ -6,11 +6,12 @@ from geopy import distance
 from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
 from trafficdl.utils import parse_time, parse_coordinate
 
-parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_type',
+parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'cut_method',
                   'window_size', 'min_checkins', 'neg_samples']
 
 
 class AtstlstmEncoder(AbstractTrajectoryEncoder):
+    # 这里有问题，需要重新修改
 
     def __init__(self, config):
         super().__init__(config)
@@ -18,7 +19,7 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
         self.location2id = {}  # 因为原始数据集中的部分 loc id 不会被使用到因此这里需要重新编码一下
         self.loc_id = 0
         self.tim_max = 0  # 记录最大的时间编码
-        if self.config['window_type'] == 'time_window':
+        if self.config['cut_method'] == 'time_interval':
             # 对于以时间窗口切割的轨迹，最大时间编码是已知的
             self.tim_max = self.config['window_size'] - 1
         self.feature_dict = {'current_loc': 'int', 'loc_neg': 'int',
