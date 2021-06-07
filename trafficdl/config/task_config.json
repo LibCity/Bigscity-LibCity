@@ -1,6 +1,6 @@
 {
     "traj_loc_pred": {
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "STAN"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla", "foursquare_serm"],
         "DeepMove": {
             "dataset_class": "TrajectoryDataset",
@@ -49,6 +49,12 @@
             "executor": "TrajLocPredExecutor",
             "evaluator": "TrajLocPredEvaluator",
             "traj_encoder": "SermEncoder"
+        },
+        "STAN": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "StanEncoder"
         },
         "ATSTLSTM": {
             "dataset_class": "PBSTrajectoryDataset",
