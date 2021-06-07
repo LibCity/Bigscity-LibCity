@@ -65,7 +65,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
         encoded_trajectories = []
         for index, traj in enumerate(trajectories):
             # 切割会保证 len(traj) < self.session_max_len
-            current_traj = np.zeros((self.max_len + 1, 3), int)
+            current_traj = np.zeros((self.max_len + 1, 3), np.int32)
             current_tim = []
             for i, point in enumerate(traj):
                 loc = point[4]
@@ -89,10 +89,10 @@ class StanEncoder(AbstractTrajectoryEncoder):
                 trace = []
                 target = current_traj[i+1][1]
                 # mask current_traj and traj_temporal_mat
-                mask = np.zeros((self.max_len, 3), int)
+                mask = np.zeros((self.max_len, 3), np.int32)
                 mask[:i+1, :] = 1
                 mask_traj = current_traj[:-1] * mask
-                mask = np.zeros((self.max_len, self.max_len), int)
+                mask = np.zeros((self.max_len, self.max_len), np.int32)
                 mask[:i+1, :i+1] = 1
                 mask_traj_temporal_mat = traj_temporal_mat * mask
                 trace.append(mask_traj.tolist())
