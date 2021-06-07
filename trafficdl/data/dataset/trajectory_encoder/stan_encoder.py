@@ -116,7 +116,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
 
     def _cal_mat1(self, current_tim):
         # calculate the temporal relation matrix
-        mat = np.zeros((self.max_len, self.max_len), int)
+        mat = np.zeros((self.max_len, self.max_len), np.int32)
         cur_len = len(current_tim)
         for i in range(cur_len):
             for j in range(cur_len):
@@ -128,7 +128,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
 
     def _cal_mat2(self, current_tim):
         # calculate the temporal relation matrix
-        mat = np.zeros((self.max_len, self.max_len), int)
+        mat = np.zeros((self.max_len, self.max_len), np.int32)
         cur_len = len(current_tim)
         for i in range(cur_len):
             if i == 0:
