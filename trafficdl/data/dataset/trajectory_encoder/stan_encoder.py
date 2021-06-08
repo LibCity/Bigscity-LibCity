@@ -87,7 +87,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
             # 一条轨迹可以产生多条训练数据，根据第一个点预测第二个点，前两个点预测第三个点....
             for i in range(len(traj) - 1):
                 trace = []
-                target = current_traj[i+1][1]
+                target = int(current_traj[i+1][1])
                 # mask current_traj and traj_temporal_mat
                 mask = np.zeros((self.max_len, 3), np.int32)
                 mask[:i+1, :] = 1
