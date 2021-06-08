@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from torch import nn
 import torch.nn.functional as F
+import random
 
 
 class Attn(nn.Module):
@@ -153,12 +154,12 @@ class STAN(AbstractModel):
         u_dim = data_feature['uid_size']
         self.max_len = config['max_session_len'] - 1
         ex = data_feature['ex']
-        self.mat2s = data_feature['spatial_matrix']
         embed_dim = config['embed_dim']
         self.batch_size = config['batch_size']
         self.device = config['device']
         self.num_neg = config['num_neg']
         self.seed = 0
+        self.mat2s = torch.tensor(data_feature['spatial_matrix']).to(self.device)
 
         emb_t = nn.Embedding(t_dim, embed_dim, padding_idx=0)
         emb_l = nn.Embedding(l_dim, embed_dim, padding_idx=0)
@@ -226,7 +227,7 @@ class STAN(AbstractModel):
                 torch.index_select(traj_loc_dis, 1, (traj_loc[i]-1)[:traj_len[i]])
         mat1 = torch.cat((traj_spatial_mat.unsqueeze(3), traj_temporal_mat.unsqueeze(3)), 3)
         score = self.forward(batch['traj'], mat1, batch['candiate_temporal_vec'], batch['traj_len'])
-        score_sample, label_sample = self._sampling_prob(score, batch['target'].tolist())
+        score_sample, label_sample = self._sampling_prob(score, batch['target'])
         loss = F.cross_entropy(score_sample, label_sample)
         return loss
 
@@ -235,14 +236,11 @@ class STAN(AbstractModel):
         label = label.view(-1)  # label (N)
         init_label = np.linspace(0, num_label-1, num_label)  # (N), [0 -- num_label-1]
         init_prob = torch.zeros(size=(num_label, self.num_neg+len(label)))  # (N, num_neg+num_label)
-
-        random_ig = np.random.sample(range(1, l_m+1), self.num_neg)  # (num_neg) from (1 -- l_max)
+        random_ig = random.sample(range(1, l_m+1), self.num_neg)  # (num_neg) from (1 -- l_max)
         while len([lab for lab in label if lab in random_ig]) != 0:  # no intersection
-            random_ig = np.random.sample(range(1, l_m+1), self.num_neg)
-
-        np.random.seed(self.seed)
+            random_ig = random.sample(range(1, l_m+1), self.num_neg)
+        random.seed(self.seed)
         self.seed += 1
-
         # place the pos labels ahead and neg samples in the end
         for k in range(num_label):
             for i in range(self.num_neg + len(label)):
@@ -250,5 +248,4 @@ class STAN(AbstractModel):
                     init_prob[k, i] = score[k, label[i]]
                 else:
                     init_prob[k, i] = score[k, random_ig[i-len(label)]]
-
         return torch.FloatTensor(init_prob), torch.LongTensor(init_label)  # (N, num_neg+num_label), (N)

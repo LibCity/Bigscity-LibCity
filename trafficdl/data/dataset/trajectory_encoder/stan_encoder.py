@@ -34,8 +34,8 @@ class StanEncoder(AbstractTrajectoryEncoder):
         self.id2location = {}
         self.ex = [0, 0, 0, 0]  # 距离最大值 最小值（0） 时间差最大值 最小值（0）
         self.loc_id = 1  # 0 for padding
-        self.feature_dict = {'traj': 'int', 'traj_temporal_mat': 'int',
-                             'candiate_temporal_vec': 'int', 'traj_len': 'int',
+        self.feature_dict = {'traj': 'int', 'traj_temporal_mat': 'float',
+                             'candiate_temporal_vec': 'float', 'traj_len': 'int',
                              'target': 'int', 'uid': 'int'}
         self.max_len = self.config['max_session_len'] - 1  # 最后一个点需要留作 target
         parameters_str = ''
@@ -92,7 +92,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
                 mask = np.zeros((self.max_len, 3), np.int32)
                 mask[:i+1, :] = 1
                 mask_traj = current_traj[:-1] * mask
-                mask = np.zeros((self.max_len, self.max_len), np.int32)
+                mask = np.zeros((self.max_len, self.max_len))
                 mask[:i+1, :i+1] = 1
                 mask_traj_temporal_mat = traj_temporal_mat * mask
                 trace.append(mask_traj.tolist())
@@ -116,11 +116,11 @@ class StanEncoder(AbstractTrajectoryEncoder):
 
     def _cal_mat1(self, current_tim):
         # calculate the temporal relation matrix
-        mat = np.zeros((self.max_len, self.max_len), np.int32)
+        mat = np.zeros((self.max_len, self.max_len))
         cur_len = len(current_tim)
         for i in range(cur_len):
             for j in range(cur_len):
-                off = int(abs(cal_timeoff(current_tim[i], current_tim[j])))
+                off = abs(cal_timeoff(current_tim[i], current_tim[j]))
                 mat[i][j] = off
                 if off > self.ex[3]:
                     self.ex[3] = off
@@ -128,13 +128,13 @@ class StanEncoder(AbstractTrajectoryEncoder):
 
     def _cal_mat2(self, current_tim):
         # calculate the temporal relation matrix
-        mat = np.zeros((self.max_len, self.max_len), np.int32)
+        mat = np.zeros((self.max_len, self.max_len))
         cur_len = len(current_tim)
         for i in range(cur_len):
             if i == 0:
                 continue
             for j in range(i):
-                off = int(abs(cal_timeoff(current_tim[i], current_tim[j])))
+                off = abs(cal_timeoff(current_tim[i], current_tim[j]))
                 mat[i-1][j] = off
                 if off > self.ex[3]:
                     self.ex[3] = off

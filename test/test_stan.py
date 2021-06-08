@@ -1,7 +1,7 @@
 # import os
 from trafficdl.config import ConfigParser
 from trafficdl.data import get_dataset
-# from trafficdl.utils import get_executor, get_model
+from trafficdl.utils import get_model
 # import pandas as pd
 
 
@@ -11,6 +11,8 @@ config = ConfigParser('traj_loc_pred', 'STAN', 'foursquare_nyc', other_args={'mi
                                                                              'max_session_len': 50})
 dataset = get_dataset(config)
 train_data, valid_data, test_data = dataset.get_data()
-# data_feature = dataset.get_data_feature()
-# batch = valid_data.__iter__().__next__()
-# batch.to_tensor(config['device'])
+data_feature = dataset.get_data_feature()
+batch = valid_data.__iter__().__next__()
+batch.to_tensor(config['device'])
+model = get_model(config, data_feature)
+model = model.to(config['device'])
