@@ -99,7 +99,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
                 trace.append(mask_traj_temporal_mat.tolist())
                 trace.append(candiate_temporal_mat[i].tolist())
                 trace.append(i+1)
-                trace.append(target)
+                trace.append(target-1)  # 因为模型预测是从 0 开始预测，而我们的 encode 是从 1 开始
                 trace.append(uid)
                 encoded_trajectories.append(trace)
         return encoded_trajectories

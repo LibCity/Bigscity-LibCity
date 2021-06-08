@@ -100,7 +100,7 @@ class TrajectoryDataset(AbstractDataset):
             self.data_path, '{}.dyna'.format(self.config['dataset'])))
         # filter inactive poi
         group_location = traj.groupby('location').count()
-        filter_location = group_location[group_location['time'] > self.config['min_checkins']]
+        filter_location = group_location[group_location['time'] >= self.config['min_checkins']]
         location_index = filter_location.index.tolist()
         traj = traj[traj['location'].isin(location_index)]
         user_set = pd.unique(traj['entity_id'])

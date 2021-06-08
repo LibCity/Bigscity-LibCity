@@ -5,8 +5,8 @@ from trafficdl.utils import get_model
 # import pandas as pd
 
 
-config = ConfigParser('traj_loc_pred', 'STAN', 'foursquare_nyc', other_args={'min_checkins': 5, 'min_sessions': 3,
-                                                                             'min_session_len': 5,
+config = ConfigParser('traj_loc_pred', 'STAN', 'foursquare_nyc', other_args={'min_checkins': 3, 'min_sessions': 3,
+                                                                             'min_session_len': 4,
                                                                              'cut_method': 'same_date',
                                                                              'max_session_len': 50})
 dataset = get_dataset(config)
