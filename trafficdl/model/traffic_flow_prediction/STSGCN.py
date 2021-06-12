@@ -4,6 +4,7 @@ from torch.nn.init import xavier_uniform
 from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import numpy as np
 from logging import getLogger
+from trafficdl.model import loss
 
 
 # 时空嵌入矩阵，真正的时空特征的嵌入表示
@@ -369,7 +370,7 @@ class STSGCN(AbstractTrafficStateModel):
         # print('y_predicted', y_predicted.shape)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        return self.loss(y_predicted, y_true)
+        return loss.huber_loss(y_predicted, y_true)
 
     def predict(self, batch):
         return self.forward(batch)
