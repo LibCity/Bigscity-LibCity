@@ -1,6 +1,6 @@
 {
     "min_session_len": 5,
-    "max_session_len": 30,
+    "max_session_len": 50,
     "min_sessions": 2,
     "min_checkins": 3,
     "window_size": 12,

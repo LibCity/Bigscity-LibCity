@@ -1,0 +1,11 @@
+{
+    "cut_method": "length_window",
+    "window_size": "100",
+    "batch_size": 1,
+    "max_session_len": "101",
+    "embed_dim": 50,
+    "num_neg": 10,
+    "learning_rate": 3e-3,
+    "max_epoch": 100,
+    "lr_step": 5
+}

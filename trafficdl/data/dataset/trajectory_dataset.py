@@ -100,7 +100,7 @@ class TrajectoryDataset(AbstractDataset):
             self.data_path, '{}.dyna'.format(self.config['dataset'])))
         # filter inactive poi
         group_location = traj.groupby('location').count()
-        filter_location = group_location[group_location['time'] > self.config['min_checkins']]
+        filter_location = group_location[group_location['time'] >= self.config['min_checkins']]
         location_index = filter_location.index.tolist()
         traj = traj[traj['location'].isin(location_index)]
         user_set = pd.unique(traj['entity_id'])
@@ -135,7 +135,7 @@ class TrajectoryDataset(AbstractDataset):
                     sessions.append(session)
                 if len(sessions) >= min_sessions:
                     res[str(uid)] = sessions
-        else:
+        elif cut_method == 'same_date':
             # 将同一天的 check-in 划为一条轨迹
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
                 usr_traj = traj[traj['entity_id'] == uid]
@@ -144,7 +144,7 @@ class TrajectoryDataset(AbstractDataset):
                 prev_date = None
                 for index, row in usr_traj.iterrows():
                     now_time = parse_time(row['time'])
-                    now_date = now_time.day()
+                    now_date = now_time.day
                     if index == 0:
                         session.append(row.tolist())
                     else:
@@ -157,6 +157,25 @@ class TrajectoryDataset(AbstractDataset):
                             session = []
                             session.append(row.tolist())
                     prev_date = now_date
+                if len(session) >= min_session_len:
+                    sessions.append(session)
+                if len(sessions) >= min_sessions:
+                    res[str(uid)] = sessions
+        else:
+            # cut by fix window_len used by STAN
+            if max_session_len != window_size:
+                raise ValueError('the fixed length window is not equal to max_session_len')
+            for uid in tqdm(user_set, desc="cut and filter trajectory"):
+                usr_traj = traj[traj['entity_id'] == uid]
+                sessions = []  # 存放该用户所有的 session
+                session = []  # 单条轨迹
+                for index, row in usr_traj.iterrows():
+                    if len(session) < window_size:
+                        session.append(row.tolist())
+                    else:
+                        sessions.append(session)
+                        session = []
+                        session.append(row.tolist())
                 if len(session) >= min_session_len:
                     sessions.append(session)
                 if len(sessions) >= min_sessions:

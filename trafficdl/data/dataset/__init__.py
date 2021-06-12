@@ -1,7 +1,5 @@
 from trafficdl.data.dataset.abstract_dataset import AbstractDataset
 from trafficdl.data.dataset.trajectory_dataset import TrajectoryDataset
-from trafficdl.data.dataset.serm_trajectory_dataset import \
-    SermTrajectoryDataset
 from trafficdl.data.dataset.traffic_state_datatset import TrafficStateDataset
 from trafficdl.data.dataset.traffic_state_cpt_dataset import \
     TrafficStateCPTDataset
@@ -28,7 +26,6 @@ from trafficdl.data.dataset.reslstm_dataset import RESLSTMDataset
 __all__ = [
     "AbstractDataset",
     "TrajectoryDataset",
-    "SermTrajectoryDataset",
     "TrafficStateDataset",
     "TrafficStateCPTDataset",
     "TrafficStatePointDataset",

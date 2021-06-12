@@ -46,8 +46,6 @@ def cal_timeoff(now_time, base_time):
     计算两个时间之间的差值，返回值以小时为单位
     """
     # 先将 now 按小时对齐
-    now_time = now_time - \
-        timedelta(minutes=now_time.minute, seconds=now_time.second)
     delta = now_time - base_time
     return delta.days * 24 + delta.seconds / 3600
 
