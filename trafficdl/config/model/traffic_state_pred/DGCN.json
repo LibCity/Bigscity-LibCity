@@ -1,0 +1,26 @@
+{
+  "c_out": 64,
+  "K": 3,
+  "Kt": 3,
+
+  "scaler": "standard",
+  "load_external": false,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "train_rate": 0.6,
+  "eval_rate": 0.2,
+  "len_closeness": 2,
+  "len_period": 1,
+  "len_trend": 2,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.0005,
+  "lr_decay": true,
+  "lr_scheduler": "exponentiallr",
+  "lr_decay_ratio": 0.92,
+  "clip_grad_norm": false,
+  "use_early_stop": false
+}
