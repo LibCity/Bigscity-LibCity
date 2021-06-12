@@ -29,6 +29,28 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
     return torch.mean(loss)
 
 
+def log_cosh_loss(preds, labels):
+    loss = torch.log(torch.cosh(preds - labels))
+    return torch.mean(loss)
+
+
+def huber_loss(preds, labels, delta=1.0):
+    residual = torch.abs(preds - labels)
+    condition = torch.le(residual, delta)
+    small_res = 0.5 * torch.square(residual)
+    large_res = delta * residual - 0.5 * delta * delta
+    return torch.mean(torch.where(condition, small_res, large_res))
+    # lo = torch.nn.SmoothL1Loss()
+    # return lo(preds, labels)
+
+
+def quantile_loss(preds, labels, delta=0.25):
+    condition = torch.ge(labels, preds)
+    large_res = delta * (labels - preds)
+    small_res = (1 - delta) * (preds - labels)
+    return torch.mean(torch.where(condition, large_res, small_res))
+
+
 def masked_mape_torch(preds, labels, null_val=np.nan):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
