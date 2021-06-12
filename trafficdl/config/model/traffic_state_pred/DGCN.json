@@ -18,7 +18,9 @@
   "max_epoch": 100,
   "learner": "adam",
   "learning_rate": 0.0005,
-  "lr_decay": false,
+  "lr_decay": true,
+  "lr_scheduler": "exponentiallr",
+  "lr_decay_ratio": 0.92,
   "clip_grad_norm": false,
   "use_early_stop": false
 }
