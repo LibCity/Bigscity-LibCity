@@ -1,8 +1,13 @@
 {
+  "max_epoch": 100,
   "learner": "adam",
   "weight_decay": 0.0000,
   "learning_rate": 0.001,
-  "max_epoch": 100,
+  "lr_decay": true,
+  "lr_scheduler": "exponentiallr",
+  "lr_decay_ratio": 0.92,
+  "use_early_stop": true,
+  "patience": 50,
 
   "cluster_nodes": 10,
   "nhid": 32,
@@ -11,9 +16,10 @@
   "skip_channels": 256,
   "end_channels": 512,
 
-
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
   "add_time_in_day": true,
-  "load_external": false,
-  "input_window": 12,
-  "output_window": 12
+  "add_day_in_week": false
 }

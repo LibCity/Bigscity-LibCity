@@ -338,6 +338,9 @@ class MTGNN(AbstractTrafficStateModel):
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.num_batches = self.data_feature.get('num_batches', 1)
 
+        self._logger = getLogger()
+        self._scaler = self.data_feature.get('scaler')
+
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
         self.output_dim = config.get('output_dim', 1)
@@ -369,9 +372,6 @@ class MTGNN(AbstractTrafficStateModel):
                                  'the model cannot be trained for all time steps.'.format(self.max_epoch))
         self.task_level = config.get('task_level', 0)
         self.idx = torch.arange(self.num_nodes).to(self.device)
-
-        self._logger = getLogger()
-        self._scaler = self.data_feature.get('scaler')
 
         self.predefined_A = torch.tensor(self.adj_mx) - torch.eye(self.num_nodes)
         self.predefined_A = self.predefined_A.to(self.device)

@@ -321,7 +321,7 @@ class GMAN(AbstractTrafficStateModel):
         self.bn = True
         self.bn_decay = 0.1
         # define the model structure
-        self.input_fc = FC(input_dims=1, units=[self.D, self.D], activations=[nn.ReLU, None],
+        self.input_fc = FC(input_dims=self.output_dim, units=[self.D, self.D], activations=[nn.ReLU, None],
                            bn=self.bn, bn_decay=self.bn_decay, device=self.device)
         self.st_embedding = STEmbedding(T=self.T, D=self.D, bn=self.bn, bn_decay=self.bn_decay,
                                         add_day_in_week=self.add_day_in_week, device=self.device)

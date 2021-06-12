@@ -196,7 +196,7 @@ class TrafficStateExecutor(AbstractExecutor):
         if self.train_loss.lower() == 'none':
             self._logger.warning('Received none train loss func and will use the loss func defined in the model.')
             return None
-        if self.train_loss.lower() not in ['mae', 'mse', 'rmse', 'mape', 'masked_mae',
+        if self.train_loss.lower() not in ['mae', 'mse', 'rmse', 'mape', 'logcosh', 'huber', 'quantile', 'masked_mae',
                                            'masked_mse', 'masked_rmse', 'masked_mape', 'r2', 'evar']:
             self._logger.warning('Received unrecognized train loss function, set default mae loss func.')
         else:
@@ -215,6 +215,12 @@ class TrafficStateExecutor(AbstractExecutor):
                 lf = loss.masked_rmse_torch
             elif self.train_loss.lower() == 'mape':
                 lf = loss.masked_mape_torch
+            elif self.train_loss.lower() == 'logcosh':
+                lf = loss.log_cosh_loss
+            elif self.train_loss.lower() == 'huber':
+                lf = loss.huber_loss
+            elif self.train_loss.lower() == 'quantile':
+                lf = loss.quantile_loss
             elif self.train_loss.lower() == 'masked_mae':
                 lf = partial(loss.masked_mae_torch, null_val=0)
             elif self.train_loss.lower() == 'masked_mse':
