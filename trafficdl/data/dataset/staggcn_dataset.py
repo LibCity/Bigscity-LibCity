@@ -5,6 +5,7 @@ import pandas as pd
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 import pickle
+import os
 
 from trafficdl.data.dataset import TrafficStatePointDataset
 # from trafficdl.data.dataset import TrafficStateGridDataset
@@ -27,12 +28,13 @@ class STAGGCNDataset(TrafficStatePointDataset):
         self.period = 7 * 24 * self.points_per_hour  # 一周的时间点数目，间隔为5min，用于求dtw_edge_index
         self.edge_index = self.get_edge_index()
         self.load_from_local = self.config.get('load_from_local', True)
-        if self.load_from_local:  # 提前算好了dtw_edge_index，并从本地导入
-            with open('./trafficdl/cache/dataset_cache/dtw_edge_index_' + self.dataset + '.npz', 'rb') as f:
+        cache_path = './trafficdl/cache/dataset_cache/dtw_edge_index_' + self.dataset + '.npz'
+        if self.load_from_local and os.path.exists(cache_path):  # 提前算好了dtw_edge_index，并从本地导入
+            with open(cache_path, 'rb') as f:
                 self.dtw_edge_index = pickle.load(f)
         else:  # 临时求dtw_edge_index (临时求会耗时很久)
             self.dtw_edge_index = self.get_dtw_edge_index()
-            with open('./trafficdl/cache/dataset_cache/dtw_edge_index_' + self.dataset + '.npz', 'wb') as f:
+            with open(cache_path, 'wb') as f:
                 pickle.dump(self.dtw_edge_index, f)
 
     # 返回语义邻接边集（该部分直接截取自源码，做为函数直接调用）
@@ -111,7 +113,7 @@ class STAGGCNDataset(TrafficStatePointDataset):
 
     # 用于将邻接矩阵转化为邻接边集
     def edge_index_func(self, matrix):
-        print(matrix, matrix.max(), matrix.min())
+        # print(matrix, matrix.max(), matrix.min())
         a, b = [], []
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
