@@ -1,0 +1,22 @@
+{
+  "hidden_size": 64,
+  "num_layers": 1,
+
+  "scaler": "minmax01",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "weight_decay": 0.001,
+  "lr_decay": true,
+  "lr_scheduler": "StepLR",
+  "step_size": 20,
+  "lr_decay_ratio": 0.3,
+  "clip_grad_norm": false,
+  "use_early_stop": true
+}

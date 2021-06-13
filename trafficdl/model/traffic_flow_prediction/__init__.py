@@ -13,6 +13,7 @@ from trafficdl.model.traffic_flow_prediction.STSGCN import STSGCN
 from trafficdl.model.traffic_flow_prediction.STNN import STNN
 from trafficdl.model.traffic_flow_prediction.ResLSTM import ResLSTM
 from trafficdl.model.traffic_flow_prediction.DGCN import DGCN
+from trafficdl.model.traffic_flow_prediction.MultiSTGCnet import MultiSTGCnet
 
 __all__ = [
     "AGCRN",
@@ -29,5 +30,6 @@ __all__ = [
     "STSGCN",
     "STNN",
     "ResLSTM",
-    "DGCN"
+    "DGCN",
+    "MultiSTGCnet"
 ]
