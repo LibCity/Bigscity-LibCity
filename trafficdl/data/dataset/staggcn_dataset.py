@@ -13,6 +13,7 @@ from trafficdl.data.dataset import TrafficStatePointDataset
 
 """
 主要功能是定义了一种计算语义邻接矩阵的方法，并缓存到dataset_cache/，并通过get_data_feature返回
+注意这里要求邻接矩阵构造成0-1矩阵，在STAGGCNDataset.json中进行了设置
 STAGGCNDataset既可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
 修改成TrafficStateGridDataset时，只需要修改：
 1.TrafficStatePointDataset-->TrafficStateGridDataset
