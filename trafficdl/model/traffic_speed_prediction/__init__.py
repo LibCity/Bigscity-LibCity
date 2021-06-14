@@ -13,6 +13,7 @@ from trafficdl.model.traffic_speed_prediction.GMAN import GMAN
 from trafficdl.model.traffic_speed_prediction.STAGGCN import STAGGCN
 from trafficdl.model.traffic_speed_prediction.GTS import GTS
 from trafficdl.model.traffic_speed_prediction.HGCN import HGCN
+from trafficdl.model.traffic_speed_prediction.STMGAT import STMGAT
 
 __all__ = [
     "DCRNN",
@@ -29,5 +30,6 @@ __all__ = [
     "GMAN",
     "GTS",
     "HGCN",
-    "STAGGCN"
+    "STAGGCN",
+    "STMGAT"
 ]

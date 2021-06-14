@@ -1,0 +1,30 @@
+{
+  "dropout": 0.3,
+  "blocks": 4,
+  "layers": 2,
+  "run_gconv": true,
+  "kernel_size": 2,
+  "heads": 8,
+  "feat_drop": 0.6,
+  "attn_drop": 0.6,
+  "negative_slope": 0.2,
+  "residual_channels": 40,
+  "dilation_channels": 40,
+  "skip_channels": 320,
+  "end_channels": 640,
+
+  "scaler": "standard",
+  "load_external": false,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_decay": false,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": false
+}

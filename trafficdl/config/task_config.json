@@ -68,7 +68,7 @@
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq", "SHARE", "DMVSTNet",
             "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
-            "MultiSTGCnet"],
+            "MultiSTGCnet", "STMGAT"],
         "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PeMSD7(M)",
             "Loop Seattle", "LOS-LOOP", "LOS-LOOP-SMALL", "Q-TRAFFIC", "SZ-TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi2014",
@@ -253,6 +253,11 @@
         },
         "MultiSTGCnet": {
             "dataset_class": "MultiSTGCnetDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "STMGAT": {
+            "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         }
