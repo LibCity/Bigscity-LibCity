@@ -7,7 +7,7 @@ from trafficdl.model.trajectory_loc_prediction.TemplateTLP import TemplateTLP
 from trafficdl.model.trajectory_loc_prediction.SERM import SERM
 from trafficdl.model.trajectory_loc_prediction.ATSTLSTM import ATSTLSTM
 from trafficdl.model.trajectory_loc_prediction.STAN import STAN
-
+from trafficdl.model.trajectory_loc_prediction.CARA import CARA
 __all__ = [
     "DeepMove",
     "RNN",
@@ -17,5 +17,6 @@ __all__ = [
     "TemplateTLP",
     "SERM",
     "ATSTLSTM",
-    "STAN"
+    "STAN",
+    "CARA"
 ]
