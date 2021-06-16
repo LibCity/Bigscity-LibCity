@@ -1,0 +1,27 @@
+{
+  "n_hidden_tem": 100,
+  "n_layers_tem": 1,
+  "n_hidden_dns": 0,
+  "n_layers_dns": 1,
+  "n_ar": 4,
+  "dim_x": 5,
+  "dim_y": 6,
+
+  "scaler": "minmax01",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+
+  "max_epoch": 200,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "weight_decay": 5e-3,
+  "lr_decay": true,
+  "lr_scheduler": "reducelronplateau",
+  "lr_patience": 10,
+  "clip_grad_norm": false,
+  "use_early_stop": true,
+  "patience": 50
+}
