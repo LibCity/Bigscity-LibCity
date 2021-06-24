@@ -40,4 +40,5 @@ The LibTraffic is mainly developed and maintained by Beihang Interest Group on S
 
 Several co-developers have also participated in the reproduction of  the model, the list of contributions of which is presented in the [reproduction contribution list](./contribution_list.md).
 
-If you encounter a bug or have any suggestion, please contact us by [raising an issue](https://github.com/LibTraffic/Bigscity-LibTraffic/issues) or 
+If you encounter a bug or have any suggestion, please contact us by [raising an issue](https://github.com/LibTraffic/Bigscity-LibTraffic/issues).
+
