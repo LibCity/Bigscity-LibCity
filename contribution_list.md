@@ -6,13 +6,13 @@ The model reproduction work in the library has been assisted by several develope
 | ------ | ------------------------------------------------------------ | ------ |
 | Trajectory Next-Location Prediction | FPMC   | [WenMellors](https://github.com/WenMellors) |
 |   | RNN-1  | [WenMellors](https://github.com/WenMellors) |
-|  | ST-RNN | [BugMakerzzz](https://github.com/BugMakerzzz), [WenMellors](https://github.com/WenMellors) |
-||ATST-LSTM|[DrSpace](https://github.com/DrSpace), [WenMellors](https://github.com/WenMellors)|
-||SERM|[cwt-2021](https://github.com/cwt-2021), [WenMellors](https://github.com/WenMellors)|
-||STAN|[JacquesdeH](https://github.com/JacquesdeH), [shihaobai](https://github.com/shihaobai), [WenMellors](https://github.com/WenMellors)|
+|  | ST-RNN | [BugMakerzzz](https://github.com/BugMakerzzz), [xcw-1010](https://github.com/xcw-1010), [WenMellors](https://github.com/WenMellors) |
+||ATST-LSTM|[DrSpace](https://github.com/DrSpace), [hairfull](https://github.com/hairfull), [WenMellors](https://github.com/WenMellors)|
+||SERM|[cwt-2021](https://github.com/cwt-2021), [Miffy623](https://github.com/Miffy623), [iceredteav](https://github.com/iceredteav), [WenMellors](https://github.com/WenMellors)|
+||STAN|[JacquesdeH](https://github.com/JacquesdeH), [0-KaiKai-0](https://github.com/0-KaiKai-0), [WenMellors](https://github.com/WenMellors)|
 ||DeepMove|[WenMellors](https://github.com/WenMellors)|
-||CARA|[aejion](https://github.com/aejion)|
-||LSTPM|[Jerry18231174](https://github.com/Jerry18231174), [WenMellors](https://github.com/WenMellors)|
+||CARA|[aejion](https://github.com/aejion), [duckingss](https://github.com/duckingss)|
+||LSTPM|[ssdrywz](https://github.com/ssdrywz), [Jerry18231174](https://github.com/Jerry18231174), [WenMellors](https://github.com/WenMellors)|
 |Traffic State Prediction|RNN-2|[aptx1231](https://github.com/aptx1231)|
 ||Seq2Seq|[aptx1231](https://github.com/aptx1231)|
 ||AutoEncoder|[aptx1231](https://github.com/aptx1231)|
