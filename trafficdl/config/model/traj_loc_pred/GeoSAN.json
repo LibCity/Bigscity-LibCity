@@ -1,0 +1,25 @@
+{
+    "model_config": {
+        "location_embedding_dim": 50,
+        "num_layers_encoder": 2,
+        "dropout": 0.5,
+
+        "region_embedding_dim": 50,
+        "num_heads_encoder": 1,
+
+        "user_embedding_dim": 0, 
+        "time_embedding_dim": 0,
+
+        "hidden_dim_encoder": 0,
+        "num_heads_decoder": 0,
+
+        "extra_config": {
+            "position_encoding": "transformer",
+            "user_location_only": false,
+            "user_embedding": false,
+            "size_sqrt_regularize": true,
+            "use_attention_as_decoder": false,
+            "embedding_fusion": "concat"
+        }
+    }
+} 
