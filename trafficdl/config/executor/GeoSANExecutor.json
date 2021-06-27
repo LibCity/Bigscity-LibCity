@@ -1,0 +1,29 @@
+{
+    "executor_config": {
+        "train": {
+            "negative_sampler": "KNNSampler",
+            "negative_sampler_config": {
+                "num_nearest": 2000,
+                "exclude_visited": false
+            },
+            "temperature": 1.0,
+            "num_negative_samples": 5,
+            "batch_size": 64,
+            "num_epochs": 50,
+            "num_workers": 5
+        }, 
+        "optimizer": {
+            "optimizer": "adam",
+            "learning_rate": 0.001
+        },
+        "test": {
+            "negative_sampler": "KNNSampler",
+            "batch_size" : 32,
+            "num_negative_samples": 100,
+            "negative_sampler_config": {
+                "num_nearest": 2000,
+                "exclude_visited": false
+            }
+        }
+    }
+}

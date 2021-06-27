@@ -1,7 +1,13 @@
 {
     "traj_loc_pred": {
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "STAN", "CARA"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "STAN", "CARA", "GeoSAN"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla", "foursquare_serm"],
+        "GeoSAN": {
+            "dataset_class": "GeoSANDataset",
+            "executor": "GeoSANExecutor",
+            "evaluator": "GeoSANEvaluator",
+            "traj_encoder": "StandardTrajectoryEncoder"
+        },
         "DeepMove": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",

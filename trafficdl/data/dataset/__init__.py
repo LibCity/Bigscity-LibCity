@@ -24,6 +24,7 @@ from trafficdl.data.dataset.convgcn_dataset import CONVGCNDataset
 from trafficdl.data.dataset.reslstm_dataset import RESLSTMDataset
 from trafficdl.data.dataset.multi_stgcnet_dataset import MultiSTGCnetDataset
 from trafficdl.data.dataset.crann_dataset import CRANNDataset
+from trafficdl.data.dataset.geosan_dataset import GeoSANDataset
 
 __all__ = [
     "AbstractDataset",
@@ -47,5 +48,6 @@ __all__ = [
     'CONVGCNDataset',
     "RESLSTMDataset",
     "MultiSTGCnetDataset",
-    "CRANNDataset"
+    "CRANNDataset",
+    "GeoSANDataset"
 ]

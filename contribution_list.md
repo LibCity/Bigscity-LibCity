@@ -13,6 +13,7 @@ The model reproduction work in the library has been assisted by several develope
 ||DeepMove|[WenMellors](https://github.com/WenMellors)|
 ||CARA|[aejion](https://github.com/aejion), [duckingss](https://github.com/duckingss)|
 ||LSTPM|[ssdrywz](https://github.com/ssdrywz), [Jerry18231174](https://github.com/Jerry18231174), [WenMellors](https://github.com/WenMellors)|
+||GeoSAN|[Reinhard-Tichy](https://github.com/Reinhard-Tichy)|
 |Traffic State Prediction|RNN-2|[aptx1231](https://github.com/aptx1231)|
 ||Seq2Seq|[aptx1231](https://github.com/aptx1231)|
 ||AutoEncoder|[aptx1231](https://github.com/aptx1231)|
