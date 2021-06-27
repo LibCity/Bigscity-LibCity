@@ -1,8 +1,8 @@
 import os
 import numpy as np
 
-from trafficdl.data.dataset import TrafficStateCPTDataset, TrafficStateGridDataset
-from trafficdl.utils.dataset import timestamp2array, timestamp2vec_origin
+from libtraffic.data.dataset import TrafficStateCPTDataset, TrafficStateGridDataset
+from libtraffic.utils.dataset import timestamp2array, timestamp2vec_origin
 
 
 class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
@@ -16,7 +16,7 @@ class ACFMDataset(TrafficStateGridDataset, TrafficStateCPTDataset):
             + '_' + str(self.pad_forward_period) + '_' + str(self.pad_back_period) \
             + '_' + str(self.pad_forward_trend) + '_' + str(self.pad_back_trend) \
             + '_' + str(self.interval_period) + '_' + str(self.interval_trend)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'grid_based_{}.npz'.format(self.parameters_str))
 
     def _get_external_array(self, timestamp_list, ext_data=None, previous_ext=False, ext_time=True):

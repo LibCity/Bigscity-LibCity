@@ -3,9 +3,9 @@ import numpy as np
 import torch
 import os
 from ray import tune
-from trafficdl.model import loss
+from libtraffic.model import loss
 from functools import partial
-from trafficdl.executor.traffic_state_executor import TrafficStateExecutor
+from libtraffic.executor.traffic_state_executor import TrafficStateExecutor
 
 
 class MTGNNExecutor(TrafficStateExecutor):

@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 from gensim.models import Word2Vec
 
-from trafficdl.data.dataset import TrafficStatePointDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
 
 
 class Graph():
@@ -177,7 +177,7 @@ class GMANDataset(TrafficStatePointDataset):
                              '_' + str(self.SE_config['q']) + '_' + str(self.SE_config['num_walks']) + \
                              '_' + str(self.SE_config['walk_length']) + '_' + str(self.SE_config['dimensions']) + \
                              '_' + str(self.SE_config['window_size']) + '_' + str(self.SE_config['iter'])
-        self.SE_cache_file = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.SE_cache_file = os.path.join('./libtraffic/cache/dataset_cache/',
                                           'SE_based_{}.txt'.format(str(self.dataset) + '_' + self.SE_config_str))
         self._generate_SE()
 

@@ -3,8 +3,8 @@ from math import sqrt
 import torch
 import torch.nn as nn
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 
 
 def calculate_normalized_laplacian(adj):

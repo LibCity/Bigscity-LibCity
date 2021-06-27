@@ -6,8 +6,8 @@ import os
 from logging import getLogger
 from tqdm import tqdm
 
-from trafficdl.executor.abstract_executor import AbstractExecutor
-from trafficdl.utils import get_evaluator
+from libtraffic.executor.abstract_executor import AbstractExecutor
+from libtraffic.utils import get_evaluator
 
 
 class TrajLocPredExecutor(AbstractExecutor):
@@ -17,9 +17,9 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         self.model = model.to(self.config['device'])
-        self.tmp_path = './trafficdl/tmp/checkpoint/'
-        self.cache_dir = './trafficdl/cache/model_cache'
-        self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
+        self.tmp_path = './libtraffic/tmp/checkpoint/'
+        self.cache_dir = './libtraffic/cache/model_cache'
+        self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
         self.loss_func = None  # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
         self._logger = getLogger()
         self.optimizer = self._build_optimizer()

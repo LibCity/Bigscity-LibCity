@@ -1,4 +1,4 @@
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 
 
 class AbstractTrafficStateModel(AbstractModel):

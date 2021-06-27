@@ -5,8 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 from torch.nn import BatchNorm2d, Conv2d, Parameter, LayerNorm, BatchNorm1d
 
 

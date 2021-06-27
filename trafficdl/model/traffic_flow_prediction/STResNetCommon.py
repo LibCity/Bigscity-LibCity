@@ -4,8 +4,8 @@ import torch.nn as nn
 from collections import OrderedDict
 from logging import getLogger
 
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 
 
 # 3x3 convolution

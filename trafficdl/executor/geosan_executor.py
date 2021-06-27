@@ -4,9 +4,9 @@ import numpy as np
 import os
 from tqdm import tqdm
 import time as Time
-from trafficdl.executor.abstract_executor import AbstractExecutor
+from libtraffic.executor.abstract_executor import AbstractExecutor
 import random
-from trafficdl.utils import get_evaluator
+from libtraffic.utils import get_evaluator
 
 
 class GeoSANExecutor(AbstractExecutor):
@@ -16,9 +16,9 @@ class GeoSANExecutor(AbstractExecutor):
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model.to(self.device)
         self.evaluator = get_evaluator(config)
-        self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
-        self.cache_dir = './trafficdl/cache/model_cache'
-        self.tmp_path = './trafficdl/tmp/checkpoint/'
+        self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
+        self.cache_dir = './libtraffic/cache/model_cache'
+        self.tmp_path = './libtraffic/tmp/checkpoint/'
 
     def train(self, train_dataloader, eval_dataloader):
         """

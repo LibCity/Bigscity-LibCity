@@ -1,6 +1,6 @@
 import numpy as np
-from trafficdl.data.dataset import TrafficStatePointDataset
-# from trafficdl.data.dataset import TrafficStateGridDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
+# from libtraffic.data.dataset import TrafficStateGridDataset
 
 
 """

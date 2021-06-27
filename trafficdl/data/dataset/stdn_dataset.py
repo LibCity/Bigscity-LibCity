@@ -2,9 +2,9 @@ import numpy as np
 import os
 import pandas as pd
 
-from trafficdl.data.dataset import TrafficStateDataset
-from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
+from libtraffic.data.dataset import TrafficStateDataset
+from libtraffic.data.utils import generate_dataloader
+from libtraffic.utils import StandardScaler, NormalScaler, NoneScaler, MinMax01Scaler, MinMax11Scaler, ensure_dir
 
 
 class STDNDataset(TrafficStateDataset):

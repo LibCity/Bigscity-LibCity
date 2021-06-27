@@ -8,9 +8,9 @@ from ray.tune.suggest import ConcurrencyLimiter
 import json
 import torch
 
-from trafficdl.config import ConfigParser
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model, get_logger, ensure_dir
+from libtraffic.config import ConfigParser
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor, get_model, get_logger, ensure_dir
 
 
 def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
@@ -39,7 +39,7 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
     train_data, valid_data, test_data = dataset.get_data()
     data_feature = dataset.get_data_feature()
     # 加载执行器
-    model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(
+    model_cache_file = './libtraffic/cache/model_cache/{}_{}.m'.format(
         model_name, dataset_name)
     model = get_model(config, data_feature)
     executor = get_executor(config, model)
@@ -190,21 +190,21 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     else:
         raise ValueError('the scheduler is illegal')
     # ray tune run
-    ensure_dir('./trafficdl/cache/hyper_tune')
+    ensure_dir('./libtraffic/cache/hyper_tune')
     result = tune.run(tune.with_parameters(train, experiment_config=experiment_config, train_data=train_data,
                       valid_data=valid_data, data_feature=data_feature),
                       resources_per_trial={'cpu': cpu_per_trial, 'gpu': gpu_per_trial}, config=search_sapce,
                       metric='loss', mode='min', scheduler=tune_scheduler, search_alg=algorithm,
-                      local_dir='./trafficdl/cache/hyper_tune', num_samples=num_samples)
+                      local_dir='./libtraffic/cache/hyper_tune', num_samples=num_samples)
     best_trial = result.get_best_trial("loss", "min", "last")
     logger.info("Best trial config: {}".format(best_trial.config))
     logger.info("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     # save best
     best_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
     model_state, optimizer_state = torch.load(best_path)
-    model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(
+    model_cache_file = './libtraffic/cache/model_cache/{}_{}.m'.format(
         model_name, dataset_name)
-    ensure_dir('./trafficdl/cache/model_cache')
+    ensure_dir('./libtraffic/cache/model_cache')
     torch.save((model_state, optimizer_state), model_cache_file)
 
 

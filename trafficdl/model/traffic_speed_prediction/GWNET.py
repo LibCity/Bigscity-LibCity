@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 import numpy as np
 import scipy.sparse as sp
 from scipy.sparse import linalg

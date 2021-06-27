@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
-from trafficdl.model import loss
+from libtraffic.model import loss
 import math
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class FilterLinear(nn.Module):

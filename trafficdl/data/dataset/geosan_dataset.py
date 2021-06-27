@@ -8,7 +8,7 @@ from collections import defaultdict
 from torchtext.data import Field
 from nltk import ngrams
 from tqdm import tqdm
-from trafficdl.data.dataset import AbstractDataset
+from libtraffic.data.dataset import AbstractDataset
 from torch.utils.data import DataLoader
 from torch.utils.data import Sampler
 import torch

@@ -4,9 +4,9 @@ import numpy as np
 import datetime
 from logging import getLogger
 
-from trafficdl.data.dataset import AbstractDataset
-from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import StandardScaler, NormalScaler, NoneScaler, \
+from libtraffic.data.dataset import AbstractDataset
+from libtraffic.data.utils import generate_dataloader
+from libtraffic.utils import StandardScaler, NormalScaler, NoneScaler, \
     MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
 
 
@@ -40,9 +40,9 @@ class TrafficStateDataset(AbstractDataset):
             + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
             + str(self.batch_size) + '_' + str(self.load_external) + '_' + str(self.add_time_in_day) + '_' \
             + str(self.add_day_in_week) + '_' + str(self.pad_with_last_sample)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'traffic_state_{}.npz'.format(self.parameters_str))
-        self.cache_file_folder = './trafficdl/cache/dataset_cache/'
+        self.cache_file_folder = './libtraffic/cache/dataset_cache/'
         ensure_dir(self.cache_file_folder)
         self.data_path = './raw_data/' + self.dataset + '/'
         if not os.path.exists(self.data_path):

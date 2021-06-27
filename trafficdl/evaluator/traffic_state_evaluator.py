@@ -2,10 +2,10 @@ import os
 import json
 import datetime
 import pandas as pd
-from trafficdl.utils import ensure_dir
-from trafficdl.model import loss
+from libtraffic.utils import ensure_dir
+from libtraffic.model import loss
 from logging import getLogger
-from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
+from libtraffic.evaluator.abstract_evaluator import AbstractEvaluator
 
 
 class TrafficStateEvaluator(AbstractEvaluator):

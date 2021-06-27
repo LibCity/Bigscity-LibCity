@@ -2,9 +2,9 @@ import os
 import pandas as pd
 import numpy as np
 import math
-from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
-from trafficdl.utils import parse_time
-from trafficdl.utils.dataset import parse_coordinate
+from libtraffic.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
+from libtraffic.utils import parse_time
+from libtraffic.utils.dataset import parse_coordinate
 from collections import defaultdict
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_size', 'min_checkins',
@@ -42,7 +42,7 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
-            './trafficdl/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
+            './libtraffic/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
         self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.config['dataset'], self.config['dataset']))
         self.time_checkin_set = defaultdict(set)
 

@@ -4,7 +4,7 @@ import time
 from collections import Counter
 import numpy as np
 
-from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
+from libtraffic.evaluator.abstract_evaluator import AbstractEvaluator
 
 
 class GeoSANEvaluator(AbstractEvaluator):

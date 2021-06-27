@@ -1,10 +1,10 @@
 from logging import getLogger
 import torch
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import BatchNorm2d, Conv2d, Parameter, BatchNorm1d
-from trafficdl.model import loss
+from libtraffic.model import loss
 
 
 class nconv(nn.Module):

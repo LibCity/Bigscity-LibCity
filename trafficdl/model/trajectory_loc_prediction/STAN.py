@@ -1,4 +1,4 @@
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 import torch
 import numpy as np
 from torch import nn
@@ -192,7 +192,7 @@ class STAN(AbstractModel):
     def predict(self, batch):
         """
         参数说明:
-            batch (trafficdl.data.batch): 类 dict 文件，其中包含的键值参见任务说明文件。
+            batch (libtraffic.data.batch): 类 dict 文件，其中包含的键值参见任务说明文件。
         返回值:
             score (pytorch.tensor): 对应张量 shape 应为 batch_size *
                 loc_size。这里返回的是模型对于输入当前轨迹的下一跳位置的预测值。
@@ -212,7 +212,7 @@ class STAN(AbstractModel):
     def calculate_loss(self, batch):
         """
         参数说明:
-            batch (trafficdl.data.batch): 类 dict 文件，其中包含的键值参见任务说明文件。
+            batch (libtraffic.data.batch): 类 dict 文件，其中包含的键值参见任务说明文件。
         返回值:
             loss (pytorch.tensor): 可以调用 pytorch 实现的 loss 函数与 batch['target']
                 目标值进行 loss 计算，并将计算结果返回。如模型有自己独特的 loss 计算方式则自行参考实现。

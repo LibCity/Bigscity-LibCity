@@ -5,9 +5,9 @@ import torch
 from ray import tune
 from logging import getLogger
 from torch.utils.tensorboard import SummaryWriter
-from trafficdl.executor.abstract_executor import AbstractExecutor
-from trafficdl.utils import get_evaluator, ensure_dir
-from trafficdl.model import loss
+from libtraffic.executor.abstract_executor import AbstractExecutor
+from libtraffic.utils import get_evaluator, ensure_dir
+from libtraffic.model import loss
 from functools import partial
 
 
@@ -18,9 +18,9 @@ class TrafficStateExecutor(AbstractExecutor):
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model.to(self.device)
 
-        self.cache_dir = './trafficdl/cache/model_cache'
-        self.evaluate_res_dir = './trafficdl/cache/evaluate_cache'
-        self.summary_writer_dir = './trafficdl/log/runs'
+        self.cache_dir = './libtraffic/cache/model_cache'
+        self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
+        self.summary_writer_dir = './libtraffic/log/runs'
         ensure_dir(self.cache_dir)
         ensure_dir(self.evaluate_res_dir)
         ensure_dir(self.summary_writer_dir)

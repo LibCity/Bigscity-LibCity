@@ -7,8 +7,8 @@ from scipy.spatial.distance import euclidean
 import pickle
 import os
 
-from trafficdl.data.dataset import TrafficStatePointDataset
-# from trafficdl.data.dataset import TrafficStateGridDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
+# from libtraffic.data.dataset import TrafficStateGridDataset
 
 
 """
@@ -29,7 +29,7 @@ class STAGGCNDataset(TrafficStatePointDataset):
         self.period = 7 * 24 * self.points_per_hour  # 一周的时间点数目，间隔为5min，用于求dtw_edge_index
         self.edge_index = self.get_edge_index()
         self.load_from_local = self.config.get('load_from_local', True)
-        cache_path = './trafficdl/cache/dataset_cache/dtw_edge_index_' + self.dataset + '.npz'
+        cache_path = './libtraffic/cache/dataset_cache/dtw_edge_index_' + self.dataset + '.npz'
         if self.load_from_local and os.path.exists(cache_path):  # 提前算好了dtw_edge_index，并从本地导入
             with open(cache_path, 'rb') as f:
                 self.dtw_edge_index = pickle.load(f)

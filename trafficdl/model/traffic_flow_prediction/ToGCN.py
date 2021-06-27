@@ -1,8 +1,8 @@
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from trafficdl.model import loss
+from libtraffic.model import loss
 import math
 import random
 

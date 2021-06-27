@@ -1,7 +1,7 @@
 import os
 
-from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
-from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
+from libtraffic.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
+from libtraffic.utils import parse_time, cal_basetime, cal_timeoff
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'window_type',
                   'window_size', 'history_type']
@@ -33,7 +33,7 @@ class CARATrajectoryEncoder(AbstractTrajectoryEncoder):
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
-            './trafficdl/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
+            './libtraffic/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
         # 对于这种 history 模式没办法做到 batch
         if self.history_type == 'cut_off':
             # self.config['batch_size'] = 1

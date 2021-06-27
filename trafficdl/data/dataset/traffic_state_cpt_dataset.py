@@ -2,9 +2,9 @@ import os
 import numpy as np
 import datetime
 
-from trafficdl.data.dataset import TrafficStateDataset
-from trafficdl.data.utils import generate_dataloader
-from trafficdl.utils import ensure_dir
+from libtraffic.data.dataset import TrafficStateDataset
+from libtraffic.data.utils import generate_dataloader
+from libtraffic.utils import ensure_dir
 
 
 class TrafficStateCPTDataset(TrafficStateDataset):

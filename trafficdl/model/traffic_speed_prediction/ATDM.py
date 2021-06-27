@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from logging import getLogger
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class SANN(nn.Module):

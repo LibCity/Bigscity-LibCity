@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from trafficdl.data.dataset import TrafficStatePointDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
 
 
 class RESLSTMDataset(TrafficStatePointDataset):
@@ -17,7 +17,7 @@ class RESLSTMDataset(TrafficStatePointDataset):
             + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
             + str(self.batch_size) + '_' + str(self.load_external) + '_' \
             + str(self.TG) + '_' + str(self.TG_in_one_day) + '_' + str(self.TG_in_one_week)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 
     def _generate_input_data(self, df):

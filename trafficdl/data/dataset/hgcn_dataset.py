@@ -1,5 +1,5 @@
 import os
-from trafficdl.data.dataset import TrafficStateDataset
+from libtraffic.data.dataset import TrafficStateDataset
 import scipy.sparse as sp
 import torch
 import numpy as np
@@ -59,7 +59,7 @@ class HGCNDataset(TrafficStateDataset):
 
     def __init__(self, config):
         super().__init__(config)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 
         # 聚类中心（区域）的个数

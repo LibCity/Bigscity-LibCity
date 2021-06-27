@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class FC(nn.Module):  # is_training: self.training

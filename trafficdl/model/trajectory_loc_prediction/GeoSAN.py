@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 import math
 
 

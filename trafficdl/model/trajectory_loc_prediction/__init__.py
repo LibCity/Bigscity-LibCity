@@ -1,14 +1,14 @@
-from trafficdl.model.trajectory_loc_prediction.DeepMove import DeepMove
-from trafficdl.model.trajectory_loc_prediction.RNN import RNN
-from trafficdl.model.trajectory_loc_prediction.FPMC import FPMC
-from trafficdl.model.trajectory_loc_prediction.LSTPM import LSTPM
-from trafficdl.model.trajectory_loc_prediction.STRNN import STRNN
-from trafficdl.model.trajectory_loc_prediction.TemplateTLP import TemplateTLP
-from trafficdl.model.trajectory_loc_prediction.SERM import SERM
-from trafficdl.model.trajectory_loc_prediction.ATSTLSTM import ATSTLSTM
-from trafficdl.model.trajectory_loc_prediction.STAN import STAN
-from trafficdl.model.trajectory_loc_prediction.CARA import CARA
-from trafficdl.model.trajectory_loc_prediction.GeoSAN import GeoSAN
+from libtraffic.model.trajectory_loc_prediction.DeepMove import DeepMove
+from libtraffic.model.trajectory_loc_prediction.RNN import RNN
+from libtraffic.model.trajectory_loc_prediction.FPMC import FPMC
+from libtraffic.model.trajectory_loc_prediction.LSTPM import LSTPM
+from libtraffic.model.trajectory_loc_prediction.STRNN import STRNN
+from libtraffic.model.trajectory_loc_prediction.TemplateTLP import TemplateTLP
+from libtraffic.model.trajectory_loc_prediction.SERM import SERM
+from libtraffic.model.trajectory_loc_prediction.ATSTLSTM import ATSTLSTM
+from libtraffic.model.trajectory_loc_prediction.STAN import STAN
+from libtraffic.model.trajectory_loc_prediction.CARA import CARA
+from libtraffic.model.trajectory_loc_prediction.GeoSAN import GeoSAN
 
 __all__ = [
     "DeepMove",

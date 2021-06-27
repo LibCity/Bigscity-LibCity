@@ -3,8 +3,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 import copy
 
-from trafficdl.data.list_dataset import ListDataset
-from trafficdl.data.batch import Batch
+from libtraffic.data.list_dataset import ListDataset
+from libtraffic.data.batch import Batch
 
 
 def get_dataset(config):
@@ -18,7 +18,7 @@ def get_dataset(config):
         AbstractDataset: the loaded dataset
     """
     try:
-        return getattr(importlib.import_module('trafficdl.data.dataset'),
+        return getattr(importlib.import_module('libtraffic.data.dataset'),
                        config['dataset_class'])(config)
     except AttributeError:
         raise AttributeError('dataset_class is not found')

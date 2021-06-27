@@ -2,8 +2,8 @@ import os
 import json
 import time
 
-from trafficdl.evaluator.abstract_evaluator import AbstractEvaluator
-from trafficdl.evaluator.eval_funcs import top_k
+from libtraffic.evaluator.abstract_evaluator import AbstractEvaluator
+from libtraffic.evaluator.eval_funcs import top_k
 allowed_metrics = ['Precision', 'Recall', 'F1', 'MRR', 'MAP', 'NDCG']
 
 

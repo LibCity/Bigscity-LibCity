@@ -6,9 +6,9 @@ from tqdm import tqdm
 import importlib
 from logging import getLogger
 
-from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils import parse_time, cal_timeoff
-from trafficdl.data.utils import generate_dataloader
+from libtraffic.data.dataset import AbstractDataset
+from libtraffic.utils import parse_time, cal_timeoff
+from libtraffic.data.utils import generate_dataloader
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', "max_session_len",
                   'cut_method', 'window_size', 'min_checkins']
@@ -18,8 +18,8 @@ class TrajectoryDataset(AbstractDataset):
 
     def __init__(self, config):
         self.config = config
-        self.cache_file_folder = './trafficdl/cache/dataset_cache/'
-        self.cut_data_cache = './trafficdl/cache/dataset_cache/cut_traj'
+        self.cache_file_folder = './libtraffic/cache/dataset_cache/'
+        self.cut_data_cache = './libtraffic/cache/dataset_cache/cut_traj'
         for param in parameter_list:
             self.cut_data_cache += '_' + str(self.config[param])
         self.cut_data_cache += '.json'
@@ -244,7 +244,7 @@ class TrajectoryDataset(AbstractDataset):
 
     def get_encoder(self):
         try:
-            return getattr(importlib.import_module('trafficdl.data.dataset.trajectory_encoder'),
+            return getattr(importlib.import_module('libtraffic.data.dataset.trajectory_encoder'),
                            self.config['traj_encoder'])(self.config)
         except AttributeError:
             raise AttributeError('trajectory encoder is not found')

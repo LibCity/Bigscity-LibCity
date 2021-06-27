@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.nn.utils.rnn import pad_packed_sequence
 

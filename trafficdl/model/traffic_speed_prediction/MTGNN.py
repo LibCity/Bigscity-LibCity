@@ -5,8 +5,8 @@ from torch.nn import init
 import numbers
 import torch.nn.functional as F
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 
 
 class NConv(nn.Module):

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 from math import sin, cos, sqrt, atan2, radians
 import numpy as np
 

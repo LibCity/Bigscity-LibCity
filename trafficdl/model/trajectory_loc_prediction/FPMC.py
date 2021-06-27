@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn.init import xavier_normal_
 
-from trafficdl.model.abstract_model import AbstractModel
+from libtraffic.model.abstract_model import AbstractModel
 
 
 class FPMC(AbstractModel):

@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from torch.nn.utils import weight_norm
 from torch_geometric.nn import GATConv
 from logging import getLogger
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import numpy as np
 import math
 

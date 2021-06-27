@@ -65,7 +65,7 @@ class ConfigParser(object):
 
     def _load_default_config(self):
         # 首先加载 task config
-        with open('./trafficdl/config/task_config.json', 'r') as f:
+        with open('./libtraffic/config/task_config.json', 'r') as f:
             task_config = json.load(f)
             if self.config['task'] not in task_config:
                 raise ValueError(
@@ -104,7 +104,7 @@ class ConfigParser(object):
         default_file_list.append('evaluator/{}.json'.format(self.config['evaluator']))
         # 加载所有默认配置
         for file_name in default_file_list:
-            with open('./trafficdl/config/{}'.format(file_name), 'r') as f:
+            with open('./libtraffic/config/{}'.format(file_name), 'r') as f:
                 x = json.load(f)
                 for key in x:
                     if key not in self.config:

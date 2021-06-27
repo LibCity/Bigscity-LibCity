@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.nn.init import xavier_uniform
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import numpy as np
 from logging import getLogger
-from trafficdl.model import loss
+from libtraffic.model import loss
 
 
 # 时空嵌入矩阵，真正的时空特征的嵌入表示

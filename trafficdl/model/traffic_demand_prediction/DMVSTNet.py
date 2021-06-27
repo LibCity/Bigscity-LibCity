@@ -1,8 +1,8 @@
 from logging import getLogger
 import torch
 import torch.nn as nn
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class SpatialViewConv(nn.Module):

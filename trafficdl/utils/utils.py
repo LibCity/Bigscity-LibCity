@@ -17,7 +17,7 @@ def get_executor(config, model):
         AbstractExecutor: the loaded executor
     """
     try:
-        return getattr(importlib.import_module('trafficdl.executor'),
+        return getattr(importlib.import_module('libtraffic.executor'),
                        config['executor'])(config, model)
     except AttributeError:
         raise AttributeError('executor is not found')
@@ -36,21 +36,21 @@ def get_model(config, data_feature):
     """
     if config['task'] == 'traj_loc_pred':
         try:
-            return getattr(importlib.import_module('trafficdl.model.trajectory_loc_prediction'),
+            return getattr(importlib.import_module('libtraffic.model.trajectory_loc_prediction'),
                            config['model'])(config, data_feature)
         except AttributeError:
             raise AttributeError('model is not found')
     elif config['task'] == 'traffic_state_pred':
         try:
-            return getattr(importlib.import_module('trafficdl.model.traffic_flow_prediction'),
+            return getattr(importlib.import_module('libtraffic.model.traffic_flow_prediction'),
                            config['model'])(config, data_feature)
         except AttributeError:
             try:
-                return getattr(importlib.import_module('trafficdl.model.traffic_speed_prediction'),
+                return getattr(importlib.import_module('libtraffic.model.traffic_speed_prediction'),
                                config['model'])(config, data_feature)
             except AttributeError:
                 try:
-                    return getattr(importlib.import_module('trafficdl.model.traffic_demand_prediction'),
+                    return getattr(importlib.import_module('libtraffic.model.traffic_demand_prediction'),
                                    config['model'])(config, data_feature)
                 except AttributeError:
                     raise AttributeError('model is not found')
@@ -69,7 +69,7 @@ def get_evaluator(config):
         AbstractEvaluator: the loaded evaluator
     """
     try:
-        return getattr(importlib.import_module('trafficdl.evaluator'),
+        return getattr(importlib.import_module('libtraffic.evaluator'),
                        config['evaluator'])(config)
     except AttributeError:
         raise AttributeError('evaluator is not found')
@@ -86,7 +86,7 @@ def get_logger(config, name=None):
     Returns:
         Logger: logger
     """
-    log_dir = './trafficdl/log'
+    log_dir = './libtraffic/log'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_filename = '{}-{}-{}.log'.format(

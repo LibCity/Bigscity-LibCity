@@ -2,9 +2,9 @@ import os
 import math
 import numpy as np
 
-from trafficdl.data.dataset import TrafficStatePointDataset
-# from trafficdl.data.dataset import TrafficStateGridDataset
-from trafficdl.utils import ensure_dir
+from libtraffic.data.dataset import TrafficStatePointDataset
+# from libtraffic.data.dataset import TrafficStateGridDataset
+from libtraffic.utils import ensure_dir
 
 
 """
@@ -24,7 +24,7 @@ class STG2SeqDataset(TrafficStatePointDataset):
         super().__init__(config)
         self.use_row_column = False
         self.parameters_str += '_save_adj'
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 
     def _load_rel(self):

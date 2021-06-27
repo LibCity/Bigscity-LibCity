@@ -1,7 +1,7 @@
-from trafficdl.evaluator.traj_loc_pred_evaluator import TrajLocPredEvaluator
-from trafficdl.evaluator.traffic_state_evaluator import TrafficStateEvaluator
-from trafficdl.evaluator.cara_loc_pred_evaluator import CARALocPredEvaluator
-from trafficdl.evaluator.geosan_evaluator import GeoSANEvaluator
+from libtraffic.evaluator.traj_loc_pred_evaluator import TrajLocPredEvaluator
+from libtraffic.evaluator.traffic_state_evaluator import TrafficStateEvaluator
+from libtraffic.evaluator.cara_loc_pred_evaluator import CARALocPredEvaluator
+from libtraffic.evaluator.geosan_evaluator import GeoSANEvaluator
 
 __all__ = [
     "TrajLocPredEvaluator",

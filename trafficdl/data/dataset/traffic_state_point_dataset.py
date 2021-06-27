@@ -1,13 +1,13 @@
 import os
 
-from trafficdl.data.dataset import TrafficStateDataset
+from libtraffic.data.dataset import TrafficStateDataset
 
 
 class TrafficStatePointDataset(TrafficStateDataset):
 
     def __init__(self, config):
         super().__init__(config)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 
     def _load_geo(self):

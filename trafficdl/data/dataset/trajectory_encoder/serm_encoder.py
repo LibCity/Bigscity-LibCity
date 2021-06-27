@@ -1,7 +1,7 @@
 import os
 import pandas as pd
-from trafficdl.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
-from trafficdl.utils import parse_time
+from libtraffic.data.dataset.trajectory_encoder.abstract_trajectory_encoder import AbstractTrajectoryEncoder
+from libtraffic.utils import parse_time
 
 parameter_list = ['dataset', 'min_session_len', 'min_sessions', 'traj_encoder', 'cut_method',
                   'window_size', 'history_type', 'min_checkins', 'max_session_len']
@@ -31,7 +31,7 @@ class SermEncoder(AbstractTrajectoryEncoder):
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
-            './trafficdl/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
+            './libtraffic/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
         # load poi_profile
         self.poi_profile = None
         if self.config['dataset'] in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:

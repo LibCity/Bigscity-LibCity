@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def calculate_scaled_laplacian(adj):

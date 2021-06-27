@@ -4,8 +4,8 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 from scipy.sparse.linalg import eigs
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def scaled_laplacian(w):

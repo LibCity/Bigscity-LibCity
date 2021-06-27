@@ -1,6 +1,6 @@
 import os
 
-from trafficdl.data.dataset import TrafficStateDataset
+from libtraffic.data.dataset import TrafficStateDataset
 
 
 class TrafficStateGridOdDataset(TrafficStateDataset):
@@ -9,7 +9,7 @@ class TrafficStateGridOdDataset(TrafficStateDataset):
         super().__init__(config)
         self.use_row_column = self.config.get('use_row_column', True)
         self.parameters_str = self.parameters_str + '_' + str(self.use_row_column)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'grid_od_based_{}.npz'.format(self.parameters_str))
         self._load_rel()  # don't care whether there is a .rel file
 

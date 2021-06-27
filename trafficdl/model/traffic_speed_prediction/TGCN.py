@@ -3,7 +3,7 @@ import scipy.sparse as sp
 import torch
 import torch.nn as nn
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def calculate_normalized_laplacian(adj):

@@ -1,7 +1,7 @@
 from logging import getLogger
 import torch
-from trafficdl.model import loss
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class TemplateTSP(AbstractTrafficStateModel):
@@ -31,7 +31,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
         # 6.从config中取用到的其他参数，主要是用于构造模型结构的参数（必须）
-        # 这些涉及到模型结构的参数应该放在trafficdl/config/model/model_name.json中（必须）
+        # 这些涉及到模型结构的参数应该放在libtraffic/config/model/model_name.json中（必须）
         # 例如: self.blocks = config['blocks']
         # ...
         # 7.构造深度模型的层次结构（必须）
@@ -70,7 +70,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         # 4.调用loss函数计算真值和预测值的误差
-        # trafficdl/model/loss.py中定义了常见的loss函数
+        # libtraffic/model/loss.py中定义了常见的loss函数
         # 如果模型源码用到了其中的loss，则可以直接调用，以MSE为例:
         res = loss.masked_mse_torch(y_predicted, y_true)
         # 如果模型源码所用的loss函数在loss.py中没有，则需要自己实现loss函数
@@ -87,7 +87,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         """
         # 如果self.forward()的结果满足要求，可以直接返回
         # 如果不符合要求，例如self.forward()进行了单时间步的预测，但是模型训练时使用的是每个batch的数据进行的多步预测，
-        # 则可以参考trafficdl/model/traffic_speed_prediction/STGCN.py中的predict()函数，进行多步预测
+        # 则可以参考libtraffic/model/traffic_speed_prediction/STGCN.py中的predict()函数，进行多步预测
         # 多步预测的原则是: 先进行一步预测，用一步预测的结果进行二步预测，**而不是使用一步预测的真值进行二步预测!**
         # 以self.forward()的结果符合要求为例:
         return self.forward(batch)

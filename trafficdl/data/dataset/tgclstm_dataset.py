@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from trafficdl.data.dataset import TrafficStatePointDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
 
 
 class TGCLSTMDataset(TrafficStatePointDataset):

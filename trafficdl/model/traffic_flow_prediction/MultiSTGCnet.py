@@ -4,8 +4,8 @@ import torch.tensor as tensor
 import torch.nn.functional as F
 import numpy as np
 from logging import getLogger
-from trafficdl.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from trafficdl.model import loss
+from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libtraffic.model import loss
 
 
 """"

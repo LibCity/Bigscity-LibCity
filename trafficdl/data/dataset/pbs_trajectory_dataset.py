@@ -7,9 +7,9 @@ import numpy as np
 from logging import getLogger
 from collections import Counter
 from tqdm import tqdm
-from trafficdl.data.dataset import AbstractDataset
-from trafficdl.utils import parse_time, cal_basetime, cal_timeoff
-from trafficdl.data.utils import generate_dataloader
+from libtraffic.data.dataset import AbstractDataset
+from libtraffic.utils import parse_time, cal_basetime, cal_timeoff
+from libtraffic.data.utils import generate_dataloader
 
 
 class PBSTrajectoryDataset(AbstractDataset):
@@ -19,7 +19,7 @@ class PBSTrajectoryDataset(AbstractDataset):
 
     def __init__(self, config):
         self.config = config
-        self.cache_file_folder = './trafficdl/cache/dataset_cache/'
+        self.cache_file_folder = './libtraffic/cache/dataset_cache/'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.data = None
         # 加载 encoder
@@ -232,7 +232,7 @@ class PBSTrajectoryDataset(AbstractDataset):
 
     def get_encoder(self):
         try:
-            return getattr(importlib.import_module('trafficdl.data.dataset.trajectory_encoder'),
+            return getattr(importlib.import_module('libtraffic.data.dataset.trajectory_encoder'),
                            self.config['traj_encoder'])(self.config)
         except AttributeError:
             raise AttributeError('trajectory encoder is not found')

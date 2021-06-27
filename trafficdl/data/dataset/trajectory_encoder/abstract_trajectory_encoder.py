@@ -10,15 +10,15 @@ class AbstractTrajectoryEncoder(object):
     Model Module.
 
     Attributes:
-        config (trafficdl.ConfigParser): The configuration of the encoder.
+        config (libtraffic.ConfigParser): The configuration of the encoder.
         pad_item (dict): The key is a feature's name and the value should be corresponding
             padding value. If a feature dose not need to be padded, don't insert it into
-            this dict. In other word, trafficdl.dataset.Batch will pad all features in pad_item.keys().
+            this dict. In other word, libtraffic.dataset.Batch will pad all features in pad_item.keys().
         feature_max_len (dict): The key is a feature's name and the value should be corresponding
-            max length. When trafficdl.dataset.Batch pads features, it will intercept the excessively
+            max length. When libtraffic.dataset.Batch pads features, it will intercept the excessively
             long sequence feature according to this attribute.
         feature_dict (dict): The key is a feature's name and the value should be the data type of
-            the corresponding feature. When trafficdl.dataset.Batch converts the encoded trajectory tuple
+            the corresponding feature. When libtraffic.dataset.Batch converts the encoded trajectory tuple
             to tensor, It will refer to this attribute to know the feature name and data type corresponding
             to each element in the tuple.
         data_feature (dict): The data_feature contains the statistics features of the encoded dataset, which is
@@ -30,7 +30,7 @@ class AbstractTrajectoryEncoder(object):
         """Init Encoder with its config
 
         Args:
-            config (trafficdl.ConfigParser): Dict-like Object. Can access any config by config[key].
+            config (libtraffic.ConfigParser): Dict-like Object. Can access any config by config[key].
         """
         self.config = config
         self.pad_item = {}
@@ -72,7 +72,7 @@ class AbstractTrajectoryEncoder(object):
             Same as the input format, each encoded trajectory should be a tuple, which contains
             all features extracted from the input trajectory. The encoded trajectory will
             subsequently be converted to a torch.tensor and then directly input to the model.
-            (see more in trafficdl.Batch)
+            (see more in libtraffic.Batch)
             Take the StandardTrajectoryEncoder as an example.
                 encoded_trajectory = [history_loc, history_tim, current_loc, current_tim, target, target_tim, uid]
             Please make sure the order of the features in the list is consistent with the order

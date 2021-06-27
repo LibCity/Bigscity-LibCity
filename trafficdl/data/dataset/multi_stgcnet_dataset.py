@@ -1,6 +1,6 @@
 import os
-from trafficdl.data.dataset import TrafficStateCPTDataset
-from trafficdl.data.dataset import TrafficStatePointDataset
+from libtraffic.data.dataset import TrafficStateCPTDataset
+from libtraffic.data.dataset import TrafficStatePointDataset
 
 """
 由于目前模型只能单步预测，所以只能使用CPT的dataset
@@ -21,7 +21,7 @@ class MultiSTGCnetDataset(TrafficStatePointDataset, TrafficStateCPTDataset):
             + '_' + str(self.pad_forward_period) + '_' + str(self.pad_back_period) \
             + '_' + str(self.pad_forward_trend) + '_' + str(self.pad_back_trend) \
             + '_' + str(self.interval_period) + '_' + str(self.interval_trend)
-        self.cache_file_name = os.path.join('./trafficdl/cache/dataset_cache/',
+        self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
 
     def get_data_feature(self):

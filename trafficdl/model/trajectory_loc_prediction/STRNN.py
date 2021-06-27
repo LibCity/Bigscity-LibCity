@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 from geopy import distance
 
-from trafficdl.model.abstract_model import AbstractModel
-from trafficdl.utils.dataset import parse_coordinate
+from libtraffic.model.abstract_model import AbstractModel
+from libtraffic.utils.dataset import parse_coordinate
 
 
 class STRNN(AbstractModel):
