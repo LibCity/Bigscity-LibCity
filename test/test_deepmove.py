@@ -1,6 +1,6 @@
-from trafficdl.config import ConfigParser
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from libtraffic.config import ConfigParser
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor, get_model
 
 config = ConfigParser('traj_loc_pred', 'DeepMove', 'foursquare_tky',
                       other_args={'evaluate_method': 'sample', 'dataset_class': 'PBSTrajectoryDataset'})
@@ -12,7 +12,7 @@ train_data, valid_data, test_data = dataset.get_data()
 # batch.to_tensor(gpu=True)
 data_feature = dataset.get_data_feature()
 # 加载执行器
-model_cache_file = './trafficdl/cache/model_cache/DeepMove_foursquare_tky.m'
+model_cache_file = './libtraffic/cache/model_cache/DeepMove_foursquare_tky.m'
 model = get_model(config, data_feature)
 executor = get_executor(config, model)
 # self = executor.model

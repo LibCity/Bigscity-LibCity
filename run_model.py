@@ -4,8 +4,8 @@
 
 import argparse
 
-from trafficdl.pipeline import run_model
-from trafficdl.utils import general_arguments, str2bool, str2float
+from libtraffic.pipeline import run_model
+from libtraffic.utils import general_arguments, str2bool, str2float
 
 
 def add_other_args(parser):

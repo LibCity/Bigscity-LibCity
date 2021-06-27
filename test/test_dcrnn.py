@@ -1,7 +1,7 @@
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor
-from trafficdl.utils import get_model
-from trafficdl.utils import get_logger
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor
+from libtraffic.utils import get_model
+from libtraffic.utils import get_logger
 
 config = {
     'log_level': 'INFO',
@@ -74,7 +74,7 @@ print(data_feature['adj_mx'].sum())
 model = get_model(config, data_feature)
 
 # 加载执行器
-model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
+model_cache_file = './libtraffic/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
 executor = get_executor(config, model)
 
 # 训练
