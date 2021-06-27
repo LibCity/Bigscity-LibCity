@@ -1,7 +1,7 @@
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor
-from trafficdl.utils import get_model
-from trafficdl.utils import get_logger
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor
+from libtraffic.utils import get_model
+from libtraffic.utils import get_logger
 
 config = {
     'log_level': 'INFO',
@@ -62,7 +62,7 @@ print(data_feature['adj_mx'].shape)
 
 model = get_model(config, data_feature)
 
-model_cache_file = './trafficdl/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
+model_cache_file = './libtraffic/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
 executor = get_executor(config, model)
 
 executor.train(train_data, valid_data)

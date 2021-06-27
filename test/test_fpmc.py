@@ -1,8 +1,8 @@
 import os
 import torch
-from trafficdl.config import ConfigParser
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from libtraffic.config import ConfigParser
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor, get_model
 
 model_name = 'FPMC'
 dataset_name = 'foursquare_tky'
@@ -16,7 +16,7 @@ data_feature = dataset.get_data_feature()
 batch = train_data.__iter__().__next__()
 batch.to_tensor(gpu=True)
 # 加载执行器
-model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(model_name, dataset_name)
+model_cache_file = './libtraffic/cache/model_cache/{}_{}.m'.format(model_name, dataset_name)
 model = get_model(config, data_feature)
 executor = get_executor(config, model)
 # 训练

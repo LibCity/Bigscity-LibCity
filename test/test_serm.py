@@ -1,7 +1,7 @@
 import os
-from trafficdl.config import ConfigParser
-from trafficdl.data import get_dataset
-from trafficdl.utils import get_executor, get_model
+from libtraffic.config import ConfigParser
+from libtraffic.data import get_dataset
+from libtraffic.utils import get_executor, get_model
 # import pandas as pd
 
 # raw_data = pd.read_csv('./raw_data/serm_foursquare.txt', sep='', header=None)
@@ -17,7 +17,7 @@ batch = valid_data.__iter__().__next__()
 batch.to_tensor(config['device'])
 
 # 加载执行器
-model_cache_file = './trafficdl/cache/model_cache/{}_{}.m'.format(
+model_cache_file = './libtraffic/cache/model_cache/{}_{}.m'.format(
     model_name, dataset_name)
 model = get_model(config, data_feature)
 executor = get_executor(config, model)

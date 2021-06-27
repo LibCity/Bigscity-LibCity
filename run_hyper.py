@@ -4,9 +4,9 @@
 
 import argparse
 
-from trafficdl.pipeline import objective_function
-from trafficdl.executor import HyperTuning
-from trafficdl.utils import general_arguments, str2bool, str2float, get_logger
+from libtraffic.pipeline import objective_function
+from libtraffic.executor import HyperTuning
+from libtraffic.utils import general_arguments, str2bool, str2float, get_logger
 
 
 def add_other_args(parser):
