@@ -17,3 +17,5 @@ fastdtw==0.3.4
 torch_geometric==1.7.0
 networkx==2.5.1
 gensim==4.0.1
+torchtext==0.6.0
+nltk==3.2.4
