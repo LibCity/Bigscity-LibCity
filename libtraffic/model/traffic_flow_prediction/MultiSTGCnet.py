@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.tensor as tensor
 import torch.nn.functional as F
 import numpy as np
 from logging import getLogger
@@ -37,7 +36,7 @@ def get_spatial_matrix(adj_mx):
     S_near = S_near.astype(np.float32)
     S_middle = S_middle.astype(np.float32)
     S_distant = S_distant.astype(np.float32)
-    return tensor(S_near), tensor(S_middle), tensor(S_distant)
+    return torch.tensor(S_near), torch.tensor(S_middle), torch.tensor(S_distant)
 
 
 class SpatialBlock(nn.Module):
