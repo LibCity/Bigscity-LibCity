@@ -14,6 +14,7 @@ from libtraffic.model.traffic_speed_prediction.STAGGCN import STAGGCN
 from libtraffic.model.traffic_speed_prediction.GTS import GTS
 from libtraffic.model.traffic_speed_prediction.HGCN import HGCN
 from libtraffic.model.traffic_speed_prediction.STMGAT import STMGAT
+from libtraffic.model.traffic_speed_prediction.STTN import STTN
 
 __all__ = [
     "DCRNN",
@@ -31,5 +32,6 @@ __all__ = [
     "GTS",
     "HGCN",
     "STAGGCN",
-    "STMGAT"
+    "STMGAT",
+    "STTN"
 ]
