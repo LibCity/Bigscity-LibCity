@@ -15,6 +15,7 @@ from libtraffic.model.traffic_flow_prediction.ResLSTM import ResLSTM
 from libtraffic.model.traffic_flow_prediction.DGCN import DGCN
 from libtraffic.model.traffic_flow_prediction.MultiSTGCnet import MultiSTGCnet
 from libtraffic.model.traffic_flow_prediction.CRANN import CRANN
+from libtraffic.model.traffic_flow_prediction.CONVGCNCommon import CONVGCNCommon
 
 __all__ = [
     "AGCRN",
@@ -33,5 +34,6 @@ __all__ = [
     "ResLSTM",
     "DGCN",
     "MultiSTGCnet",
-    "CRANN"
+    "CRANN",
+    "CONVGCNCommon"
 ]
