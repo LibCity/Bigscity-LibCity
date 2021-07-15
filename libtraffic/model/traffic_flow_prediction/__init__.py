@@ -34,5 +34,6 @@ __all__ = [
     "ResLSTM",
     "DGCN",
     "MultiSTGCnet",
-    "CRANN"
+    "CRANN",
+    "CONVGCNCommon"
 ]
