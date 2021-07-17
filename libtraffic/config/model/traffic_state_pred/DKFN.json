@@ -14,7 +14,6 @@
 
     "train_rate": 0.7,
     "eval_rate": 0.1,
-    "metrics": ["MSE"],
     "train_loss": "mse",
     "loss_func": "l1",
     "learning_rate": 1e-4,
