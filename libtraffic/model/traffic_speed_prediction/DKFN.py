@@ -207,7 +207,7 @@ class DKFN(AbstractTrafficStateModel):
         return loss.masked_mse_torch(y_predicted, y_true)
     '''
 
-    '''
+    # multi-step prediction
     def predict(self, batch):
         x = batch['X']
         y = batch['y']
@@ -224,8 +224,11 @@ class DKFN(AbstractTrafficStateModel):
             x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
         y_preds = torch.cat(y_preds, dim=1)  # [batch_size, output_window, num_nodes, output_dim]
         return y_preds
-    '''
 
-    def predict(self, batch):
-        return self.forward(batch)
+    def calculate_loss(self, batch):
+        y_true = batch['y']
+        y_predicted = self.predict(batch)
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+        return loss.masked_mse_torch(y_predicted, y_true)
 
