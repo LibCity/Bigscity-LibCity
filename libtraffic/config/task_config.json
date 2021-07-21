@@ -80,16 +80,7 @@
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq", "SHARE", "DMVSTNet",
             "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
-<<<<<<< HEAD
-            "MultiSTGCnet", "STMGAT", "CRANN", "DKFN"],
-        "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PeMSD7(M)",
-            "Loop Seattle", "LOS-LOOP", "LOS-LOOP-SMALL", "Q-TRAFFIC", "SZ-TAXI",
-            "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi2014",
-            "NYCTaxi20150103", "NYCTaxi20160102", "TAXIBJ", "T-Drive20150206",
-            "AcousticPollution", "BEIJING SUBWAY_10MIN", "BEIJING SUBWAY_15MIN", "BEIJING SUBWAY_30MIN",
-            "CTM", "HEAT", "Rotterdam", "HZMetro", "SHMetro", "M_DENSE"
-=======
-            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon"],
+            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DKFN"],
         "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
             "LOOP_SEATTLE", "LOS_LOOP", "LOS_LOOP_SMALL", "Q_TRAFFIC", "SZ_TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi20140112",
@@ -98,7 +89,6 @@
             "ROTTERDAM", "HZMETRO", "SHMETRO", "M_DENSE", "PORTO", "NYCTAXI_DYNA",
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI"
->>>>>>> origin/master
         ],
         "DCRNN": {
             "dataset_class": "TrafficStatePointDataset",
