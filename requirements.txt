@@ -1,6 +1,5 @@
 numpy==1.19.4
 torch==1.7.1
-geopy==2.0.0
 scipy==1.5.3
 pandas==1.1.5
 tensorboard==2.4.1
@@ -11,10 +10,10 @@ pytest==3.2.1
 ray==1.2.0
 tabulate==0.8.9
 hyperopt==0.2.5
-dgl==0.6.1
 tqdm==4.60.0
+geopy==2.0.0
+dgl==0.6.1
 fastdtw==0.3.4
-torch_geometric==1.7.0
 networkx==2.5.1
 gensim==4.0.1
 torchtext==0.6.0

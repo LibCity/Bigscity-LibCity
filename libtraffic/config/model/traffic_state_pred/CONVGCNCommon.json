@@ -1,0 +1,11 @@
+{
+    "batch_size": 64,
+    "scaler": "standard",
+    "load_external": true,
+    "normal_external": false,
+    "add_time_in_day": true,
+    "add_day_in_week": false,
+    "max_epoch": 100,
+    "learner": "adam",
+    "learning_rate": 0.001
+}
