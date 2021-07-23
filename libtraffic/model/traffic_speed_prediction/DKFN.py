@@ -10,20 +10,18 @@ from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateMo
 
 
 class FilterLinear(nn.Module):
-    def __init__(self, in_features, out_features, filter_square_matrix, bias=True):
+    def __init__(self, device, in_features, out_features, filter_square_matrix, bias=True):
         '''
         filter_square_matrix : filter square matrix, whose each elements is 0 or 1.
         '''
         super(FilterLinear, self).__init__()
+        self.device = device
+
         self.in_features = in_features
         self.out_features = out_features
 
-        use_gpu = torch.cuda.is_available()
         self.filter_square_matrix = None
-        if use_gpu:
-            self.filter_square_matrix = Variable(filter_square_matrix.cuda(), requires_grad=False)
-        else:
-            self.filter_square_matrix = Variable(filter_square_matrix, requires_grad=False)
+        self.filter_square_matrix = Variable(filter_square_matrix.to(device), requires_grad=False)
 
         self.weight = Parameter(torch.Tensor(out_features, in_features))
         if bias:
@@ -95,7 +93,7 @@ class DKFN(AbstractTrafficStateModel):
             self.A_list.append(A_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
-        self.gc_list = nn.ModuleList([FilterLinear(self.feature_size, self.feature_size, self.A_list[i], bias=False) for i in range(self.K)])
+        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.feature_size, self.feature_size, self.A_list[i], bias=False) for i in range(self.K)])
 
         self.fl = nn.Linear(self.gc_input_size + self.hidden_size, self.hidden_size)
         self.il = nn.Linear(self.gc_input_size + self.hidden_size, self.hidden_size)
@@ -180,19 +178,11 @@ class DKFN(AbstractTrafficStateModel):
         # return Hidden_State, Cell_State, rHidden_State, rCell_State, pred
 
     def initHidden(self, batch_size):
-        use_gpu = torch.cuda.is_available()
-        if use_gpu:
-            Hidden_State = Variable(torch.zeros(batch_size, self.hidden_size).cuda())
-            Cell_State = Variable(torch.zeros(batch_size, self.hidden_size).cuda())
-            rHidden_State = Variable(torch.zeros(batch_size, self.hidden_size).cuda())
-            rCell_State = Variable(torch.zeros(batch_size, self.hidden_size).cuda())
-            return Hidden_State, Cell_State, rHidden_State, rCell_State
-        else:
-            Hidden_State = Variable(torch.zeros(batch_size, self.hidden_size))
-            Cell_State = Variable(torch.zeros(batch_size, self.hidden_size))
-            rHidden_State = Variable(torch.zeros(batch_size, self.hidden_size))
-            rCell_State = Variable(torch.zeros(batch_size, self.hidden_size))
-            return Hidden_State, Cell_State, rHidden_State, rCell_State
+        Hidden_State = Variable(torch.zeros(batch_size, self.hidden_size).to(self.device))
+        Cell_State = Variable(torch.zeros(batch_size, self.hidden_size).to(self.device))
+        rHidden_State = Variable(torch.zeros(batch_size, self.hidden_size).to(self.device))
+        rCell_State = Variable(torch.zeros(batch_size, self.hidden_size).to(self.device))
+        return Hidden_State, Cell_State, rHidden_State, rCell_State
 
     def reinitHidden(self, batch_size, Hidden_State_data, Cell_State_data):
         return initHidden()
