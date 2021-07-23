@@ -10,7 +10,7 @@ from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateMo
 
 
 class FilterLinear(nn.Module):
-    def __init__(self, device, in_features, out_features, filter_square_matrix, bias=True):
+    def __init__(self, device, input_dim, output_dim, in_features, out_features, filter_square_matrix, bias=True):
         '''
         filter_square_matrix : filter square matrix, whose each elements is 0 or 1.
         '''
@@ -20,12 +20,12 @@ class FilterLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.filter_square_matrix = None
-        self.filter_square_matrix = Variable(filter_square_matrix.to(device), requires_grad=False)
+        self.num_nodes = filter_square_matrix.shape[0]
+        self.filter_square_matrix = Variable(filter_square_matrix.repeat(output_dim, input_dim).to(device), requires_grad=False)
 
-        self.weight = Parameter(torch.Tensor(out_features, in_features))
+        self.weight = Parameter(torch.Tensor(out_features, in_features).to(device))
         if bias:
-            self.bias = Parameter(torch.Tensor(out_features))
+            self.bias = Parameter(torch.Tensor(out_features).to(device))
         else:
             self.register_parameter('bias', None)
         self.reset_parameters()
@@ -62,6 +62,12 @@ class DKFN(AbstractTrafficStateModel):
         '''
         super(DKFN, self).__init__(config, data_feature)
 
+        self.num_nodes = self.data_feature.get('num_nodes', 1)
+        self.input_dim = self.data_feature.get('feature_dim', 1)
+        self.in_features = self.input_dim * self.num_nodes
+        self.output_dim = self.data_feature.get('output_dim', 1)
+        self.out_features = self.output_dim * self.num_nodes
+
         self.device = config.get('device', torch.device('cpu'))
         self._scaler = self.data_feature.get('scaler')
 
@@ -79,12 +85,8 @@ class DKFN(AbstractTrafficStateModel):
         norm_A = torch.matmul(D_inverse, A)
         A = norm_A
 
-        self.feature_size = A.shape[0]
-        self.hidden_size = self.feature_size
-        self.gc_input_size = self.feature_size * self.K
-
         # compute its list of powers
-        A_temp = torch.eye(self.feature_size, self.feature_size, device=self.device)
+        A_temp = torch.eye(self.num_nodes, self.num_nodes, device=self.device)
         for i in range(self.K):
             A_temp = torch.matmul(A_temp, A)
             if config.get('Clamp_A', True):
@@ -93,7 +95,10 @@ class DKFN(AbstractTrafficStateModel):
             self.A_list.append(A_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
-        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.feature_size, self.feature_size, self.A_list[i], bias=False) for i in range(self.K)])
+        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim, self.in_features, self.out_features, self.A_list[i], bias=False) for i in range(self.K)])
+
+        self.hidden_size = self.out_features
+        self.gc_input_size = self.out_features * self.K
 
         self.fl = nn.Linear(self.gc_input_size + self.hidden_size, self.hidden_size)
         self.il = nn.Linear(self.gc_input_size + self.hidden_size, self.hidden_size)
@@ -101,12 +106,12 @@ class DKFN(AbstractTrafficStateModel):
         self.Cl = nn.Linear(self.gc_input_size + self.hidden_size, self.hidden_size)
 
         # initialize the neighbor weight for the cell state
-        self.Neighbor_weight = Parameter(torch.FloatTensor(self.feature_size))
-        stdv = 1. / math.sqrt(self.feature_size)
+        self.Neighbor_weight = Parameter(torch.FloatTensor(self.out_features).to(self.device))
+        stdv = 1. / math.sqrt(self.out_features)
         self.Neighbor_weight.data.uniform_(-stdv, stdv)
 
         # RNN
-        self.rnn_input_size = self.feature_size
+        self.rnn_input_size = self.in_features
 
         self.rfl = nn.Linear(self.rnn_input_size + self.hidden_size, self.hidden_size)
         self.ril = nn.Linear(self.rnn_input_size + self.hidden_size, self.hidden_size)
@@ -115,15 +120,6 @@ class DKFN(AbstractTrafficStateModel):
 
         # addtional variables
         self.c = torch.nn.Parameter(torch.Tensor([1]))
-
-        self.fc1 = nn.Linear(64, self.hidden_size)
-        self.fc2 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.fc3 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.fc4 = nn.Linear(self.hidden_size, 64)
-        self.fc5 = nn.Linear(64, self.hidden_size)
-        self.fc6 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.fc7 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.fc8 = nn.Linear(self.hidden_size, 64)
 
     def step(self, step_input, Hidden_State, Cell_State, rHidden_State, rCell_State):
         # GC-LSTM
@@ -139,23 +135,24 @@ class DKFN(AbstractTrafficStateModel):
         C = torch.tanh(self.Cl(combined))
 
         NC = torch.mul(Cell_State,
-                       torch.mv(Variable(self.A_list[-1], requires_grad=False).to(self.device), self.Neighbor_weight))
-        Cell_State = f * NC + i * C
-        Hidden_State = o * torch.tanh(Cell_State)
+                       torch.mv(Variable(self.A_list[-1].repeat(self.output_dim, self.output_dim), requires_grad=False).to(self.device), self.Neighbor_weight))
+        Cell_State = f * NC + i * C  # [batch_size, out_features]
+        Hidden_State = o * torch.tanh(Cell_State)  # [batch_size, out_features]
 
         # LSTM
-        rcombined = torch.cat((step_input, rHidden_State), 1)
-        rf = torch.sigmoid(self.rfl(rcombined))
+        rcombined = torch.cat((step_input, rHidden_State), 1)  # [batch_size, in_features + out_features]
+        # rfl: nn.Linear([in_features + out_features, out_features])
+        rf = torch.sigmoid(self.rfl(rcombined))  # [batch_size, out_features]
         ri = torch.sigmoid(self.ril(rcombined))
         ro = torch.sigmoid(self.rol(rcombined))
         rC = torch.tanh(self.rCl(rcombined))
-        rCell_State = rf * rCell_State + ri * rC
-        rHidden_State = ro * torch.tanh(rCell_State)
+        rCell_State = rf * rCell_State + ri * rC  # [batch_size, out_features]
+        rHidden_State = ro * torch.tanh(rCell_State)  # [batch_size, out_features]
 
         # Kalman Filtering
         var1, var2 = torch.var(step_input), torch.var(gc)
 
-        pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / (var1 + var2 * self.c)
+        pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / (var1 + var2 * self.c)  # [batch_size, out_features]
 
         return Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred
 
@@ -173,9 +170,8 @@ class DKFN(AbstractTrafficStateModel):
         for i in range(time_step):
             step_input = inputs[:, i:i+1, :, :].transpose(2, 3).squeeze().reshape(batch_size, -1)
             Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred = self.step(
-                torch.squeeze(inputs[:, i:i + 1, :]), Hidden_State, Cell_State, rHidden_State, rCell_State)
-        return pred.unsqueeze(1).unsqueeze(3)
-        # return Hidden_State, Cell_State, rHidden_State, rCell_State, pred
+                step_input, Hidden_State, Cell_State, rHidden_State, rCell_State)
+        return pred.reshape(batch_size, self.output_dim, self.num_nodes).transpose(1, 2).unsqueeze(1)
 
     def initHidden(self, batch_size):
         Hidden_State = Variable(torch.zeros(batch_size, self.hidden_size).to(self.device))
@@ -210,7 +206,7 @@ class DKFN(AbstractTrafficStateModel):
             y_preds.append(y_.clone())
             if y_.shape[3] < x_.shape[3]:
                 # concatenate with the extra dimensions of original predictions of nodes
-                y_ = torch.cat([y_, y[:, i:i+1, :, 1:]], dim=3)
+                y_ = torch.cat([y_, y[:, i:i+1, :, self.output_dim:]], dim=3)
             x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
         y_preds = torch.cat(y_preds, dim=1)  # [batch_size, output_window, num_nodes, output_dim]
         return y_preds
