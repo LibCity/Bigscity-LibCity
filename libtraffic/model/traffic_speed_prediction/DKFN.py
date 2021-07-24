@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,7 +20,8 @@ class FilterLinear(nn.Module):
         self.out_features = out_features
 
         self.num_nodes = filter_square_matrix.shape[0]
-        self.filter_square_matrix = Variable(filter_square_matrix.repeat(output_dim, input_dim).to(device), requires_grad=False)
+        self.filter_square_matrix = Variable(filter_square_matrix.repeat(output_dim, input_dim).to(device),
+                                             requires_grad=False)
 
         self.weight = Parameter(torch.Tensor(out_features, in_features).to(device))
         if bias:
@@ -95,7 +95,9 @@ class DKFN(AbstractTrafficStateModel):
             self.A_list.append(A_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
-        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim, self.in_features, self.out_features, self.A_list[i], bias=False) for i in range(self.K)])
+        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim,
+                                                   self.in_features, self.out_features,
+                                                   self.A_list[i], bias=False) for i in range(self.K)])
 
         self.hidden_size = self.out_features
         self.gc_input_size = self.out_features * self.K
@@ -135,7 +137,8 @@ class DKFN(AbstractTrafficStateModel):
         C = torch.tanh(self.Cl(combined))
 
         NC = torch.mul(Cell_State,
-                       torch.mv(Variable(self.A_list[-1].repeat(self.output_dim, self.output_dim), requires_grad=False).to(self.device), self.Neighbor_weight))
+                       torch.mv(Variable(self.A_list[-1].repeat(self.output_dim, self.output_dim),
+                                         requires_grad=False).to(self.device), self.Neighbor_weight))
         Cell_State = f * NC + i * C  # [batch_size, out_features]
         Hidden_State = o * torch.tanh(Cell_State)  # [batch_size, out_features]
 
@@ -152,7 +155,8 @@ class DKFN(AbstractTrafficStateModel):
         # Kalman Filtering
         var1, var2 = torch.var(step_input), torch.var(gc)
 
-        pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / (var1 + var2 * self.c)  # [batch_size, out_features]
+        pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / \
+               (var1 + var2 * self.c)  # [batch_size, out_features]
 
         return Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred
 
@@ -181,7 +185,7 @@ class DKFN(AbstractTrafficStateModel):
         return Hidden_State, Cell_State, rHidden_State, rCell_State
 
     def reinitHidden(self, batch_size, Hidden_State_data, Cell_State_data):
-        return initHidden()
+        return self.initHidden()
 
     '''
     def calculate_loss(self, batch):
@@ -217,4 +221,3 @@ class DKFN(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mse_torch(y_predicted, y_true)
-
