@@ -1,0 +1,18 @@
+{
+  "batch_size": 64,
+  "cache_dataset": true,
+  "num_workers": 0,
+  "pad_with_last_sample": true,
+  "train_rate": 0.7,
+  "eval_rate": 0.1,
+  "scaler": "none",
+  "load_external": false,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "input_window": 12,
+  "output_window": 12,
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "hidden_size": 20,
+  "method": "big"
+}
