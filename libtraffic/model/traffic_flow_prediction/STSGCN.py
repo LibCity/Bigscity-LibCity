@@ -16,10 +16,10 @@ class PositionEmbedding(nn.Module):
         self.embedding_size = embedding_size
         self.temporal = temporal
         self.spatial = spatial
-        self.temporal_emb = torch.nn.Parameter(torch.zeros((1, input_length, 1, embedding_size))).to(config['device'])
+        self.temporal_emb = torch.nn.Parameter(torch.zeros((1, input_length, 1, embedding_size)).to(config['device']))
         # shape is (1, T, 1, C)
         xavier_uniform(self.temporal_emb)
-        self.spatial_emb = torch.nn.Parameter(torch.zeros((1, 1, num_of_vertices, embedding_size))).to(config['device'])
+        self.spatial_emb = torch.nn.Parameter(torch.zeros((1, 1, num_of_vertices, embedding_size)).to(config['device']))
         # shape is (1, 1, N, C)
         xavier_uniform(self.spatial_emb)
 
@@ -293,7 +293,7 @@ class STSGCN(AbstractTrafficStateModel):
         self.activation = config.get('act_type', 'GLU')
         self.temporal_emb = config.get('temporal_emb', True)
         self.spatial_emb = config.get('spatial_emb', True)
-        self.use_mask = config.get('use_mask', True)
+        self.use_mask = config.get('use_mask', False)
         self.device = config.get('device', torch.device('cpu'))
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
@@ -309,7 +309,11 @@ class STSGCN(AbstractTrafficStateModel):
 
         if self.use_mask:
             # 初始化遮罩矩阵
-            self.mask = torch.tensor((self.adj != 0) + 0.0).to(self.device)
+            self._logger.warning('You use mask matrix, please make sure you set '
+                                 '`loss.backward(retain_graph=True)` to replace the '
+                                 '`loss.backward()` in traffic_state_executor.py!')
+            self.mask = torch.nn.Parameter(torch.tensor((self.adj != 0) + 0.0).to(self.device))
+            self.adj = self.mask * self.adj
 
         # 输入嵌入层，增加特征数量，提升表示能力
         self.embedding_dim = self.feature_dim
@@ -337,7 +341,7 @@ class STSGCN(AbstractTrafficStateModel):
         self.outputs = nn.ModuleList()
         for i in range(self.predict_length):
             self.outputs.append(OutputLayer(self.num_of_vertices, self.input_length, self.num_of_features,
-                                            num_of_filters=4, predict_length=1, output_dim=self.output_dim))
+                                            num_of_filters=128, predict_length=1, output_dim=self.output_dim))
 
         # Huber Loss 损失函数
         self.loss = nn.SmoothL1Loss(beta=self.rho)
@@ -353,7 +357,7 @@ class STSGCN(AbstractTrafficStateModel):
             data = torch.relu(self.first_layer_embedding(data))
 
         for stsgcl_layer in self.stsgcl_layers:
-            data = stsgcl_layer(data, self.mask * self.adj)
+            data = stsgcl_layer(data, self.adj)
 
         need_concat = []
         for output_layer in self.outputs:

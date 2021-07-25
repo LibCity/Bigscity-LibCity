@@ -3,7 +3,7 @@
     "act_type": "GLU",
     "temporal_emb": true,
     "spatial_emb": true,
-    "use_mask": true,
+    "use_mask": false,
     "first_layer_embedding_size": 64,
     "filters": [
         [64, 64, 64],
