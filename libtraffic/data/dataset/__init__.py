@@ -24,6 +24,7 @@ from libtraffic.data.dataset.convgcn_dataset import CONVGCNDataset
 from libtraffic.data.dataset.reslstm_dataset import RESLSTMDataset
 from libtraffic.data.dataset.multi_stgcnet_dataset import MultiSTGCnetDataset
 from libtraffic.data.dataset.crann_dataset import CRANNDataset
+from libtraffic.data.dataset.ccrnn_dataset import CCRNNDataset
 from libtraffic.data.dataset.geosan_dataset import GeoSANDataset
 
 __all__ = [
@@ -49,5 +50,6 @@ __all__ = [
     "RESLSTMDataset",
     "MultiSTGCnetDataset",
     "CRANNDataset",
+    "CCRNNDataset",
     "GeoSANDataset"
 ]

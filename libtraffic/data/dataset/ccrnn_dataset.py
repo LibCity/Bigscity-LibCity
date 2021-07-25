@@ -1,17 +1,14 @@
 import os
-import math
 import numpy as np
-
+from scipy.spatial.distance import cdist
+from libtraffic.utils import ensure_dir
 from libtraffic.data.dataset import TrafficStatePointDataset
 # from libtraffic.data.dataset import TrafficStateGridDataset
-from libtraffic.utils import ensure_dir
 
 
 """
-主要功能是定义了一种根据原始交通状态数据计算邻接矩阵的方法，并且保存了计算好的邻接矩阵
-当然，采用框架预定义的根据距离定义邻接矩阵的方法也是可以的
-因此STG2Seq模型也支持基础的TrafficStatePointDataset、TrafficStateGridDataset
-STG2SeqDataset既可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
+主要功能是定义了一种根据原始交通状态数据计算邻接矩阵的方法
+CCRNNDataset既可以继承TrafficStatePointDataset，也可以继承TrafficStateGridDataset以处理网格数据
 修改成TrafficStateGridDataset时，只需要修改：
 1.TrafficStatePointDataset-->TrafficStateGridDataset
 2.self.use_row_column = False, 可以加到self.parameters_str中
@@ -19,11 +16,13 @@ STG2SeqDataset既可以继承TrafficStatePointDataset，也可以继承TrafficSt
 """
 
 
-class STG2SeqDataset(TrafficStatePointDataset):
+class CCRNNDataset(TrafficStatePointDataset):
 
     def __init__(self, config):
         super().__init__(config)
         self.use_row_column = False
+        self.hidden_size = config.get('hidden_size', 20)
+        self.method = config.get('method', 'big')
         self.parameters_str += '_save_adj'
         self.cache_file_name = os.path.join('./libtraffic/cache/dataset_cache/',
                                             'point_based_{}.npz'.format(self.parameters_str))
@@ -109,7 +108,7 @@ class STG2SeqDataset(TrafficStatePointDataset):
         self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
         self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
 
-        self.adj_mx = self._generate_graph_with_data(data=df, length=num_test)
+        self.adj_mx = self._generate_graph_with_data(data=df, len=num_train)
         if self.cache_dataset:
             ensure_dir(self.cache_file_folder)
             np.savez_compressed(
@@ -166,30 +165,25 @@ class STG2SeqDataset(TrafficStatePointDataset):
         self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape))
         self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
         self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
-        sparsity = self.adj_mx.sum() / (self.adj_mx.shape[0] * self.adj_mx.shape[1])
         self._logger.info("Generate rel file from data, shape=" + str(self.adj_mx.shape))
-        self._logger.info("Sparsity of the adjacent matrix is: " + str(sparsity))
         return x_train, y_train, x_val, y_val, x_test, y_test
 
-    def _generate_graph_with_data(self, data, length, threshold=0.05):
-        # data shape is [sample_nums, node_nums, dims] or [sample_nums, node_nums]
-        sample_nums, node_num, dim = data.shape[0], data.shape[1], data.shape[2]
-        # print(data.shape)
-        adj_mx = np.zeros((node_num, node_num))
-        demand_zero = np.zeros((length, dim))
-        for i in range(node_num):
-            node_i = data[-length:, i, :]
-            adj_mx[i, i] = 1
-            if np.array_equal(node_i, demand_zero):
-                continue
-            else:
-                for j in range(i + 1, node_num):
-                    node_j = data[-length:, j, :]
-                    distance = math.exp(-(np.abs((node_j - node_i)).sum() / length*dim))
-                    if distance > threshold:
-                        adj_mx[i, j] = 1
-                        adj_mx[j, i] = 1
-        sparsity = adj_mx.sum() / (node_num * node_num)
-        self._logger.info("Generate rel file from data, shape=" + str(adj_mx.shape))
-        self._logger.info("Sparsity of the adjacent matrix is: " + str(sparsity))
-        return adj_mx
+    def _generate_graph_with_data(self, data, len):
+        data = data[:len, ...]
+        len_time, num_nodes, feature_dim = data.shape[0], data.shape[1], data.shape[2]
+        inputs = np.swapaxes(data, 1, 2).reshape(-1, num_nodes)  # m*n
+        self._logger.info("Start singular value decomposition, data.shape={}!".format(str(inputs.shape)))
+        u, s, v = np.linalg.svd(inputs)  # u=(m*m), v=(n*n)
+        w = np.diag(s[:self.hidden_size]).dot(v[:self.hidden_size, :]).T  # n*hid
+
+        support = None
+        if self.method == 'big':
+            self._logger.info("Start calculating adjacency matrix!")
+            graph = cdist(w, w, metric='euclidean')  # n*n
+            support = graph * -1 / np.std(graph) ** 2
+            support = np.exp(support)  # n*n
+        elif self.method == 'small':
+            support = w  # n*hid
+
+        self._logger.info("Generate rel file from data, shape=" + str(support.shape))
+        return support

@@ -25,11 +25,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # 增加指定的参数
     parser.add_argument('--task', type=str,
-                        default='', help='the name of task')
+                        default='traffic_state_pred', help='the name of task')
     parser.add_argument('--model', type=str,
-                        default='', help='the name of model')
+                        default='GRU', help='the name of model')
     parser.add_argument('--dataset', type=str,
-                        default='', help='the name of dataset')
+                        default='METR_LA', help='the name of dataset')
     parser.add_argument('--config_file', type=str,
                         default=None, help='the file name of config file')
     parser.add_argument('--saved_model', type=str2bool,
