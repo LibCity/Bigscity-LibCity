@@ -16,10 +16,10 @@ class PositionEmbedding(nn.Module):
         self.embedding_size = embedding_size
         self.temporal = temporal
         self.spatial = spatial
-        self.temporal_emb = torch.zeros((1, input_length, 1, embedding_size)).to(config['device'])
+        self.temporal_emb = torch.nn.Parameter(torch.zeros((1, input_length, 1, embedding_size))).to(config['device'])
         # shape is (1, T, 1, C)
         xavier_uniform(self.temporal_emb)
-        self.spatial_emb = torch.zeros((1, 1, num_of_vertices, embedding_size)).to(config['device'])
+        self.spatial_emb = torch.nn.Parameter(torch.zeros((1, 1, num_of_vertices, embedding_size))).to(config['device'])
         # shape is (1, 1, N, C)
         xavier_uniform(self.spatial_emb)
 
@@ -42,16 +42,16 @@ class GcnOperation(nn.Module):
         self.num_of_vertices = num_of_vertices
         self.activation = activation
         if activation == "GLU":
-            self.layer = nn.Linear(num_of_features, 2 * num_of_features)
+            self.layer = nn.Linear(num_of_features, 2 * num_of_filter)
         elif activation == "relu":
-            self.layer = nn.Linear(num_of_features, num_of_features)
+            self.layer = nn.Linear(num_of_features, num_of_filter)
 
     def forward(self, data, adj):
         data = torch.matmul(adj, data)
 
         if self.activation == "GLU":
             data = self.layer(data)
-            lhs, rhs = data.split(self.num_of_features, -1)
+            lhs, rhs = data.split(self.num_of_filter, -1)
             data = lhs * torch.sigmoid(rhs)
 
         elif self.activation == "relu":
