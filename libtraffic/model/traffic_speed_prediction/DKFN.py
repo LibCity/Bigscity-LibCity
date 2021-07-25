@@ -36,9 +36,6 @@ class FilterLinear(nn.Module):
         if self.bias is not None:
             self.bias.data.uniform_(-stdv, stdv)
 
-    #         print(self.weight.data)
-    #         print(self.bias.data)
-
     def forward(self, input):
         return F.linear(input, self.filter_square_matrix.matmul(self.weight), self.bias)
 
@@ -53,13 +50,6 @@ class DKFN(AbstractTrafficStateModel):
     # def __init__(self, K, A, feature_size, Clamp_A=True):
     def __init__(self, config, data_feature):
         # GC-LSTM
-        '''
-        Args:
-            K: K-hop graph
-            A: adjacency matrix
-            feature_size: the dimension of features
-            Clamp_A: Boolean value, clamping all elements of A between 0. to 1.
-        '''
         super(DKFN, self).__init__(config, data_feature)
 
         self.num_nodes = self.data_feature.get('num_nodes', 1)
@@ -187,17 +177,6 @@ class DKFN(AbstractTrafficStateModel):
     def reinitHidden(self, batch_size, Hidden_State_data, Cell_State_data):
         return self.initHidden()
 
-    '''
-    def calculate_loss(self, batch):
-        y_true = batch['y']
-        y_predicted = self.predict(batch)
-        # pick the first output dimension only as only the first is supported
-        y_true = self._scaler.inverse_transform(y_true[..., :1])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :1])
-        return loss.masked_mse_torch(y_predicted, y_true)
-    '''
-
-    # multi-step prediction
     def predict(self, batch):
         x = batch['X']
         y = batch['y']
@@ -209,7 +188,6 @@ class DKFN(AbstractTrafficStateModel):
             y_ = self.forward(batch_tmp)
             y_preds.append(y_.clone())
             if y_.shape[3] < x_.shape[3]:
-                # concatenate with the extra dimensions of original predictions of nodes
                 y_ = torch.cat([y_, y[:, i:i+1, :, self.output_dim:]], dim=3)
             x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
         y_preds = torch.cat(y_preds, dim=1)  # [batch_size, output_window, num_nodes, output_dim]
