@@ -15,6 +15,7 @@ STG2SeqDataset既可以继承TrafficStatePointDataset，也可以继承TrafficSt
 修改成TrafficStateGridDataset时，只需要修改：
 1.TrafficStatePointDataset-->TrafficStateGridDataset
 2.self.use_row_column = False, 可以加到self.parameters_str中
+3.需要修改_generate_graph_with_data函数！
 """
 
 
