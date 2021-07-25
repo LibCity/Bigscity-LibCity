@@ -1,0 +1,31 @@
+{
+  "hidden_size": 25,
+  "n_dim": 50,
+  "n_supports": 1,
+  "k_hop": 3,
+  "n_rnn_layers": 1,
+  "n_gconv_layers": 3,
+  "cl_decay_steps": 300,
+  "graph_category": "gau",
+  "normalized_category": "randomwalk",
+
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.01,
+  "lr_decay": true,
+  "lr_scheduler": "reducelronplateau",
+  "lr_decay_ratio": 0.2,
+  "lr_patience": 5,
+  "lr_threshold": 0.001,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 50
+}
