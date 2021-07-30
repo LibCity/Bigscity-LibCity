@@ -63,7 +63,7 @@ python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 
 ## Contribution
 
-LibTraffic 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigscity.com/)) 开发和维护。 该库的核心开发人员是 [@aptx1231](https://github.com/aptx1231) 和 [@WenMellors](https://github.com/WenMellors)。
+LibTraffic 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigcity.ai/)) 开发和维护。 该库的核心开发人员是 [@aptx1231](https://github.com/aptx1231) 和 [@WenMellors](https://github.com/WenMellors)。
 
 若干共同开发者也参与了模型的复现，其贡献列表在 [贡献者列表](./contribution_list.md) 。
 

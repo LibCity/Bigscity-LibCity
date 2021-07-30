@@ -65,7 +65,7 @@ More details is represented in [Docs](https://bigscity-libtraffic-docs.readthedo
 
 ## Contribution
 
-The LibTraffic is mainly developed and maintained by Beihang Interest Group on SmartCity ([BIGSCITY](https://www.bigscity.com/)). The core developers of this library are [@aptx1231](https://github.com/aptx1231) and [@WenMellors](https://github.com/WenMellors). 
+The LibTraffic is mainly developed and maintained by Beihang Interest Group on SmartCity ([BIGSCITY](https://www.bigcity.ai/)). The core developers of this library are [@aptx1231](https://github.com/aptx1231) and [@WenMellors](https://github.com/WenMellors). 
 
 Several co-developers have also participated in the reproduction of  the model, the list of contributions of which is presented in the [reproduction contribution list](./contribution_list.md).
 
