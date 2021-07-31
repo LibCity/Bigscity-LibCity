@@ -1,49 +1,13 @@
 import math
-
 import torch
+import torch.nn.functional as F
 from torch.nn import init
 from torch.nn.parameter import Parameter
-import math
 from bisect import bisect
-
-import nni
 import numpy as np
-import pandas as pd
 from torch import nn
-from tqdm import tqdm, trange
 
-def st_lstm_cell_cal(input_l, input_s, input_q, hidden, cell, w_ih, w_hh, w_s, w_q, b_ih, b_hh):
-    """
-    Proceed calculation of one step of STLSTM.
-    :param input_l: input of location embedding, shape (batch_size, input_size)
-    :param input_s: input of spatial embedding, shape (batch_size, input_size)
-    :param input_q: input of temporal embedding, shape (batch_size, input_size)
-    :param hidden: hidden state from previous step, shape (batch_size, hidden_size)
-    :param cell: cell state from previous step, shape (batch_size, hidden_size)
-    :param w_ih: chunk of weights for process input tensor, shape (4 * hidden_size, input_size)
-    :param w_hh: chunk of weights for process hidden state tensor, shape (4 * hidden_size, hidden_size)
-    :param w_s: chunk of weights for process input of spatial embedding, shape (3 * hidden_size, input_size)
-    :param w_q: chunk of weights for process input of temporal embedding, shape (3 * hidden_size, input_size)
-    :param b_ih: chunk of biases for process input tensor, shape (4 * hidden_size)
-    :param b_hh: chunk of biases for process hidden state tensor, shape (4 * hidden_size)
-    :return: hidden state and cell state of this step.
-    """
-    gates = torch.mm(input_l, w_ih.t()) + torch.mm(hidden, w_hh.t()) + b_ih + b_hh  # Shape (batch_size, 4 * hidden_size)
-    in_gate, forget_gate, cell_gate, out_gate = gates.chunk(4, 1)
-
-    ifo_gates = torch.cat((in_gate, forget_gate, out_gate), 1)  # shape (batch_size, 3 * hidden_size)
-    ifo_gates += torch.mm(input_s, w_s.t()) + torch.mm(input_q, w_q.t())
-    in_gate, forget_gate, out_gate = ifo_gates.chunk(3, 1)
-
-    in_gate = torch.sigmoid(in_gate)
-    forget_gate = torch.sigmoid(forget_gate)
-    cell_gate = torch.tanh(cell_gate)
-    out_gate = torch.sigmoid(out_gate)
-
-    next_cell = (forget_gate * cell) + (in_gate * cell_gate)
-    next_hidden = out_gate * torch.tanh(cell_gate)
-
-    return next_hidden, next_cell
+from libtraffic.model.abstract_model import AbstractModel
 
 
 class STLSTMCell(nn.Module):
@@ -110,6 +74,40 @@ class STLSTMCell(nn.Module):
         for weight in self.parameters():
             init.uniform_(weight, -stdv, stdv)
 
+    def st_lstm_cell_cal(self, input_l, input_s, input_q, hidden, cell, w_ih, w_hh, w_s, w_q, b_ih, b_hh):
+        """
+        Proceed calculation of one step of STLSTM.
+        :param input_l: input of location embedding, shape (batch_size, input_size)
+        :param input_s: input of spatial embedding, shape (batch_size, input_size)
+        :param input_q: input of temporal embedding, shape (batch_size, input_size)
+        :param hidden: hidden state from previous step, shape (batch_size, hidden_size)
+        :param cell: cell state from previous step, shape (batch_size, hidden_size)
+        :param w_ih: chunk of weights for process input tensor, shape (4 * hidden_size, input_size)
+        :param w_hh: chunk of weights for process hidden state tensor, shape (4 * hidden_size, hidden_size)
+        :param w_s: chunk of weights for process input of spatial embedding, shape (3 * hidden_size, input_size)
+        :param w_q: chunk of weights for process input of temporal embedding, shape (3 * hidden_size, input_size)
+        :param b_ih: chunk of biases for process input tensor, shape (4 * hidden_size)
+        :param b_hh: chunk of biases for process hidden state tensor, shape (4 * hidden_size)
+        :return: hidden state and cell state of this step.
+        """
+        # Shape (batch_size, 4 * hidden_size)
+        gates = torch.mm(input_l, w_ih.t()) + torch.mm(hidden, w_hh.t()) + b_ih + b_hh
+        in_gate, forget_gate, cell_gate, out_gate = gates.chunk(4, 1)
+
+        ifo_gates = torch.cat((in_gate, forget_gate, out_gate), 1)  # shape (batch_size, 3 * hidden_size)
+        ifo_gates += torch.mm(input_s, w_s.t()) + torch.mm(input_q, w_q.t())
+        in_gate, forget_gate, out_gate = ifo_gates.chunk(3, 1)
+
+        in_gate = torch.sigmoid(in_gate)
+        forget_gate = torch.sigmoid(forget_gate)
+        cell_gate = torch.tanh(cell_gate)
+        out_gate = torch.sigmoid(out_gate)
+
+        next_cell = (forget_gate * cell) + (in_gate * cell_gate)
+        next_hidden = out_gate * torch.tanh(cell_gate)
+
+        return next_hidden, next_cell
+
     def forward(self, input_l, input_s, input_q, hc=None):
         """
         Proceed one step forward propagation of ST-LSTM.
@@ -131,10 +129,11 @@ class STLSTMCell(nn.Module):
         self.check_forward_hidden(input_s, hc[1], '[0]')
         self.check_forward_hidden(input_q, hc[0], '[0]')
         self.check_forward_hidden(input_q, hc[1], '[0]')
-        return st_lstm_cell_cal(input_l=input_l, input_s=input_s, input_q=input_q,
-                            hidden=hc[0], cell=hc[1],
-                            w_ih=self.w_ih, w_hh=self.w_hh, w_s=self.w_s, w_q=self.w_q,
-                            b_ih=self.b_ih, b_hh=self.b_hh)
+        return self.st_lstm_cell_cal(input_l=input_l, input_s=input_s, input_q=input_q,
+                                     hidden=hc[0], cell=hc[1],
+                                     w_ih=self.w_ih, w_hh=self.w_hh, w_s=self.w_s, w_q=self.w_q,
+                                     b_ih=self.b_ih, b_hh=self.b_hh)
+
 
 def cal_slot_distance(value, slots):
     """
@@ -152,9 +151,8 @@ def cal_slot_distance(value, slots):
         lower_value = slots[lower_bound]
         higher_value = slots[higher_bound]
         total_distance = higher_value - lower_value
-        return (value - lower_value) / total_distance, \
-               (higher_value - value) / total_distance, \
-               lower_bound, higher_bound
+        return (value - lower_value) / total_distance, (higher_value -
+                                                        value) / total_distance, lower_bound, higher_bound
 
 
 def cal_slot_distance_batch(batch_value, slots):
@@ -178,7 +176,7 @@ def cal_slot_distance_batch(batch_value, slots):
         hd.append(hd_row)
         l.append(l_row)
         h.append(h_row)
-    return np.array(ld), np.array(hd), np.array(l), np.array(h)
+    return ld, hd, l, h
 
 
 def construct_slots(min_value, max_value, num_slots, type):
@@ -196,6 +194,7 @@ def construct_slots(min_value, max_value, num_slots, type):
     elif type == 'linear':
         n = (max_value - min_value) / (num_slots - 1)
         return [n * x + min_value for x in range(num_slots)]
+
 
 class STLSTM(nn.Module):
     """
@@ -239,53 +238,50 @@ class STLSTM(nn.Module):
         output_hidden, output_cell = [], []
         self.check_forward_input(input_l, input_s, input_q)
         for step in range(input_l.size(1)):
-            hc = self.cell(input_l[:,step,:], input_s[:,step,:], input_q[:,step,:], hc)
+            hc = self.cell(input_l[:, step, :], input_s[:, step, :], input_q[:, step, :], hc)
             output_hidden.append(hc[0])
             output_cell.append(hc[1])
         return torch.stack(output_hidden, 1), torch.stack(output_cell, 1)
 
-class STLSTMClassifier(nn.Module):
+
+class HSTLSTM(AbstractModel):
     """
     RNN classifier using ST-LSTM as its core.
     """
-    def __init__(self, input_size, output_size, hidden_size,
-                 temporal_slots, spatial_slots,
-                 device, learning_rate):
+    def __init__(self, config, data_feature):
         """
-        :param input_size: The number of expected features in the input vectors.
-        :param output_size: The number of classes in the classifier outputs.
-        :param hidden_size: The number of features in the hidden state.
-        :param temporal_slots: values of temporal slots.
-        :param spatial_slots: values of spatial slots.
-        :param device: The name of the device used for training.
-        :param learning_rate: Learning rate of training.
         """
-        super(STLSTMClassifier, self).__init__()
-        self.temporal_slots = sorted(temporal_slots)
-        self.spatial_slots = sorted(spatial_slots)
-
+        super(HSTLSTM, self).__init__(config, data_feature)
+        self.tim_slot_max = data_feature['tim_slot_max']
+        self.dis_slot_max = data_feature['dis_slot_max']
+        self.tim_slot_len = min(config['tim_slot_len'], self.tim_slot_max + 1)
+        self.dis_slot_len = min(config['dis_slot_len'], self.dis_slot_max + 1)
+        self.tim_slots = np.linspace(0, self.tim_slot_max, self.tim_slot_len).astype(int)
+        self.dis_slots = np.linspace(0, self.dis_slot_max, self.dis_slot_len).astype(int)
+        self.embed_size = config["embed_size"]
+        self.hidden_size = config['hidden_size']
+        self.loc_size = data_feature['loc_size']
+        self.device = config['device']
         # Initialization of network parameters.
-        self.st_lstm = STLSTM(input_size, hidden_size)
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.st_lstm = STLSTM(self.embed_size, self.hidden_size)
+        # output layer
+        self.linear = nn.Linear(self.hidden_size, self.loc_size)
 
         # Embedding matrix for every temporal and spatial slots.
-        self.embed_s = nn.Embedding(len(temporal_slots), input_size)
+        self.embed_s = nn.Embedding(self.tim_slot_len, self.embed_size)
         self.embed_s.weight.data.normal_(0, 0.1)
-        self.embed_q = nn.Embedding(len(spatial_slots), input_size)
+        self.embed_q = nn.Embedding(self.dis_slot_len, self.embed_size)
         self.embed_q.weight.data.normal_(0, 0.1)
+        self.embed_l = nn.Embedding(self.loc_size, self.embed_size)
 
         # Initialization of network components.
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
-        self.loss_func = nn.CrossEntropyLoss()
-
-        self.device = torch.device(device)
-        self.to(self.device)
+        self.loss_func = nn.NLLLoss()
 
     def place_parameters(self, ld, hd, l, h):
-        ld = torch.from_numpy(np.array(ld)).type(torch.FloatTensor).to(self.device)
-        hd = torch.from_numpy(np.array(hd)).type(torch.FloatTensor).to(self.device)
-        l = torch.from_numpy(np.array(l)).type(torch.LongTensor).to(self.device)
-        h = torch.from_numpy(np.array(h)).type(torch.LongTensor).to(self.device)
+        ld = torch.FloatTensor(ld).to(self.device)
+        hd = torch.FloatTensor(hd).to(self.device)
+        l = torch.LongTensor(l).to(self.device)
+        h = torch.LongTensor(h).to(self.device)
 
         return ld, hd, l, h
 
@@ -303,7 +299,7 @@ class STLSTMClassifier(nn.Module):
         h_embed = embed(h)
         return torch.stack([hd], -1) * l_embed + torch.stack([ld], -1) * h_embed
 
-    def forward(self, batch_l, batch_t, batch_d):
+    def forward(self, batch_l, batch_t, batch_d, origin_len):
         """
         Process forward propagation of ST-LSTM classifier.
         :param batch_l: batch of input location sequences,
@@ -312,19 +308,25 @@ class STLSTMClassifier(nn.Module):
         :param batch_d: batch of spatial distance value, size (batch_size, step)
         :return: prediction result of this batch, size (batch_size, output_size, step).
         """
-        batch_l = torch.from_numpy(np.array(batch_l)).type(torch.FloatTensor).to(self.device)
 
-        t_ld, t_hd, t_l, t_h = self.place_parameters(*cal_slot_distance_batch(batch_t, self.temporal_slots))
-        d_ld, d_hd, d_l, d_h = self.place_parameters(*cal_slot_distance_batch(batch_d, self.spatial_slots))
+        t_ld, t_hd, t_l, t_h = self.place_parameters(*cal_slot_distance_batch(batch_t.tolist(), self.tim_slots))
+        d_ld, d_hd, d_l, d_h = self.place_parameters(*cal_slot_distance_batch(batch_d.tolist(), self.dis_slots))
 
         batch_s = self.cal_inter(t_ld, t_hd, t_l, t_h, self.embed_s)
         batch_q = self.cal_inter(d_ld, d_hd, d_l, d_h, self.embed_q)
+        batch_l = self.embed_l(batch_l)
 
         hidden_out, cell_out = self.st_lstm(batch_l, batch_s, batch_q)
-        linear_out = self.linear(hidden_out[:,-1,:])
-        return linear_out
+        # we do padding
+        # 因为是补齐了的，所以需要找到真正的 out
+        final_out_index = torch.tensor(origin_len) - 1
+        final_out_index = final_out_index.reshape(final_out_index.shape[0], 1, -1)
+        final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
+        out = torch.gather(hidden_out, 1, final_out_index).squeeze(1)  # batch_size * hidden_size
+        linear_out = self.linear(out)
+        return F.softmax(linear_out, dim=1)
 
-    def predict(self, batch_l, batch_t, batch_d):
+    def predict(self, batch):
         """
         Predict a batch of data.
         :param batch_l: batch of input location sequences,
@@ -333,9 +335,13 @@ class STLSTMClassifier(nn.Module):
         :param batch_d: batch of spatial distance value, size (batch_size, step)
         :return: batch of predicted class indices, size (batch_size).
         """
-        return torch.max(self.forward(batch_l, batch_t, batch_d), 1)[1].detach().cpu().numpy().squeeze()
+        batch_l = batch['current_loc']
+        batch_t = batch['tim_interval']
+        batch_d = batch['dis']
+        origin_len = batch.get_origin_len('current_loc')
+        return self.forward(batch_l, batch_t, batch_d, origin_len)
 
-    def calculate_loss(self, batch_l, batch_t, batch_d, batch_label):
+    def calculate_loss(self, batch):
         """
         Train model using one batch of data and return loss value.
         :param model: One instance of STLSTMClassifier.
@@ -346,12 +352,11 @@ class STLSTMClassifier(nn.Module):
         :param batch_label: batch of label, size (batch_size)
         :return: loss value.
         """
-        prediction = self(batch_l, batch_t, batch_d)
-        batch_label = torch.from_numpy(np.array(batch_label)).type(torch.LongTensor).to(self.device)
+        batch_l = batch['current_loc']
+        batch_t = batch['tim_interval']
+        batch_d = batch['dis']
+        origin_len = batch.get_origin_len('current_loc')
+        prediction = self.forward(batch_l, batch_t, batch_d, origin_len)
+        batch_label = batch['target']
 
-        self.optimizer.zero_grad()
-        loss = self.loss_func(prediction, batch_label)
-        loss.backward()
-        self.optimizer.step()
-
-        return loss.detach().cpu().numpy()
+        return self.loss_func(prediction, batch_label)
