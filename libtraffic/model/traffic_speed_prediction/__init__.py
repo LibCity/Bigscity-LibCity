@@ -33,7 +33,7 @@ __all__ = [
     "GTS",
     "HGCN",
     "STAGGCN",
-    "STMGAT"
+    "STMGAT",
     "DKFN",
     "STTN"
 ]
