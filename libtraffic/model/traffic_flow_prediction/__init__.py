@@ -6,6 +6,7 @@ from libtraffic.model.traffic_flow_prediction.STResNet import STResNet
 from libtraffic.model.traffic_flow_prediction.STResNetCommon import STResNetCommon
 from libtraffic.model.traffic_flow_prediction.ACFMCommon import ACFMCommon
 from libtraffic.model.traffic_flow_prediction.ASTGCNCommon import ASTGCNCommon
+from libtraffic.model.traffic_flow_prediction.MSTGCNCommon import MSTGCNCommon
 from libtraffic.model.traffic_flow_prediction.ToGCN import ToGCN
 from libtraffic.model.traffic_flow_prediction.CONVGCN import CONVGCN
 from libtraffic.model.traffic_flow_prediction.STDN import STDN
@@ -27,6 +28,7 @@ __all__ = [
     "STResNetCommon",
     "ACFMCommon",
     "ASTGCNCommon",
+    "MSTGCNCommon",
     "ToGCN",
     "CONVGCN",
     "STDN",

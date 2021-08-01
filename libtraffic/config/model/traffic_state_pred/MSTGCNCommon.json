@@ -1,0 +1,22 @@
+{
+  "nb_block": 2,
+  "K": 3,
+  "nb_chev_filter": 64,
+  "nb_time_filter": 64,
+
+  "scaler": "standard",
+  "load_external": false,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": false,
+  "add_day_in_week": false,
+  "train_rate": 0.6,
+  "eval_rate": 0.2,
+
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.0001,
+  "lr_decay": false,
+  "clip_grad_norm": false,
+  "use_early_stop": false
+}
