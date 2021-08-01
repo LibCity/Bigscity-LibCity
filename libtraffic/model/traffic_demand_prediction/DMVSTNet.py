@@ -26,6 +26,7 @@ class TemporalView(nn.Module):
     def __init__(self, fc_oup_dim, lstm_oup_dim, output_dim):
         super(TemporalView, self).__init__()
         self.lstm = nn.LSTM(fc_oup_dim, lstm_oup_dim)
+        # TODO 这里应该再连接语义层输出
         self.fc = nn.Linear(in_features=lstm_oup_dim, out_features=output_dim)
 
     def forward(self, inp):
@@ -96,9 +97,9 @@ class DMVSTNet(AbstractTrafficStateModel):
             for j in range(self.padding_size, self.len_column - self.padding_size):
                 spatial_res = self.spatial_forward(
                     x_padding[:, :, i - self.padding_size:i + self.padding_size + 1,
-                              j - self.padding_size: j + self.padding_size + 1])
-                # print('spatial_res', spatial_res.shape)  # (T*B, fc_oup_dim)
-                seq_res = spatial_res.reshape((self.input_window, batch_size, self.fc_oup_dim))
+                    j - self.padding_size: j + self.padding_size + 1])
+                # print('spatial_res', spatial_res.shape)  # (B*T, fc_oup_dim)
+                seq_res = spatial_res.reshape((batch_size, self.input_window, self.fc_oup_dim)).permute(1, 0, 2)
                 # print('seq_res', seq_res.shape)  # (T, B, fc_oup_dim)
                 temporal_res = self.temporalLayers(seq_res)
                 # print('temporal_res', temporal_res.shape)  # (B, output_dim)
