@@ -7,13 +7,6 @@ from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateMo
 from libtraffic.model import loss
 
 
-""""
-加了dim让代码可以处理多维数据，但是
-只能做一步预测，且由于需要三段数据，不方便做多步
-考虑做一个Common模型，支持多步预测
-"""
-
-
 def get_spatial_matrix(adj_mx):
     h, w = adj_mx.shape
     inf = float("inf")
