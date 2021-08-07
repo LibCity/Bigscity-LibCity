@@ -1,6 +1,13 @@
+import random
+from decimal import Decimal
 from logging import getLogger
 import torch
+import torch.optim as optim
 import torch.nn as nn
+import torch.nn.functional as F
+from tqdm import trange
+from tqdm import tqdm
+
 from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
@@ -23,18 +30,217 @@ class SpatialViewConv(nn.Module):
 
 
 class TemporalView(nn.Module):
-    def __init__(self, fc_oup_dim, lstm_oup_dim, output_dim):
+    def __init__(self, fc_oup_dim, lstm_oup_dim):
         super(TemporalView, self).__init__()
         self.lstm = nn.LSTM(fc_oup_dim, lstm_oup_dim)
-        # TODO 这里应该再连接语义层输出
-        self.fc = nn.Linear(in_features=lstm_oup_dim, out_features=output_dim)
 
     def forward(self, inp):
         # inp = [T, B, fc_oup_dim]
         lstm_res, (h, c) = self.lstm(inp)
         # lstm_res = [T, B, lstm_oup_dim]
         # h/c = [1, B, lstm_oup_dim]
-        return self.fc(h[0])  # [B, output_dim]
+        return h[0]  # [B, lstm_oup_dim]
+
+
+class VoseAlias(object):
+    """
+    Adding a few modifs to https://github.com/asmith26/Vose-Alias-Method
+    """
+
+    def __init__(self, dist):
+        """
+        (VoseAlias, dict) -> NoneType
+        """
+        self.dist = dist
+        self.alias_initialisation()
+
+    def alias_initialisation(self):
+        """
+        Construct probability and alias tables for the distribution.
+        """
+        # Initialise variables
+        n = len(self.dist)
+        self.table_prob = {}  # probability table
+        self.table_alias = {}  # alias table
+        scaled_prob = {}  # scaled probabilities
+        small = []  # stack for probabilities smaller that 1
+        large = []  # stack for probabilities greater than or equal to 1
+
+        # Construct and sort the scaled probabilities into their appropriate stacks
+        print("1/2. Building and sorting scaled probabilities for alias table...")
+        for o, p in tqdm(self.dist.items()):
+            scaled_prob[o] = Decimal(p) * n
+
+            if scaled_prob[o] < 1:
+                small.append(o)
+            else:
+                large.append(o)
+
+        print("2/2. Building alias table...")
+        # Construct the probability and alias tables
+        while small and large:
+            s = small.pop()
+            l = large.pop()
+
+            self.table_prob[s] = scaled_prob[s]
+            self.table_alias[s] = l
+
+            scaled_prob[l] = (scaled_prob[l] + scaled_prob[s]) - Decimal(1)
+
+            if scaled_prob[l] < 1:
+                small.append(l)
+            else:
+                large.append(l)
+
+        # The remaining outcomes (of one stack) must have probability 1
+        while large:
+            self.table_prob[large.pop()] = Decimal(1)
+
+        while small:
+            self.table_prob[small.pop()] = Decimal(1)
+        self.listprobs = list(self.table_prob)
+
+    def alias_generation(self):
+        """
+        Yields a random outcome from the distribution.
+        """
+        # Determine which column of table_prob to inspect
+        col = random.choice(self.listprobs)
+        # Determine which outcome to pick in that column
+        if self.table_prob[col] >= random.uniform(0, 1):
+            return col
+        else:
+            return self.table_alias[col]
+
+    def sample_n(self, size):
+        """
+        Yields a sample of size n from the distribution, and print the results to stdout.
+        """
+        for i in range(size):
+            yield self.alias_generation()
+
+
+class Line(nn.Module):
+    def __init__(self, size, embed_dim=128, order=1):
+        super(Line, self).__init__()
+
+        assert order in [1, 2], print("Order should either be int(1) or int(2)")
+
+        self.embed_dim = embed_dim
+        self.order = order
+        self.nodes_embeddings = nn.Embedding(size, embed_dim)
+
+        if order == 2:
+            self.contextnodes_embeddings = nn.Embedding(size, embed_dim)
+            # Initialization
+            self.contextnodes_embeddings.weight.data = self.contextnodes_embeddings.weight.data.uniform_(
+                -.5, .5) / embed_dim
+
+        # Initialization
+        self.nodes_embeddings.weight.data = self.nodes_embeddings.weight.data.uniform_(
+            -.5, .5) / embed_dim
+
+    def forward(self, v_i, v_j, negsamples, device):
+
+        v_i = self.nodes_embeddings(v_i).to(device)
+
+        if self.order == 2:
+            v_j = self.contextnodes_embeddings(v_j).to(device)
+            negativenodes = -self.contextnodes_embeddings(negsamples).to(device)
+
+        else:
+            v_j = self.nodes_embeddings(v_j).to(device)
+            negativenodes = -self.nodes_embeddings(negsamples).to(device)
+
+        mulpositivebatch = torch.mul(v_i, v_j)
+        positivebatch = F.logsigmoid(torch.sum(mulpositivebatch, dim=1))
+
+        mulnegativebatch = torch.mul(v_i.view(len(v_i), 1, self.embed_dim), negativenodes)
+        negativebatch = torch.sum(
+            F.logsigmoid(
+                torch.sum(mulnegativebatch, dim=2)
+            ),
+            dim=1)
+        loss = positivebatch + negativebatch
+        return -torch.mean(loss)
+
+    def get_embeddings(self):
+        if self.order == 1:
+            return self.nodes_embeddings.weight.data
+        else:
+            return self.contextnodes_embeddings.weight.data
+
+
+def negSampleBatch(sourcenode, targetnode, negsamplesize, weights, nodedegrees, nodesaliassampler, t=10e-3):
+    """
+    For generating negative samples.
+    """
+    negsamples = 0
+    while negsamples < negsamplesize:
+        samplednode = nodesaliassampler.sample_n(1)
+        if (samplednode == sourcenode) or (samplednode == targetnode):
+            continue
+        else:
+            negsamples += 1
+            yield samplednode
+
+
+def makeData(samplededges, negsamplesize, weights, nodedegrees, nodesaliassampler):
+    for e in samplededges:
+        sourcenode, targetnode = e[0], e[1]
+        negnodes = []
+        for negsample in negSampleBatch(sourcenode, targetnode, negsamplesize,
+                                        weights, nodedegrees, nodesaliassampler):
+            for node in negsample:
+                negnodes.append(node)
+        yield [e[0], e[1]] + negnodes
+
+
+class SemanticView(nn.Module):
+    def __init__(self, config, dtw_graph):
+        super(SemanticView, self).__init__()
+
+        self.num_nodes = config.get('num_nodes', 1)
+        self.len_row = self.data_feature.get('len_row', 1)  # 网格行数
+        self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
+        self.embedding_dim = config.get('line_dimension')
+        self.semantic_dim = config.get('semantic_dim')
+        self.order = config.get('line_order')
+        self.negsamplesize = config.get('line_negsamplesize')
+        self.embedding_dim = config.get("line_dimension")
+        self.batchsize = config.get('line_batchsize')
+        self.epochs = config.get('line_epochs')
+        self.lr = config.get('line_learning_rate')
+        self.negativepower = config.get('line_negativepower')
+        self.fc = nn.Linear(self.embedding_dim, self.semantic_dim)
+
+        print("Data Pretreatment: Line embedding...")
+        [edgedistdict, nodedistdict, weights, nodedegrees] = dtw_graph
+
+        edgesaliassampler = VoseAlias(edgedistdict)
+        nodesaliassampler = VoseAlias(nodedistdict)
+        batchrange = int(len(edgedistdict) / self.batchsize)
+
+        line = Line(self.num_nodes, self.embedding_dim, self.order)
+        opt = optim.SGD(line.parameters(), lr=self.lr, momentum=0.9, nesterov=True)
+
+        for _ in range(self.epochs):
+            for _ in trange(batchrange):
+                samplededges = edgesaliassampler.sample_n(self.batchsize)
+                batch = list(makeData(samplededges, self.negsamplesize, weights, nodedegrees, nodesaliassampler))
+                batch = torch.LongTensor(batch)
+                v_i = batch[:, 0]
+                v_j = batch[:, 1]
+                negsamples = batch[:, 2:]
+                line.zero_grad()
+                loss = line(v_i, v_j, negsamples, config.get('device', torch.device('cpu')))
+                loss.backward()
+                opt.step()
+
+        self.embedding = line.get_embeddings().reshape((self.len_row, self.len_column, -1))
+
+    def forward(self, i, j):
+        return self.fc(self.embedding[i][j])
 
 
 class DMVSTNet(AbstractTrafficStateModel):
@@ -49,6 +255,9 @@ class DMVSTNet(AbstractTrafficStateModel):
         self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
         self._logger = getLogger()
 
+        self.dtw_graph = self.data_feature.get('dtw_graph')  # DTW 矩阵
+        self.embeddings = self.get_embeddings()
+
         self.device = config.get('device', torch.device('cpu'))
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
@@ -57,15 +266,19 @@ class DMVSTNet(AbstractTrafficStateModel):
         self.cnn_hidden_dim_first = config.get('cnn_hidden_dim_first', 32)
         self.fc_oup_dim = config.get('fc_oup_dim', 64)
         self.lstm_oup_dim = config.get('lstm_oup_dim', 512)
+        self.graph_embedding_dim = config.get('graph_embedding_dim', 32)
+        self.semantic_dim = config.get('semantic_dim', 6)
 
         self.padding = nn.ZeroPad2d((self.padding_size, self.padding_size, self.padding_size, self.padding_size))
 
         # 三层Local CNN
         self.local_conv1 = SpatialViewConv(inp_channel=self.feature_dim, oup_channel=self.cnn_hidden_dim_first,
                                            kernel_size=3, stride=1, padding=1)
-        self.local_conv2 = SpatialViewConv(inp_channel=self.cnn_hidden_dim_first, oup_channel=self.cnn_hidden_dim_first,
+        self.local_conv2 = SpatialViewConv(inp_channel=self.cnn_hidden_dim_first,
+                                           oup_channel=self.cnn_hidden_dim_first,
                                            kernel_size=3, stride=1, padding=1)
-        self.local_conv3 = SpatialViewConv(inp_channel=self.cnn_hidden_dim_first, oup_channel=self.cnn_hidden_dim_first,
+        self.local_conv3 = SpatialViewConv(inp_channel=self.cnn_hidden_dim_first,
+                                           oup_channel=self.cnn_hidden_dim_first,
                                            kernel_size=3, stride=1, padding=1)
 
         # 全连接降维
@@ -73,7 +286,13 @@ class DMVSTNet(AbstractTrafficStateModel):
                              out_features=self.fc_oup_dim)
 
         # TemporalView
-        self.temporalLayers = TemporalView(self.fc_oup_dim, self.lstm_oup_dim, self.output_dim)
+        self.temporalLayers = TemporalView(self.fc_oup_dim, self.lstm_oup_dim)
+
+        #  SemanticView
+        self.semanticLayer = SemanticView(config, self.dtw_graph)
+
+        # 输出层
+        self.fc2 = nn.Linear(in_features=self.lstm_oup_dim + self.semantic_dim, out_features=self.output_dim)
 
     def spatial_forward(self, grid_batch):
         x1 = self.local_conv1(grid_batch)
@@ -102,8 +321,11 @@ class DMVSTNet(AbstractTrafficStateModel):
                 seq_res = spatial_res.reshape((batch_size, self.input_window, self.fc_oup_dim)).permute(1, 0, 2)
                 # print('seq_res', seq_res.shape)  # (T, B, fc_oup_dim)
                 temporal_res = self.temporalLayers(seq_res)
-                # print('temporal_res', temporal_res.shape)  # (B, output_dim)
-                oup[:, :, i, j, :] = temporal_res.reshape(batch_size, 1, self.output_dim)
+                # print('temporal_res', temporal_res.shape)  # (B, lstm_oup_dim)
+                emb_res = self.semanticLayer(i, j)
+                emb_res = emb_res.repat(batch_size, 1)
+                res = self.fc2(torch.cat([temporal_res, emb_res], dim=1))
+                oup[:, :, i, j, :] = res.reshape(batch_size, 1, self.output_dim)
         return oup
 
     def calculate_loss(self, batch):
