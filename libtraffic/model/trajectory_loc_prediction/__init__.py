@@ -9,7 +9,7 @@ from libtraffic.model.trajectory_loc_prediction.ATSTLSTM import ATSTLSTM
 from libtraffic.model.trajectory_loc_prediction.STAN import STAN
 from libtraffic.model.trajectory_loc_prediction.CARA import CARA
 from libtraffic.model.trajectory_loc_prediction.GeoSAN import GeoSAN
-
+from libtraffic.model.trajectory_loc_prediction.HSTLSTM import HSTLSTM
 __all__ = [
     "DeepMove",
     "RNN",
@@ -21,5 +21,6 @@ __all__ = [
     "ATSTLSTM",
     "STAN",
     "CARA",
-    "GeoSAN"
+    "GeoSAN",
+    "HSTLSTM"
 ]

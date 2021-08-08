@@ -1,6 +1,6 @@
 {
     "traj_loc_pred": {
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "STAN", "CARA", "GeoSAN"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM","HSTLSTM", "STAN", "CARA", "GeoSAN"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla", "foursquare_serm"],
         "GeoSAN": {
             "dataset_class": "GeoSANDataset",
@@ -68,6 +68,12 @@
             "evaluator": "TrajLocPredEvaluator",
             "traj_encoder": "AtstlstmEncoder"
         },
+        "HSTLSTM": {
+            "dataset_class": "TrajectoryDataset",
+            "executor": "TrajLocPredExecutor",
+            "evaluator": "TrajLocPredEvaluator",
+            "traj_encoder": "HstlstmEncoder"
+        },
         "CARA": {
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
@@ -78,9 +84,9 @@
     "traffic_state_pred": {
         "allowed_model": ["DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
-            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq", "SHARE", "DMVSTNet",
-            "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
-            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN"],
+            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon","ToGCN", "CONVGCN", "STG2Seq",
+            "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
+            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon"],
         "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
             "LOOP_SEATTLE", "LOS_LOOP", "LOS_LOOP_SMALL", "Q_TRAFFIC", "SZ_TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi20140112",
@@ -190,6 +196,11 @@
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
+        "MSTGCNCommon": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
         "ToGCN": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
@@ -202,11 +213,6 @@
         },
         "STG2Seq": {
             "dataset_class": "STG2SeqDataset",
-            "executor": "TrafficStateExecutor",
-            "evaluator": "TrafficStateEvaluator"
-        },
-        "SHARE": {
-            "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
@@ -303,6 +309,11 @@
         "CCRNN": {
             "dataset_class": "CCRNNDataset",
             "executor": "DCRNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "MultiSTGCnetCommon": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         }
     }

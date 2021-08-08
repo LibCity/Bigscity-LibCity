@@ -1,0 +1,6 @@
+{
+    "tim_slot_len": 50,
+    "dis_slot_len": 50,
+    "embed_size": 200,
+    "hidden_size": 200
+}

@@ -2,14 +2,6 @@ import os
 from libtraffic.data.dataset import TrafficStateCPTDataset
 from libtraffic.data.dataset import TrafficStatePointDataset
 
-"""
-由于目前模型只能单步预测，所以只能使用CPT的dataset
-否则的话，可以直接适配ASTGCNDataset
-并且，CPT的外部数据跟交通数据是分开的，而模型是图卷积模型应该把它们合在一起，用一般的dataset
-1.开发一个Common模型改成多步预测，直接用ASTGCNDataset
-2.保持单步预测，写一个外部数据跟交通数据合在一起的dataset
-"""
-
 
 class MultiSTGCnetDataset(TrafficStatePointDataset, TrafficStateCPTDataset):
 
