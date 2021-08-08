@@ -197,12 +197,13 @@ def makeData(samplededges, negsamplesize, weights, nodedegrees, nodesaliassample
 
 
 class SemanticView(nn.Module):
-    def __init__(self, config, dtw_graph):
+    def __init__(self, config, data_feature):
         super(SemanticView, self).__init__()
 
-        self.num_nodes = config.get('num_nodes', 1)
-        self.len_row = self.data_feature.get('len_row', 1)  # 网格行数
-        self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
+        self.num_nodes = data_feature.get('num_nodes', 1)
+        self.len_row = data_feature.get('len_row', 1)  # 网格行数
+        self.len_column = data_feature.get('len_column', 1)  # 网格列数
+
         self.embedding_dim = config.get('line_dimension')
         self.semantic_dim = config.get('semantic_dim')
         self.order = config.get('line_order')
@@ -215,7 +216,7 @@ class SemanticView(nn.Module):
         self.fc = nn.Linear(self.embedding_dim, self.semantic_dim)
 
         print("Data Pretreatment: Line embedding...")
-        [edgedistdict, nodedistdict, weights, nodedegrees] = dtw_graph
+        [edgedistdict, nodedistdict, weights, nodedegrees] = data_feature.get('dtw_graph')
 
         edgesaliassampler = VoseAlias(edgedistdict)
         nodesaliassampler = VoseAlias(nodedistdict)
@@ -240,7 +241,7 @@ class SemanticView(nn.Module):
         self.embedding = line.get_embeddings().reshape((self.len_row, self.len_column, -1))
 
     def forward(self, i, j):
-        return self.fc(self.embedding[i][j])
+        return self.fc(self.embedding[i, j, :])
 
 
 class DMVSTNet(AbstractTrafficStateModel):
@@ -254,9 +255,6 @@ class DMVSTNet(AbstractTrafficStateModel):
         self.len_row = self.data_feature.get('len_row', 1)  # 网格行数
         self.len_column = self.data_feature.get('len_column', 1)  # 网格列数
         self._logger = getLogger()
-
-        self.dtw_graph = self.data_feature.get('dtw_graph')  # DTW 矩阵
-        self.embeddings = self.get_embeddings()
 
         self.device = config.get('device', torch.device('cpu'))
         self.input_window = config.get('input_window', 1)
@@ -289,7 +287,7 @@ class DMVSTNet(AbstractTrafficStateModel):
         self.temporalLayers = TemporalView(self.fc_oup_dim, self.lstm_oup_dim)
 
         #  SemanticView
-        self.semanticLayer = SemanticView(config, self.dtw_graph)
+        self.semanticLayer = SemanticView(config, self.data_feature)
 
         # 输出层
         self.fc2 = nn.Linear(in_features=self.lstm_oup_dim + self.semantic_dim, out_features=self.output_dim)
@@ -323,7 +321,7 @@ class DMVSTNet(AbstractTrafficStateModel):
                 temporal_res = self.temporalLayers(seq_res)
                 # print('temporal_res', temporal_res.shape)  # (B, lstm_oup_dim)
                 emb_res = self.semanticLayer(i, j)
-                emb_res = emb_res.repat(batch_size, 1)
+                emb_res = emb_res.repeat(batch_size, 1)
                 res = self.fc2(torch.cat([temporal_res, emb_res], dim=1))
                 oup[:, :, i, j, :] = res.reshape(batch_size, 1, self.output_dim)
         return oup

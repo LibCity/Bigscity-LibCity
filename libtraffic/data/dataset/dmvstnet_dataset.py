@@ -115,7 +115,8 @@ class DMVSTNetDataset(TrafficStateGridDataset):
             dict: 包含数据集的相关特征的字典
         """
         return {"scaler": self.scaler, "adj_mx": self.adj_mx,
-                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
-                "output_dim": self.output_dim, "ext_dim": self.ext_dim,
-                "dtw_edge_index": self.dtw_graph,  # 将语义邻接图作为data_feature返回
+                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim, "ext_dim": self.ext_dim,
+
+                "output_dim": self.output_dim, "len_row": self.len_row, "len_column": self.len_column,
+                "dtw_graph": self.dtw_graph,  # 将语义邻接图作为data_feature返回
                 "num_batches": self.num_batches}
