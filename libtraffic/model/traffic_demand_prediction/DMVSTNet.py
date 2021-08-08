@@ -263,7 +263,7 @@ class DMVSTNet(AbstractTrafficStateModel):
         self.padding_size = self.local_image_size // 2
         self.cnn_hidden_dim_first = config.get('cnn_hidden_dim_first', 32)
         self.fc_oup_dim = config.get('fc_oup_dim', 64)
-        self.lstm_oup_dim = config.get('lstm_oup_dim', 512)
+        self.lstm_oup_dim = config.get('lstm_oup_dim', 32)
         self.graph_embedding_dim = config.get('graph_embedding_dim', 32)
         self.semantic_dim = config.get('semantic_dim', 6)
 
