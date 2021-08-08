@@ -11,7 +11,7 @@ import torch.nn as nn
 """
 
 class DCGRUCell(torch.nn.Module):
-    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
+    def __init__(self, input_dim, num_units, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True):
         """
         :param num_units:
@@ -27,8 +27,8 @@ class DCGRUCell(torch.nn.Module):
         self._activation = torch.tanh if nonlinearity == 'tanh' else torch.relu
         # support other nonlinearities up here?
         self._num_nodes = num_nodes
-        self._adj_mx = adj_mx
         self._num_units = num_units
+        self._device = device
         self._max_diffusion_step = max_diffusion_step
         self._supports = []
         self._use_gc_for_ru = use_gc_for_ru
@@ -36,12 +36,12 @@ class DCGRUCell(torch.nn.Module):
 
         
         if self._use_gc_for_ru:
-            self._fn = GCONV(self._num_nodes, self._adj_mx, self._max_diffusion_step, self._supports, self._device,
+            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
                           hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
-        self._gconv = GCONV(self._num_nodes, self._adj_mx, self._max_diffusion_step, self._supports, self._device,
+        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0)
 
     def _build_sparse_matrix(self, L):
@@ -77,7 +77,7 @@ class DCGRUCell(torch.nn.Module):
             fn = self._gconv
         else:
             fn = self._fc
-        value = torch.sigmoid(fn(inputs, adj_mx, hx, output_size, bias_start=1.0))
+        value = torch.sigmoid(fn(inputs, hx, adj_mx))
         value = torch.reshape(value, (-1, self._num_nodes, output_size))
         r, u = torch.split(tensor=value, split_size_or_sections=self._num_units, dim=-1)
         r = torch.reshape(r, (-1, self._num_nodes * self._num_units))
@@ -92,10 +92,9 @@ class DCGRUCell(torch.nn.Module):
 
 
 class GCONV(nn.Module):
-    def __init__(self, num_nodes, adj_mx, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+    def __init__(self, num_nodes,  max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0):
         super().__init__()
         self._num_nodes = num_nodes
-        self._adj_mx = adj_mx
         self._max_diffusion_step = max_diffusion_step
         self._supports = supports
         self._device = device
@@ -113,7 +112,7 @@ class GCONV(nn.Module):
         x_ = x_.unsqueeze(0)
         return torch.cat([x, x_], dim=0)
 
-    def forward(self, inputs, state):
+    def forward(self, inputs, state, adj_mx):
         # 对X(t)和H(t-1)做图卷积，并加偏置bias
         # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
         batch_size = inputs.shape[0]
@@ -135,12 +134,12 @@ class GCONV(nn.Module):
             pass
         else:
             # T1=L x1=T1*x=L*x
-            x1 = torch.mm(self._adj_mx, x0)  
+            x1 = torch.mm(adj_mx, x0)  
             x = self._concat(x, x1)  # (2, num_nodes, total_arg_size * batch_size)
             for k in range(2, self._max_diffusion_step + 1):
                 # T2=2LT1-T0=2L^2-1 x2=T2*x=2L^2x-x=2L*x1-x0...
                 # T3=2LT2-T1=2L(2L^2-1)-L x3=2L*x2-x1...
-                x2 = 2 * torch.sparse.mm(self._adj_mx, x1) - x0
+                x2 = 2 * torch.sparse.mm(adj_mx, x1) - x0
                 x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
                 x1, x0 = x2, x1  # 循环
         # x.shape (Ks, num_nodes, total_arg_size * batch_size)
@@ -169,7 +168,7 @@ class FC(nn.Module):
         torch.nn.init.xavier_normal_(self.weight)
         torch.nn.init.constant_(self.biases, bias_start)
 
-    def forward(self, inputs, state):
+    def forward(self, inputs, state, adj_mx):
         batch_size = inputs.shape[0]
         # Reshape input and state to (batch_size * self._num_nodes, input_dim/state_dim)
         inputs = torch.reshape(inputs, (batch_size * self._num_nodes, -1))
@@ -237,7 +236,7 @@ class Seq2SeqAttrs:
         self.num_rnn_layers = int(config.get('num_rnn_layers', 1))
         self.rnn_units = int(config.get('rnn_units'))
         self.hidden_state_size = self.num_nodes * self.rnn_units
-        self.input_dim = int(data_feature.get('feature_dim'))
+        self.input_dim = int(data_feature.get('feature_dim',1))
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
@@ -249,7 +248,7 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         # print(f"encoder input_dim = {self.input_dim}")
         # print(f"encoder seq_len = {self.seq_len}")
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, self.max_diffusion_step, self.num_nodes, device,
+            [DCGRUCell(self.input_dim, self.rnn_units, self.max_diffusion_step, self.num_nodes, device,
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, adj, hidden_state=None):
@@ -287,7 +286,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         # print(f"OUTPUT WINDOW: {self.horizon}")
         self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList(
-            [DCGRUCell(self.rnn_units, self.max_diffusion_step, self.num_nodes, device,
+            [DCGRUCell(self.input_dim, self.rnn_units, self.max_diffusion_step, self.num_nodes, device,
                        filter_type=self.filter_type) for _ in range(self.num_rnn_layers)])
 
     def forward(self, inputs, adj, hidden_state=None):
