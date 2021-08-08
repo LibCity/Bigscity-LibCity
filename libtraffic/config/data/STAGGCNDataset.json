@@ -14,8 +14,5 @@
   "add_time_in_day": false,
   "add_day_in_week": false,
   "load_from_local": true,
-  "init_weight_inf_or_zero": "zero",
-  "set_weight_link_or_dist": "link",
-  "calculate_weight_adj": false,
   "use_row_column": false
 }
