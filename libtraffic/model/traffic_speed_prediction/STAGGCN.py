@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import weight_norm
-from torch_geometric.nn import GATConv
+from .STAGGCNGATConv import GATConv
 from logging import getLogger
 from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
