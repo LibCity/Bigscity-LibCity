@@ -214,6 +214,7 @@ class SemanticView(nn.Module):
         self.lr = config.get('line_learning_rate')
         self.negativepower = config.get('line_negativepower')
         self.fc = nn.Linear(self.embedding_dim, self.semantic_dim)
+        self.device = config.get('device', torch.device('cpu'))
 
         print("Data Pretreatment: Line embedding...")
         [edgedistdict, nodedistdict, weights, nodedegrees] = data_feature.get('dtw_graph')
@@ -234,11 +235,11 @@ class SemanticView(nn.Module):
                 v_j = batch[:, 1]
                 negsamples = batch[:, 2:]
                 line.zero_grad()
-                loss = line(v_i, v_j, negsamples, config.get('device', torch.device('cpu')))
+                loss = line(v_i, v_j, negsamples, self.device)
                 loss.backward()
                 opt.step()
 
-        self.embedding = line.get_embeddings().reshape((self.len_row, self.len_column, -1))
+        self.embedding = line.get_embeddings().reshape((self.len_row, self.len_column, -1)).to(self.device)
 
     def forward(self, i, j):
         return self.fc(self.embedding[i, j, :])
