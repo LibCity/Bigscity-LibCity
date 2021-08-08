@@ -7,43 +7,13 @@ from torch.nn import functional as F
 import torch.nn as nn
 
 """
-跟旧版DCRNN一样，加载模型会报错。
 为什么这个模型速度比DCRNN快呢？修改之后是不是会变慢。
 """
 
-
-class LayerParams:
-    def __init__(self, rnn_network: torch.nn.Module, layer_type: str):
-        self._rnn_network = rnn_network
-        self._params_dict = {}
-        self._biases_dict = {}
-        self._type = layer_type
-
-    def get_weights(self, shape, device):
-        if shape not in self._params_dict:
-            nn_param = torch.nn.Parameter(torch.empty(*shape, device=device))
-            torch.nn.init.xavier_normal_(nn_param)
-            self._params_dict[shape] = nn_param
-            self._rnn_network.register_parameter('{}_weight_{}'.format(self._type, str(shape)),
-                                                 nn_param)
-        return self._params_dict[shape]
-
-    def get_biases(self, length, device, bias_start=0.0):
-        if length not in self._biases_dict:
-            biases = torch.nn.Parameter(torch.empty(length, device=device))
-            torch.nn.init.constant_(biases, bias_start)
-            self._biases_dict[length] = biases
-            self._rnn_network.register_parameter('{}_biases_{}'.format(self._type, str(length)),
-                                                 biases)
-
-        return self._biases_dict[length]
-
-
 class DCGRUCell(torch.nn.Module):
-    def __init__(self, num_units, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
+    def __init__(self, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True):
         """
-
         :param num_units:
         :param adj_mx:
         :param max_diffusion_step:
@@ -57,14 +27,22 @@ class DCGRUCell(torch.nn.Module):
         self._activation = torch.tanh if nonlinearity == 'tanh' else torch.relu
         # support other nonlinearities up here?
         self._num_nodes = num_nodes
+        self._adj_mx = adj_mx
         self._num_units = num_units
         self._max_diffusion_step = max_diffusion_step
         self._supports = []
         self._use_gc_for_ru = use_gc_for_ru
         self.device = device
 
-        self._fc_params = LayerParams(self, 'fc')
-        self._gconv_params = LayerParams(self, 'gconv')
+        
+        if self._use_gc_for_ru:
+            self._fn = GCONV(self._num_nodes, self._adj_mx, self._max_diffusion_step, self._supports, self._device,
+                             input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
+        else:
+            self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
+                          hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
+        self._gconv = GCONV(self._num_nodes, self._adj_mx, self._max_diffusion_step, self._supports, self._device,
+                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0)
 
     def _build_sparse_matrix(self, L):
         L = L.tocoo()
@@ -112,59 +90,97 @@ class DCGRUCell(torch.nn.Module):
         new_state = u * hx + (1.0 - u) * c
         return new_state
 
+
+class GCONV(nn.Module):
+    def __init__(self, num_nodes, adj_mx, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+        super().__init__()
+        self._num_nodes = num_nodes
+        self._adj_mx = adj_mx
+        self._max_diffusion_step = max_diffusion_step
+        self._supports = supports
+        self._device = device
+        self._num_matrices = self._max_diffusion_step + 1  # Ks
+        self._output_dim = output_dim
+        input_size = input_dim + hid_dim
+        shape = (input_size * self._num_matrices, self._output_dim)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
+
     @staticmethod
     def _concat(x, x_):
         x_ = x_.unsqueeze(0)
         return torch.cat([x, x_], dim=0)
 
-    def _fc(self, inputs, state, output_size, bias_start=0.0):
-        batch_size = inputs.shape[0]
-        inputs = torch.reshape(inputs, (batch_size * self._num_nodes, -1))
-        state = torch.reshape(state, (batch_size * self._num_nodes, -1))
-        inputs_and_state = torch.cat([inputs, state], dim=-1)
-        input_size = inputs_and_state.shape[-1]
-        weights = self._fc_params.get_weights((input_size, output_size), self.device)
-        value = torch.sigmoid(torch.matmul(inputs_and_state, weights))
-        biases = self._fc_params.get_biases(output_size, self.device, bias_start)
-        value += biases
-        return value
-
-    def _gconv(self, inputs, adj_mx, state, output_size, bias_start=0.0):
+    def forward(self, inputs, state):
+        # 对X(t)和H(t-1)做图卷积，并加偏置bias
         # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
         batch_size = inputs.shape[0]
         inputs = torch.reshape(inputs, (batch_size, self._num_nodes, -1))
         state = torch.reshape(state, (batch_size, self._num_nodes, -1))
         inputs_and_state = torch.cat([inputs, state], dim=2)
-        input_size = inputs_and_state.size(2)
+        # (batch_size, num_nodes, total_arg_size(input_dim+state_dim))
+        input_size = inputs_and_state.size(2)  # =total_arg_size
 
         x = inputs_and_state
+        # T0=I x0=T0*x=x
         x0 = x.permute(1, 2, 0)  # (num_nodes, total_arg_size, batch_size)
         x0 = torch.reshape(x0, shape=[self._num_nodes, input_size * batch_size])
-        x = torch.unsqueeze(x0, 0)
+        x = torch.unsqueeze(x0, 0)  # (1, num_nodes, total_arg_size * batch_size)
 
+        # 3阶[T0,T1,T2]Chebyshev多项式近似g(theta)
+        # 把图卷积公式中的~L替换成了随机游走拉普拉斯D^(-1)*W
         if self._max_diffusion_step == 0:
             pass
         else:
-            x1 = torch.mm(adj_mx, x0)
-            x = self._concat(x, x1)
-
+            # T1=L x1=T1*x=L*x
+            x1 = torch.mm(self._adj_mx, x0)  
+            x = self._concat(x, x1)  # (2, num_nodes, total_arg_size * batch_size)
             for k in range(2, self._max_diffusion_step + 1):
-                x2 = 2 * torch.mm(adj_mx, x1) - x0
-                x = self._concat(x, x2)
-                x1, x0 = x2, x1
-        num_matrices = self._max_diffusion_step + 1  # Adds for x itself.
-        x = torch.reshape(x, shape=[num_matrices, self._num_nodes, input_size, batch_size])
-        x = x.permute(3, 1, 2, 0)  # (batch_size, num_nodes, input_size, order)
-        x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * num_matrices])
+                # T2=2LT1-T0=2L^2-1 x2=T2*x=2L^2x-x=2L*x1-x0...
+                # T3=2LT2-T1=2L(2L^2-1)-L x3=2L*x2-x1...
+                x2 = 2 * torch.sparse.mm(self._adj_mx, x1) - x0
+                x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
+                x1, x0 = x2, x1  # 循环
+        # x.shape (Ks, num_nodes, total_arg_size * batch_size)
+        # Ks = self._max_diffusion_step + 1
 
-        weights = self._gconv_params.get_weights((input_size * num_matrices, output_size), self.device)
-        x = torch.matmul(x, weights)  # (batch_size * self._num_nodes, output_size)
+        x = torch.reshape(x, shape=[self._num_matrices, self._num_nodes, input_size, batch_size])
+        x = x.permute(3, 1, 2, 0)  # (batch_size, num_nodes, input_size, num_matrices)
+        x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * self._num_matrices])
 
-        biases = self._gconv_params.get_biases(output_size, self.device, bias_start)
-        x += biases
-        # Reshape res back to 2D: (batch_size, num_node, state_dim) -> (batch_size, num_node * state_dim)
-        return torch.reshape(x, [batch_size, self._num_nodes * output_size])
+        x = torch.matmul(x, self.weight)  # (batch_size * self._num_nodes, self._output_dim)
+        x += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
+        return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
 
+
+class FC(nn.Module):
+    def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+        super().__init__()
+        self._num_nodes = num_nodes
+        self._device = device
+        self._output_dim = output_dim
+        input_size = input_dim + hid_dim
+        shape = (input_size, self._output_dim)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
+
+    def forward(self, inputs, state):
+        batch_size = inputs.shape[0]
+        # Reshape input and state to (batch_size * self._num_nodes, input_dim/state_dim)
+        inputs = torch.reshape(inputs, (batch_size * self._num_nodes, -1))
+        state = torch.reshape(state, (batch_size * self._num_nodes, -1))
+        inputs_and_state = torch.cat([inputs, state], dim=-1)
+        # (batch_size * self._num_nodes, input_size(input_dim+state_dim))
+        value = torch.sigmoid(torch.matmul(inputs_and_state, self.weight))
+        # (batch_size * self._num_nodes, self._output_dim)
+        value += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
+        return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -299,7 +315,6 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
 """
 虽然输出受到output_dim的控制
 但是推断邻接矩阵的过程应该不适合输入多维数据，例如流入和流出。（但是此时代码可以运行）
-这个代码模仿的旧版的DCRNN 所以加载模型会出现异常 需要之后修改
 """
 
 
