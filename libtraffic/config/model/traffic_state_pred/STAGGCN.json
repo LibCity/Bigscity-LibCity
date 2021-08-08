@@ -1,7 +1,7 @@
 {
   "graph_dim": 32,
   "tcn_dim": [10],
-  "atten_head": 5,
+  "atten_head": 3,
   "choice": [1,1,1],
 
   "scaler": "standard",
