@@ -311,5 +311,18 @@
             "executor": "DCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         }
+    },
+    "map_matching": {
+        "allowed_model": [
+            "STMatching"
+        ],
+        "allowed_dataset": [
+            "test", "Seattle", "00000000"
+        ],
+        "STMatching": {
+            "dataset_class": "MapMatchingDataset",
+            "executor": "MapMatchingExecutor",
+            "evaluator": "MapMatchingEvaluator"
+        }
     }
 }

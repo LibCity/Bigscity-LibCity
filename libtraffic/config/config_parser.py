@@ -38,7 +38,7 @@ class ConfigParser(object):
         self.config['model'] = model
         self.config['dataset'] = dataset
         self.config['saved_model'] = saved_model
-        self.config['train'] = train
+        self.config['train'] = False if task == 'map_matching' else train
         if other_args is not None:
             # TODO: 这里可以设计加入参数检查，哪些参数是允许用户通过命令行修改的
             for key in other_args:
