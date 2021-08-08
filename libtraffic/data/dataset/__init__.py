@@ -17,6 +17,7 @@ from libtraffic.data.dataset.stg2seq_dataset import STG2SeqDataset
 from libtraffic.data.dataset.gman_dataset import GMANDataset
 from libtraffic.data.dataset.gts_dataset import GTSDataset
 from libtraffic.data.dataset.staggcn_dataset import STAGGCNDataset
+from libtraffic.data.dataset.dmvstnet_dataset import DMVSTNetDataset
 from libtraffic.data.dataset.pbs_trajectory_dataset import PBSTrajectoryDataset
 from libtraffic.data.dataset.stdn_dataset import STDNDataset
 from libtraffic.data.dataset.hgcn_dataset import HGCNDataset
@@ -51,5 +52,6 @@ __all__ = [
     "MultiSTGCnetDataset",
     "CRANNDataset",
     "CCRNNDataset",
-    "GeoSANDataset"
+    "GeoSANDataset",
+    "DMVSTNetDataset"
 ]
