@@ -211,9 +211,9 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "DMVSTNet": {
-        "dataset_class": "DMVSTNetDataset",
-        "executor": "TrafficStateExecutor",
-        "evaluator": "TrafficStateEvaluator"
+            "dataset_class": "DMVSTNetDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
         },
         "ATDM": {
             "dataset_class": "TrafficStatePointDataset",
