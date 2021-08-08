@@ -76,14 +76,14 @@ class SpatialBlock(nn.Module):
 
 
 class SpatialComponent(nn.Module):
-    def __init__(self, n, adj_mx, len_closeness, feature_dim, output_dim, device):
+    def __init__(self, n, adj_mx, input_window, feature_dim, output_dim, device):
         super(SpatialComponent, self).__init__()
 
         self.device = device
         self.feature_dim = feature_dim
         self.output_dim = output_dim
         self.num_nodes = n
-        self.len_closeness = len_closeness
+        self.len_closeness = input_window
 
         self.near_matrix, self.middle_matrix, self.distant_matrix = get_spatial_matrix(adj_mx)
 
@@ -136,59 +136,30 @@ class TemporalBlock(nn.Module):
 
 
 class TemporalComponent(nn.Module):
-    def __init__(self, n, len_closeness, len_period, len_trend, feature_dim, output_dim, device):
+    def __init__(self, n, input_window, feature_dim, output_dim, device):
         super(TemporalComponent, self).__init__()
 
         self.num_nodes = n
-        self.len_closeness = len_closeness
-        self.len_period = len_period
-        self.len_trend = len_trend
+        self.input_window = input_window
         self.feature_dim = feature_dim
         self.output_dim = output_dim
         self.device = device
 
-        self.daily_block = TemporalBlock(self.num_nodes, self.feature_dim, self.device)
-        self.interval_block = TemporalBlock(self.num_nodes, self.feature_dim, self.device)
-        self.weekly_block = TemporalBlock(self.num_nodes, self.feature_dim, self.device)
+        self.block = TemporalBlock(self.num_nodes, self.feature_dim, self.device)
 
-        count = 0
-        if self.len_closeness > 0:
-            count = count + 1
-        if self.len_period > 0:
-            count = count + 1
-        if self.len_trend > 0:
-            count = count + 1
-        self.linear = nn.Linear(count * n * feature_dim, n * output_dim)
+        self.linear = nn.Linear(n * feature_dim, n * output_dim)
 
     def forward(self, x):
         # (batch, time, node, feature)
         list_y = []
-        if self.len_closeness > 0:
-            begin_index = 0
-            end_index = begin_index + self.len_closeness
-            x_interval = x[:, begin_index:end_index, :, :]
-            y_interval = self.daily_block(x_interval)  # batch*n
-            list_y.append(y_interval)  # (batch, node * feature)
-        if self.len_period > 0:
-            begin_index = self.len_closeness
-            end_index = begin_index + self.len_period
-            x_daily = x[:, begin_index:end_index, :, :]
-            y_daily = self.daily_block(x_daily)  # batch*n
-            list_y.append(y_daily)  # (batch, node * feature)
-        if self.len_trend > 0:
-            begin_index = self.len_closeness + self.len_period
-            end_index = begin_index + self.len_trend
-            x_weekly = x[:, begin_index:end_index, :, :]
-            y_weekly = self.weekly_block(x_weekly)   # batch*n
-            list_y.append(y_weekly)  # (batch, node * feature)
-
+        list_y.append(self.block(x))
         out = torch.cat(list_y, 1)
 
         out = F.relu(self.linear(out))  # (batch, node * output_dim)
         return out
 
 
-class MultiSTGCnet(AbstractTrafficStateModel):
+class MultiSTGCnetCommon(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.adj_mx = self.data_feature.get("adj_mx")
@@ -196,28 +167,19 @@ class MultiSTGCnet(AbstractTrafficStateModel):
         self.feature_dim = self.data_feature.get("feature_dim", 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
 
-        self.len_period = self.data_feature.get('len_period', 0)
-        self.len_trend = self.data_feature.get('len_trend', 0)
-        self.len_closeness = self.data_feature.get('len_closeness', 0)
-        if self.len_period == 0 and self.len_trend == 0 and self.len_closeness == 0:
-            raise ValueError('Num of days/weeks/hours are all zero! Set at least one of them not zero!')
-
-        self.input_window = config.get('input_window', 1)
-        self.output_window = config.get('output_window', 1)
+        self.input_window = config.get('input_window', 12)
+        self.output_window = config.get('output_window', 12)
         self._scaler = self.data_feature.get('scaler')
         self._logger = getLogger()
 
         # get model config
-        self.hidden_size = config.get("hidden_size", 64)
-        self.num_layers = config.get("num_layers", 1)
         self.device = config.get('device', torch.device('cpu'))
 
         # define the model structure
         self.spatial_component = SpatialComponent(self.num_nodes, self.adj_mx,
-                                                  self.len_closeness, self.feature_dim, self.output_dim, self.device)
+                                                  self.input_window, self.feature_dim, self.output_dim, self.device)
         self.temporal_component = TemporalComponent(self.num_nodes,
-                                                    self.len_closeness, self.len_period,
-                                                    self.len_trend, self.feature_dim, self.output_dim, self.device)
+                                                    self.input_window, self.feature_dim, self.output_dim, self.device)
         # fusion的参数
         self.Ws = nn.Parameter(torch.tensor(np.random.normal(0, 0.01, (1, self.num_nodes * self.output_dim)),
                                             dtype=torch.float32).to(self.device))
@@ -226,7 +188,7 @@ class MultiSTGCnet(AbstractTrafficStateModel):
         self.count = 0
 
     def forward(self, batch):
-        x = batch['X']  # (batch, time, node, feature)
+        x = batch['X']  # (batch, time, node, feature)  # torch.Size([64, 12, 276, 14])
 
         y_spatial = self.spatial_component(x)  # (batch, node * output_dim)
 
@@ -237,7 +199,20 @@ class MultiSTGCnet(AbstractTrafficStateModel):
         return y.reshape(-1, 1, self.num_nodes, self.output_dim)
 
     def predict(self, batch):
-        return self.forward(batch)
+        # 多步预测
+        x = batch['X']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y = batch['y']  # (batch_size, input_window, len_row, len_column, feature_dim)
+        y_preds = []
+        x_ = x.clone()
+        for i in range(self.output_window):
+            batch_tmp = {'X': x_}
+            y_ = self.forward(batch_tmp)  # (batch_size, 1, len_row, len_column, output_dim)
+            y_preds.append(y_.clone())
+            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
+                y_ = torch.cat([y_, y[:, i:i + 1, :, self.output_dim:]], dim=-1)
+            x_ = torch.cat([x_[:, 1:, :, :], y_], dim=1)
+        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, len_row, len_column, output_dim)
+        return y_preds
 
     def calculate_loss(self, batch):
         y_true = batch['y']  # ground-truth value
