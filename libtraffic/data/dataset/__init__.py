@@ -26,6 +26,7 @@ from libtraffic.data.dataset.multi_stgcnet_dataset import MultiSTGCnetDataset
 from libtraffic.data.dataset.crann_dataset import CRANNDataset
 from libtraffic.data.dataset.ccrnn_dataset import CCRNNDataset
 from libtraffic.data.dataset.geosan_dataset import GeoSANDataset
+from libtraffic.data.dataset.map_matching_dataset import MapMatchingDataset
 
 __all__ = [
     "AbstractDataset",

@@ -4,6 +4,7 @@ from libtraffic.executor.dcrnn_executor import DCRNNExecutor
 from libtraffic.executor.mtgnn_executor import MTGNNExecutor
 from libtraffic.executor.hyper_tuning import HyperTuning
 from libtraffic.executor.geosan_executor import GeoSANExecutor
+from libtraffic.executor.map_matching_executor import MapMatchingExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -11,5 +12,6 @@ __all__ = [
     "DCRNNExecutor",
     "MTGNNExecutor",
     "HyperTuning",
-    "GeoSANExecutor"
+    "GeoSANExecutor",
+    "MapMatchingExecutor"
 ]
