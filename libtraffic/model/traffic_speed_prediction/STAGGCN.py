@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import weight_norm
 from .STAGGCNGATConv import GATConv
+# from torch_geometric.nn import GATConv
 from logging import getLogger
 from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
@@ -226,7 +227,7 @@ class STCell(nn.Module):
 
         if choice[1] == 1:
             print(f"[SP]")
-            self.sp_origin = nn.Linear(in_features=seq_len, out_features=graph_dim)
+            self.sp_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
             self.sp_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
             self.sp_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
             self.sp_gconv3 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
@@ -246,18 +247,18 @@ class STCell(nn.Module):
 
         if choice[2] == 1:
             print(f"[DTW]")
-            self.dtw_origin = nn.Linear(in_features=seq_len, out_features=graph_dim)
-            self.dtw_gconv1 = GATConv(seq_len, graph_dim, heads=3, concat=False)
-            self.dtw_gconv2 = GATConv(graph_dim, graph_dim, heads=3, concat=False)
-            self.dtw_gconv3 = GATConv(graph_dim, graph_dim, heads=3, concat=False)
-            self.dtw_gconv4 = GATConv(graph_dim, graph_dim, heads=3, concat=False)
+            self.dtw_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
+            self.dtw_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
+            self.dtw_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
+            self.dtw_gconv3 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
+            self.dtw_gconv4 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
             # self.dtw_gconv5 = GATConv(graph_dim, graph_dim, heads = 1, concat = False)
             self.dtw_source_embed = nn.Parameter(torch.Tensor(self.node_num, 12))
             self.dtw_target_embed = nn.Parameter(torch.Tensor(12, self.node_num))
-            self.dtw_linear_1 = nn.Linear(self.seq_len, self.graph_dim)
-            self.dtw_linear_2 = nn.Linear(self.graph_dim, self.graph_dim)
-            self.dtw_linear_3 = nn.Linear(self.graph_dim, self.graph_dim)
-            self.dtw_linear_4 = nn.Linear(self.graph_dim, self.graph_dim)
+            self.dtw_linear_1 = nn.Linear(self.input_dim*self.seq_len, self.output_dim*self.graph_dim)
+            self.dtw_linear_2 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
+            self.dtw_linear_3 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
+            self.dtw_linear_4 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
             # self.dtw_linear_5 = nn.Linear(self.graph_dim, self.graph_dim)
             # self.dtw_jklayer = JumpingKnowledge("max")
 
@@ -300,9 +301,6 @@ class STCell(nn.Module):
             # [batch_size, num_nodes, input_dim*seq_len]
             sp_gout_0 = x.permute(0, 2, 3, 1).reshape(-1, self.input_dim*self.seq_len).contiguous()
             dtw_gout_0 = sp_gout_0.detach().clone()
-            # enlarged graph with equivalent nodes fully connected
-            edge_index = edge_index.repeat(self.output_dim, self.output_dim)
-            dtw_edge_index = dtw_edge_index.repeat(self.output_dim, self.output_dim)
 
         if self.choice[1] == 1:
             # [batch_size*num_nodes, input_dim*seq_len]
@@ -422,5 +420,5 @@ class STCell(nn.Module):
         # cell_output = self.out(cell_output)
 
         # cell_output = torch.reshape(cell_output, (-1, self.pred_len_raw))
-
+    
         return cell_output
