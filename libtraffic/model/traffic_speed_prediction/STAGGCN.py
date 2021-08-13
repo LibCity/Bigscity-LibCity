@@ -3,17 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import weight_norm
 from .STAGGCNGATConv import GATConv
-# from torch_geometric.nn import GATConv
 from logging import getLogger
 from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 import numpy as np
 import math
-
-
-"""
-环境torch_geometric很难配置
-"""
 
 
 class STAGGCN(AbstractTrafficStateModel):
@@ -74,7 +68,7 @@ class STAGGCN(AbstractTrafficStateModel):
 
 
 class STAGGCNModel(nn.Module):
-    def __init__(self, input_dim=1, output_dim=1, 
+    def __init__(self, input_dim=1, output_dim=1,
                  node_num=325, seq_len=12, pred_len=6, graph_dim=32,
                  tcn_dim=[10], attn_head=4, choice=[1, 1, 1]):
         super(STAGGCNModel, self).__init__()
@@ -85,14 +79,17 @@ class STAGGCNModel(nn.Module):
         # self.output_dim = seq_len + np.sum(choice) * graph_dim
         self.pred_len_raw = np.sum(choice) * graph_dim
 
-        self.STCell = STCell(node_num, seq_len, graph_dim, tcn_dim, choice=choice, attn_head=attn_head, input_dim=input_dim, output_dim=output_dim)
+        self.STCell = STCell(node_num, seq_len, graph_dim, tcn_dim,
+                             choice=choice, attn_head=attn_head,
+                             input_dim=input_dim, output_dim=output_dim)
         self.output_linear = nn.Linear(in_features=self.pred_len_raw, out_features=self.pred_len)
         # self.output_linear_0 = nn.Linear(in_features=self.graph_dim, out_features=256)
         # self.output_linear_1 = nn.Linear(in_features=256, out_features=self.pred_len)
 
     def forward(self, x, edge_index, dtw_edge_index):
         # x: [batch_size, seq_len, num_nodes, input_dim]
-        # st_output: [batch_size, num_nodes, output_dim, sum(choice)*graph_dim == [batch_size, num_nodes, output_dim, pred_len_raw]]
+        # st_output: [batch_size, num_nodes, output_dim, sum(choice)*graph_dim ==
+        # [batch_size, num_nodes, output_dim, pred_len_raw]]
         st_output = self.STCell(x, edge_index, dtw_edge_index)
         output = st_output
 
@@ -197,7 +194,8 @@ class LearnedGCN(nn.Module):
 
 
 class STCell(nn.Module):
-    def __init__(self, node_num=524, seq_len=12, graph_dim=16, tcn_dim=[10], choice=[1, 1, 1], attn_head=2, input_dim=1, output_dim=1):
+    def __init__(self, node_num=524, seq_len=12, graph_dim=16, tcn_dim=[10],
+                 choice=[1, 1, 1], attn_head=2, input_dim=1, output_dim=1):
         super(STCell, self).__init__()
         self.node_num = node_num
         self.seq_len = seq_len
@@ -215,18 +213,18 @@ class STCell(nn.Module):
         self.seq_linear = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.input_dim*seq_len)
 
         if choice[0] == 1:
-            print(f"[TCN]")
+            print("[TCN]")
             print("node_num:", node_num, "\tattn_head:", attn_head)
             # one node of one input feature per embedding element
             self.self_attn = nn.MultiheadAttention(embed_dim=node_num*input_dim, num_heads=attn_head)
             # expand convolution output_dimension by output_dim
-            self.tcn = TemporalConvNet(num_inputs=self.input_dim, 
+            self.tcn = TemporalConvNet(num_inputs=self.input_dim,
                                        num_channels=[x * self.output_dim for x in self.tcn_dim])
-            self.tlinear = nn.Linear(in_features=self.output_dim*self.tcn_dim[-1]*self.seq_len, 
+            self.tlinear = nn.Linear(in_features=self.output_dim*self.tcn_dim[-1]*self.seq_len,
                                      out_features=self.output_dim*self.graph_dim)
 
         if choice[1] == 1:
-            print(f"[SP]")
+            print("[SP]")
             self.sp_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
             self.sp_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
             self.sp_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
@@ -246,7 +244,7 @@ class STCell(nn.Module):
             nn.init.xavier_uniform_(self.sp_target_embed)
 
         if choice[2] == 1:
-            print(f"[DTW]")
+            print("[DTW]")
             self.dtw_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
             self.dtw_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
             self.dtw_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
@@ -288,8 +286,8 @@ class STCell(nn.Module):
             # [batch_size*num_nodes, output_dim*self.tcn_dim[-1], seq_len]
             tcn_output = self.tcn(tcn_input)
             # [batch_size*num_nodes, output_dim*self.tcn_dim[-1]*seq_len]
-            tcn_output = torch.reshape(tcn_output, 
-                                      (-1, self.output_dim*self.tcn_dim[-1]*self.seq_len))
+            tcn_output = torch.reshape(tcn_output,
+                                       (-1, self.output_dim*self.tcn_dim[-1]*self.seq_len))
             # [batch_size*num_nodes, output_dim*self.graph_dim]
             tcn_output = self.tlinear(tcn_output)
             # [batch_size, num_nodes, output_dim, self.graph_dim]
@@ -332,7 +330,8 @@ class STCell(nn.Module):
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_adp_2 = torch.reshape(sp_adp_2, (-1, self.output_dim*self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
-            sp_output_2 = F.leaky_relu(sp_gout_2) * torch.sigmoid(sp_adp_2) + sp_output_1 * (1 - torch.sigmoid(sp_adp_2))
+            sp_output_2 = F.leaky_relu(sp_gout_2) * torch.sigmoid(sp_adp_2) + \
+                sp_output_1 * (1 - torch.sigmoid(sp_adp_2))
 
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_gout_3 = self.sp_gconv3(F.relu(sp_output_2), edge_index)
@@ -373,13 +372,15 @@ class STCell(nn.Module):
             dtw_adp_1 = self.dtw_linear_1(dtw_learned_matrix.matmul(F.dropout(adp_input_1, p=0.1)))
             dtw_adp_1 = torch.reshape(dtw_adp_1, (-1, self.output_dim*self.graph_dim))
             dtw_origin = self.dtw_origin(dtw_gout_0)
-            dtw_output_1 = torch.tanh(dtw_gout_1) * torch.sigmoid(dtw_adp_1) + dtw_origin * (1 - torch.sigmoid(dtw_adp_1))
+            dtw_output_1 = torch.tanh(dtw_gout_1) * torch.sigmoid(dtw_adp_1) + \
+                dtw_origin * (1 - torch.sigmoid(dtw_adp_1))
 
             dtw_gout_2 = self.dtw_gconv2(torch.tanh(dtw_output_1), dtw_edge_index)
             adp_input_2 = torch.reshape(torch.tanh(dtw_output_1), (-1, self.node_num, self.output_dim*self.graph_dim))
             dtw_adp_2 = self.dtw_linear_2(dtw_learned_matrix.matmul(F.dropout(adp_input_2, p=0.1)))
             dtw_adp_2 = torch.reshape(dtw_adp_2, (-1, self.output_dim*self.graph_dim))
-            dtw_output_2 = F.leaky_relu(dtw_gout_2) * torch.sigmoid(dtw_adp_2) + dtw_output_1 * (1 - torch.sigmoid(dtw_adp_2))
+            dtw_output_2 = F.leaky_relu(dtw_gout_2) * torch.sigmoid(dtw_adp_2) + \
+                dtw_output_1 * (1 - torch.sigmoid(dtw_adp_2))
 
             dtw_gout_3 = self.dtw_gconv3(F.relu(dtw_output_2), dtw_edge_index)
             adp_input_3 = torch.reshape(F.relu(dtw_output_2), (-1, self.node_num, self.output_dim*self.graph_dim))
@@ -420,5 +421,5 @@ class STCell(nn.Module):
         # cell_output = self.out(cell_output)
 
         # cell_output = torch.reshape(cell_output, (-1, self.pred_len_raw))
-    
+
         return cell_output
