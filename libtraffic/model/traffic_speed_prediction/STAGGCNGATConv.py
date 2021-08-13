@@ -21,7 +21,10 @@ def maybe_num_nodes(edge_index: torch.Tensor, num_nodes: Optional[int] = None):
 
 
 def add_self_loops(edge_index: torch.Tensor, num_nodes: Optional[int] = None):
-    return torch.cat((edge_index, torch.arange(maybe_num_nodes(edge_index, num_nodes)).repeat(2, 1).to(edge_index.device)), dim=1)
+    return torch.cat((edge_index,
+                      torch.arange(maybe_num_nodes(edge_index, num_nodes))
+                           .repeat(2, 1)
+                           .to(edge_index.device)), dim=1)
 
 
 def softmax(x: torch.Tensor, index: torch.Tensor, num_nodes: Optional[int] = None, dim: int = 0):
