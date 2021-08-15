@@ -179,7 +179,7 @@ class STMatching(AbstractMapMatchingModel):
         for candidate_i in self.candidates:
             for edge, dct in candidate_i.items():
                 candidate_i[edge]['N'] = (1 / math.sqrt(2 * math.pi) / self.sigma * math.exp(
-                    - (dct['distance'] - self.mu) ** 2 / 2 * self.sigma ** 2))
+                    - (dct['distance'] - self.mu) ** 2 / (2 * self.sigma ** 2)))
 
     def _transmission_probability(self):
         """
@@ -283,7 +283,7 @@ class STMatching(AbstractMapMatchingModel):
                             dct_j['V'] = {edge_k: 0}
             i += 1
 
-    def _spatial_analysis(self):
+    def _temporal_analysis(self):
         """
 
         Returns:
