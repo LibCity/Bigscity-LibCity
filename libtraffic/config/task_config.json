@@ -217,7 +217,7 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "DMVSTNet": {
-            "dataset_class": "TrafficStateGridDataset",
+            "dataset_class": "DMVSTNetDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
