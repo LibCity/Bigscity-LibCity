@@ -86,7 +86,7 @@
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon","ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
-            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN"],
+            "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon"],
         "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
             "LOOP_SEATTLE", "LOS_LOOP", "LOS_LOOP_SMALL", "Q_TRAFFIC", "SZ_TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi20140112",
@@ -217,7 +217,7 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "DMVSTNet": {
-            "dataset_class": "TrafficStateGridDataset",
+            "dataset_class": "DMVSTNetDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
@@ -310,6 +310,29 @@
             "dataset_class": "CCRNNDataset",
             "executor": "DCRNNExecutor",
             "evaluator": "TrafficStateEvaluator"
+        },
+        "MultiSTGCnetCommon": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        }
+    },
+    "map_matching": {
+        "allowed_model": [
+            "STMatching", "IVMM"
+        ],
+        "allowed_dataset": [
+            "test", "Seattle", "00000000"
+        ],
+        "STMatching": {
+            "dataset_class": "MapMatchingDataset",
+            "executor": "MapMatchingExecutor",
+            "evaluator": "MapMatchingEvaluator"
+        },
+        "IVMM": {
+            "dataset_class": "MapMatchingDataset",
+            "executor": "MapMatchingExecutor",
+            "evaluator": "MapMatchingEvaluator"
         }
     }
 }
