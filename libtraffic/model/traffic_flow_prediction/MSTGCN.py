@@ -10,17 +10,24 @@ from scipy.sparse.linalg import eigs
 
 def scaled_laplacian(weight):
     """
-    compute \tilde{L} (scaled laplacian matrix)
+    compute ~L (scaled laplacian matrix)
+    L = D - A
+    ~L = 2L/lambda - I
 
     Args:
         weight(np.ndarray): shape is (N, N), N is the num of vertices
 
     Returns:
-        np.ndarray: shape (N, N)
+        np.ndarray: ~L, shape (N, N)
     """
     assert weight.shape[0] == weight.shape[1]
+    n = weight.shape[0]
     diag = np.diag(np.sum(weight, axis=1))
     lap = diag - weight
+    for i in range(n):
+        for j in range(n):
+            if diag[i, i] > 0 and diag[j, j] > 0:
+                lap[i, j] /= np.sqrt(diag[i, i] * diag[j, j])
     lambda_max = eigs(lap, k=1, which='LR')[0].real
     return (2 * lap) / lambda_max - np.identity(weight.shape[0])
 
@@ -39,7 +46,7 @@ def cheb_polynomial(l_tilde, k):
     num = l_tilde.shape[0]
     cheb_polynomials = [np.identity(num), l_tilde.copy()]
     for i in range(2, k):
-        cheb_polynomials.append(2 * l_tilde * cheb_polynomials[i - 1] - cheb_polynomials[i - 2])
+        cheb_polynomials.append(np.matmul(2 * l_tilde, cheb_polynomials[i - 1]) - cheb_polynomials[i - 2])
     return cheb_polynomials
 
 
@@ -90,13 +97,13 @@ class ChebConv(nn.Module):
 
                 theta_k = self.Theta[k]  # (in_channel, out_channel)
 
-                rhs = graph_signal.permute(0, 2, 1).matmul(t_k).permute(0, 2, 1)
+                rhs = graph_signal.permute(0, 2, 1).matmul(t_k).permute(0, 2, 1)  # (b, N, F_in)
 
-                output = output + rhs.matmul(theta_k)
+                output = output + rhs.matmul(theta_k)  # (b, N, F_out)
 
-            outputs.append(output.unsqueeze(-1))
+            outputs.append(output.unsqueeze(-1))  # (b, N, F_out, 1)
 
-        return F.relu(torch.cat(outputs, dim=-1))
+        return F.relu(torch.cat(outputs, dim=-1))  # (b, N, F_out, T)
 
 
 class MSTGCNBlock(nn.Module):
@@ -114,7 +121,7 @@ class MSTGCNBlock(nn.Module):
             x: (batch_size, N, F_in, T)
 
         Returns:
-            torch.tensor: (batch_size, N, nb_time_filter, T)
+            torch.tensor: (batch_size, N, nb_time_filter, output_window)
         """
         # cheb gcn
         spatial_gcn = self.ChebConv(x)  # (b,N,F,T)

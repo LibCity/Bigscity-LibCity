@@ -142,7 +142,7 @@ class TrafficStateDataset(AbstractDataset):
                     'origin_id', 'destination_id', self.weight_col]]
         # 把数据转换成矩阵的形式
         self.adj_mx = np.zeros((len(self.geo_ids), len(self.geo_ids)), dtype=np.float32)
-        if self.init_weight_inf_or_zero.lower() == 'inf':
+        if self.init_weight_inf_or_zero.lower() == 'inf' and self.set_weight_link_or_dist.lower() != 'link':
             self.adj_mx[:] = np.inf
         for row in self.distance_df.values:
             if row[0] not in self.geo_to_ind or row[1] not in self.geo_to_ind:
