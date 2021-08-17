@@ -6,7 +6,7 @@
 
 [主页](https://libtraffic.github.io/Bigscity-LibTraffic-Website)|[文档](https://bigscity-libtraffic-docs.readthedocs.io/zh/latest/index.html)|[数据集](https://github.com/LibTraffic/Bigscity-LibTraffic-Datasets)|[交通论文列表](https://github.com/LibTraffic/Bigscity-LibTraffic-Paper)|[英文版](https://github.com/LibTraffic/Bigscity-LibTraffic/blob/master/readme.md)
 
-LibTraffic 是一个统一、灵活、全面、可扩展的交通预测库，为研究人员提供了可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中。
+LibTraffic 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
 LibTraffic 目前支持以下任务：
 

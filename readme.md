@@ -6,7 +6,7 @@
 
 [HomePage](https://libtraffic.github.io/Bigscity-LibTraffic-Website)|[Docs](https://bigscity-libtraffic-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibTraffic/Bigscity-LibTraffic-Datasets)|[Paper List](https://github.com/LibTraffic/Bigscity-LibTraffic-Paper) |[中文版](https://github.com/LibTraffic/Bigscity-LibTraffic/blob/master/readme_zh.md)
 
-LibTraffic is a unified, flexible and comprehensive traffic prediction library, which  provides researchers with a credibly experimental tool and a convenient development framework. Our library is implemented based on PyTorch, and includes all the necessary steps or components related to traffic prediction into a systematic pipeline.
+LibTraffic is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 
 LibTraffic currently supports the following tasks:
 
@@ -51,7 +51,7 @@ More details about environment configuration is represented in [Docs](https://bi
 
 Before run models in LibTraffic, please make sure you download at least one dataset and put it in directory `./raw_data/`. The dataset link is [BaiduDisk with code 1231](https://pan.baidu.com/s/1qEfcXBO-QwZfiT0G3IYMpQ) or [Google Drive](https://drive.google.com/drive/folders/1g5v2Gq1tkOq8XO0HDCZ9nOTtRpB6-gPe?usp=sharing).
 
-The script `run_model.py` is used for training and evaluating a single model in LibTraffic. When run the `run_model.py`, you must specify the following three parameters, namely **task, dataset and model**.  
+The script `run_model.py` is used for training and evaluating a single model in LibTraffic. When run the `run_model.py`, you must specify the following three parameters, namely **task**, **dataset** and **model**.  
 
 For example:
 

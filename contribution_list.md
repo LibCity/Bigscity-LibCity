@@ -37,6 +37,7 @@ The model reproduction work in the library has been assisted by several develope
 ||STDN|[NickHan-cs](https://github.com/NickHan-cs), [8igfive](https://github.com/8igfive)|
 ||ToGCN|[XBR-1111](https://github.com/XBR-1111)|
 ||MultiSTGCnet|[wyooyw](https://github.com/wyooyw)|
+||MultiSTGCnetCommon|[XBR-1111](https://github.com/XBR-1111)|
 ||STNN|[mjh12138](https://github.com/mjh12138), [01010122](https://github.com/01010122)|
 |Traffic Speed Prediction| DCRNN          | [aptx1231](https://github.com/aptx1231)                      |
 |                                     | STGCN          | [aptx1231](https://github.com/aptx1231)                      |
@@ -54,7 +55,9 @@ The model reproduction work in the library has been assisted by several develope
 | | STTN | [NickHan-cs](https://github.com/NickHan-cs) |
 |On-Demand Service Prediction|CCRNN|[aptx1231](https://github.com/aptx1231)|
 |                                     |STG2Seq|[aptx1231](https://github.com/aptx1231), [Stevezzy](https://github.com/Stevezzy)|
-||DMVSTNet|[WANDY666](https://github.com/WANDY666)|
+||DMVSTNet|[l782993610](https://github.com/l782993610), [WANDY666](https://github.com/WANDY666)|
+|Map Matching|STMatching|[XBR-1111](https://github.com/XBR-1111)|
+||IVMM|[excelsior399](https://github.com/excelsior399)|
 
 
 
