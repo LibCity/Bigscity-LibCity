@@ -10,17 +10,24 @@ from scipy.sparse.linalg import eigs
 
 def scaled_laplacian(weight):
     """
-    compute \tilde{L} (scaled laplacian matrix)
+    compute ~L (scaled laplacian matrix)
+    L = D - A
+    ~L = 2L/lambda - I
 
     Args:
         weight(np.ndarray): shape is (N, N), N is the num of vertices
 
     Returns:
-        np.ndarray: shape (N, N)
+        np.ndarray: ~L, shape (N, N)
     """
     assert weight.shape[0] == weight.shape[1]
+    n = weight.shape[0]
     diag = np.diag(np.sum(weight, axis=1))
     lap = diag - weight
+    for i in range(n):
+        for j in range(n):
+            if diag[i, i] > 0 and diag[j, j] > 0:
+                lap[i, j] /= np.sqrt(diag[i, i] * diag[j, j])
     lambda_max = eigs(lap, k=1, which='LR')[0].real
     return (2 * lap) / lambda_max - np.identity(weight.shape[0])
 
@@ -39,7 +46,7 @@ def cheb_polynomial(l_tilde, k):
     num = l_tilde.shape[0]
     cheb_polynomials = [np.identity(num), l_tilde.copy()]
     for i in range(2, k):
-        cheb_polynomials.append(2 * l_tilde * cheb_polynomials[i - 1] - cheb_polynomials[i - 2])
+        cheb_polynomials.append(np.matmul(2 * l_tilde, cheb_polynomials[i - 1]) - cheb_polynomials[i - 2])
     return cheb_polynomials
 
 
@@ -59,21 +66,22 @@ class SpatialAttentionLayer(nn.Module):
     def forward(self, x):
         """
         Args:
-            x(torch.tensor): (batch_size, N, F_in, T)
+            x(torch.tensor): (B, N, F_in, T)
 
         Returns:
             torch.tensor: (B,N,N)
         """
-        lhs = torch.matmul(torch.matmul(x, self.W1), self.W2)  # (b,N,F,T)(T)->(b,N,F)(F,T)->(b,N,T)
-
-        rhs = torch.matmul(self.W3, x).transpose(-1, -2)  # (F)(b,N,F,T)->(b,N,T)->(b,T,N)
-
-        product = torch.matmul(lhs, rhs)  # (b,N,T)(b,T,N) -> (B, N, N)
-
-        s = torch.matmul(self.Vs, torch.sigmoid(product + self.bs))  # (N,N)(B, N, N)->(B,N,N)
-
+        # x * W1 --> (B,N,F,T)(T)->(B,N,F)
+        # x * W1 * W2 --> (B,N,F)(F,T)->(B,N,T)
+        lhs = torch.matmul(torch.matmul(x, self.W1), self.W2)
+        # (W3 * x) ^ T --> (F)(B,N,F,T)->(B,N,T)-->(B,T,N)
+        rhs = torch.matmul(self.W3, x).transpose(-1, -2)
+        # x = lhs * rhs --> (B,N,T)(B,T,N) -> (B, N, N)
+        product = torch.matmul(lhs, rhs)
+        # S = Vs * sig(x + bias) --> (N,N)(B,N,N)->(B,N,N)
+        s = torch.matmul(self.Vs, torch.sigmoid(product + self.bs))
+        # softmax (B,N,N)
         s_normalized = F.softmax(s, dim=1)
-
         return s_normalized
 
 
@@ -85,8 +93,8 @@ class ChebConvWithSAt(nn.Module):
     def __init__(self, k, cheb_polynomials, in_channels, out_channels):
         """
         Args:
-            k(int):
-            cheb_polynomials:
+            k(int): K-order
+            cheb_polynomials: cheb_polynomials
             in_channels(int): num of channels in the input sequence
             out_channels(int): num of channels in the output sequence
         """
@@ -124,12 +132,11 @@ class ChebConvWithSAt(nn.Module):
 
                 t_k = self.cheb_polynomials[k]  # (N,N)
 
-                t_k_with_at = t_k.mul(spatial_attention)   # (N,N)*(N,N) = (N,N) 多行和为1, 按着列进行归一化
+                t_k_with_at = t_k.mul(spatial_attention)   # (N,N)*(B,N,N) = (B,N,N) .mul->element-wise的乘法
 
                 theta_k = self.Theta[k]  # (in_channel, out_channel)
 
-                rhs = t_k_with_at.permute(0, 2, 1).matmul(graph_signal)
-                # (N, N)(b, N, F_in) = (b, N, F_in) 因为是左乘，所以多行和为1变为多列和为1，即一行之和为1，进行左乘
+                rhs = t_k_with_at.permute(0, 2, 1).matmul(graph_signal)  # (B, N, N)(B, N, F_in) = (B, N, F_in)
 
                 output = output + rhs.matmul(theta_k)  # (b, N, F_in)(F_in, F_out) = (b, N, F_out)
 
@@ -155,7 +162,6 @@ class TemporalAttentionLayer(nn.Module):
         Returns:
             torch.tensor: (B, T, T)
         """
-        _, num_of_vertices, num_of_features, num_of_timesteps = x.shape
 
         lhs = torch.matmul(torch.matmul(x.permute(0, 3, 2, 1), self.U1), self.U2)
         # x:(B, N, F_in, T) -> (B, T, F_in, N)
@@ -180,8 +186,15 @@ class ASTGCNBlock(nn.Module):
         self.TAt = TemporalAttentionLayer(device, in_channels, num_of_vertices, num_of_timesteps)
         self.SAt = SpatialAttentionLayer(device, in_channels, num_of_vertices, num_of_timesteps)
         self.cheb_conv_SAt = ChebConvWithSAt(k, cheb_polynomials, in_channels, nb_chev_filter)
+        # 时间卷积: 输入时间长度 = num_of_timesteps = time_strides * output_window
+        # 输入必须是输出output_window的固定倍数！
+        # ker=3, pad=2, stride=time_strides
+        # 输出时间长度 = (time_strides * output_window + 2 * pad - ker) / time_strides + 1 = output_window
         self.time_conv = nn.Conv2d(nb_chev_filter, nb_time_filter, kernel_size=(1, 3),
                                    stride=(1, time_strides), padding=(0, 1))
+        # 时间维度上卷积: 输入时间长度 = num_of_timesteps = time_strides * output_window
+        # ker=1, stride=time_strides
+        # 输出时间长度 = (time_strides * output_window - ker) / time_strides + 1 = output_window
         self.residual_conv = nn.Conv2d(in_channels, nb_time_filter, kernel_size=(1, 1), stride=(1, time_strides))
         self.ln = nn.LayerNorm(nb_time_filter)  # 需要将channel放到最后一个维度上
 
@@ -191,7 +204,7 @@ class ASTGCNBlock(nn.Module):
             x: (batch_size, N, F_in, T)
 
         Returns:
-            torch.tensor: (batch_size, N, nb_time_filter, T)
+            torch.tensor: (batch_size, N, nb_time_filter, output_window)
         """
         batch_size, num_of_vertices, num_of_features, num_of_timesteps = x.shape
 
@@ -200,12 +213,12 @@ class ASTGCNBlock(nn.Module):
 
         x_tat = torch.matmul(x.reshape(batch_size, -1, num_of_timesteps), temporal_at)\
             .reshape(batch_size, num_of_vertices, num_of_features, num_of_timesteps)
-        # (B, N*F_in, T) * (B, T, T) -> (B, N*F_in, T) -> (B, N, F_in, T)
+        # 结合时间注意力：(B, N*F_in, T) * (B, T, T) -> (B, N*F_in, T) -> (B, N, F_in, T)
 
         # SAt
         spatial_at = self.SAt(x_tat)  # (B, N, N)
 
-        # cheb gcn
+        # 结合空间注意力的图卷积 cheb gcn
         spatial_gcn = self.cheb_conv_SAt(x, spatial_at)  # (B, N, F_out, T), F_out = nb_chev_filter
 
         # convolution along the time axis
@@ -264,10 +277,11 @@ class ASTGCNSubmodule(nn.Module):
         """
         x = x.permute(0, 2, 3, 1)  # (B, N, F_in(feature_dim), T_in)
         for block in self.BlockList:
-            x = block(x)
+            x = block(x)  # 每个时空块的输出维度是nb_time_filter
         # (B, N, F_out(nb_time_filter), T_out(output_window))
+        # 将nb_time_filter变成output_dim
         output = self.final_conv(x.permute(0, 3, 1, 2))
-        # (B,N,F_out,T_out)->(B,T_out,N,F_out)-conv<1,F_out-out_dim+1>->(B,T_out,N,out_dim)
+        # (B, N, F_out, T_out) --> (B, T_out, N, F_out) --> conv<1,F_out-out_dim+1> --> (B, T_out, N, out_dim)
         output = self.fusionlayer(output)
         return output
 
