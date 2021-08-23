@@ -15,7 +15,6 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
         self.location2id = {}  # 因为原始数据集中的部分 loc id 不会被使用到因此这里需要重新编码一下
         self.loc_id = 0
         self.tim_max = 0  # 记录最大的时间编码
-        self.history_type = self.config['history_type']
         self.feature_dict = {'current_loc': 'int', 'current_tim': 'int',
                              'target': 'int', 'target_tim': 'int', 'uid': 'int', 'current_dis': 'float'
                              }
@@ -27,8 +26,7 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             './libtraffic/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
 
         self.geo_coord = {}
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # 获取当前目录文件夹
-        path = os.path.join(current_dir, "foursquare_tky.geo")
+        path = "./raw_data/{}/{}.geo".format(config['dataset'], config['dataset'])
         f_geo = open(path)
         lines = f_geo.readlines()
 
@@ -63,12 +61,12 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             current_longi = []
             current_lati = []
             current_points = []
-            start_time = parse_time(traj[0][1], traj[0][2])
+            start_time = parse_time(traj[0][2])
             # 以当天凌晨的时间作为计算 time_off 的基准
             base_time = cal_basetime(start_time, True)
             for point in traj:
-                loc = point[0]
-                now_time = parse_time(point[1], point[2])
+                loc = point[4]
+                now_time = parse_time(point[2])
                 if loc not in self.location2id:
                     self.location2id[loc] = self.loc_id
                     self.loc_id += 1
