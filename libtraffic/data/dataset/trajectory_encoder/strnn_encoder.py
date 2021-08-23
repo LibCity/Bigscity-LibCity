@@ -16,25 +16,15 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
         self.loc_id = 0
         self.tim_max = 0  # 记录最大的时间编码
         self.history_type = self.config['history_type']
-        self.feature_dict = {'history_loc': 'int', 'history_tim': 'int',
-                             'current_loc': 'int', 'current_tim': 'int',
+        self.feature_dict = {'current_loc': 'int', 'current_tim': 'int',
                              'target': 'int', 'target_tim': 'int', 'uid': 'int', 'current_dis': 'float'
                              }
-        self.feature_max_len = {
-            'history_loc': self.config['history_len'],
-            'history_tim': self.config['history_len']
-        }
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
             './libtraffic/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
-        # 对于这种 history 模式没办法做到 batch
-        if self.history_type == 'cut_off':
-            # self.config['batch_size'] = 1
-            self.feature_name['history_loc'] = 'array of int'
-            self.feature_name['history_tim'] = 'array of int'
 
         self.geo_coord = {}
         current_dir = os.path.dirname(os.path.abspath(__file__))  # 获取当前目录文件夹
@@ -51,7 +41,7 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             self.geo_coord[loc_id] = [loc_lati, loc_longi]
         f_geo.close()
 
-    def encode(self, uid, trajectories):
+    def encode(self, uid, trajectories, negative_sample=None):
         """standard encoder use the same method as DeepMove
         Recode poi id. Encode timestamp with its hour.
         Args:
@@ -67,8 +57,6 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
         uid = self.uid
         self.uid += 1
         encoded_trajectories = []
-        history_loc = []
-        history_tim = []
         for index, traj in enumerate(trajectories):
             current_loc = []
             current_tim = []
@@ -103,8 +91,6 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             longi = self.geo_coord[self.location2id[current_points[-1]]][1]
             longi = np.array([longi for i in range(len(current_loc))])
             current_dis = euclidean_dist(lati - current_lati[:-1], longi - current_longi[:-1])
-            trace.append(history_loc)
-            trace.append(history_tim)
             trace.append(current_loc)
             trace.append(current_tim)
             trace.append(target)
@@ -112,32 +98,17 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             trace.append(uid)
             trace.append(current_dis)
             encoded_trajectories.append(trace)
-            if self.history_type == 'splice':
-                history_loc += current_loc
-                history_tim += current_tim
-            else:
-                history_loc.append(current_loc)
-                history_tim.append(current_tim)
         return encoded_trajectories
 
     def gen_data_feature(self):
         loc_pad = self.loc_id
         tim_pad = self.tim_max + 1
-        dis_pad = 0
-        if self.history_type == 'cut_off':
-            self.pad_item = {
-                'current_loc': loc_pad,
-                'current_tim': tim_pad
-            }
-            # 这种情况下不对 history_loc history_tim 做补齐
-        else:
-            self.pad_item = {
-                'current_loc': loc_pad,
-                'history_loc': loc_pad,
-                'current_tim': tim_pad,
-                'history_tim': tim_pad,
-                'current_dis': dis_pad
-            }
+        dis_pad = 0.0
+        self.pad_item = {
+            'current_loc': loc_pad,
+            'current_tim': tim_pad,
+            'current_dis': dis_pad
+        }
         self.data_feature = {
             'loc_size': self.loc_id + 1,
             'tim_size': self.tim_max + 2,
