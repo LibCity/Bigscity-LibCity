@@ -1,10 +1,8 @@
 import math
 import torch
 import torch.nn as nn
-from geopy import distance
 
 from libtraffic.model.abstract_model import AbstractModel
-from libtraffic.utils.dataset import parse_coordinate
 
 
 class STRNN(AbstractModel):
@@ -18,7 +16,6 @@ class STRNN(AbstractModel):
         self.up_time = data_feature['tim_size'] - 1
         self.lw_loc = 0.0
         self.up_loc = data_feature['distance_upper']
-        self.poi_profile = data_feature['poi_profile']
         self.h0 = nn.Parameter(torch.randn(size=[self.hidden_size, 1]))  # h0
         self.weight_ih = nn.Parameter(torch.randn(
             size=[self.hidden_size, self.hidden_size]))  # C
@@ -76,25 +73,12 @@ class STRNN(AbstractModel):
         user = batch['uid']
         dst = batch['target'].tolist()
         dst_time = batch['target_tim']
-        current_loc = batch['current_loc']
         current_tim = batch['current_tim']
         # 计算 td ld
         batch_size = len(dst)
         td = dst_time.unsqueeze(1) - current_tim
-        ld = torch.zeros(current_loc.shape).to(self.device)
+        ld = batch['current_dis']
         loc_len = batch.get_origin_len('current_loc')
-        current_loc = current_loc.tolist()
-        for i in range(batch_size):
-            target = dst[i]
-            lon_i, lat_i = parse_coordinate(
-                self.poi_profile.iloc[target]['coordinates'])
-            for j in range(loc_len[i]):
-                origin = current_loc[i][j]
-                lon_j, lat_j = parse_coordinate(
-                    self.poi_profile.iloc[origin]['coordinates'])
-                # 计算 target - origin 的距离，并写入 ld[i][j] 中
-                ld[i][j] = distance.distance(
-                    (lat_i, lon_i), (lat_j, lon_j)).kilometers
 
         td_upper = torch.LongTensor(
             [self.up_time] * batch_size).to(self.device).unsqueeze(1)
@@ -121,25 +105,12 @@ class STRNN(AbstractModel):
         user = batch['uid']
         dst = batch['target'].tolist()
         dst_time = batch['target_tim']
-        current_loc = batch['current_loc']
         current_tim = batch['current_tim']
         # 计算 td ld
         batch_size = len(dst)
         td = dst_time.unsqueeze(1) - current_tim
-        ld = torch.zeros(current_loc.shape).to(self.device)
+        ld = batch['current_dis']
         loc_len = batch.get_origin_len('current_loc')
-        current_loc = current_loc.tolist()
-        for i in range(batch_size):
-            target = dst[i]
-            lon_i, lat_i = parse_coordinate(
-                self.poi_profile.iloc[target]['coordinates'])
-            for j in range(loc_len[i]):
-                origin = current_loc[i][j]
-                lon_j, lat_j = parse_coordinate(
-                    self.poi_profile.iloc[origin]['coordinates'])
-                # 计算 target - origin 的距离，并写入 ld[i][j] 中
-                ld[i][j] = distance.distance(
-                    (lat_i, lon_i), (lat_j, lon_j)).kilometers
 
         td_upper = torch.LongTensor(
             [self.up_time] * batch_size).to(self.device).unsqueeze(1)

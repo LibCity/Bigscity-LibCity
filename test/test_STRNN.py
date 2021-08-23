@@ -2,7 +2,7 @@ from libtraffic.config import ConfigParser
 from libtraffic.data import get_dataset
 from libtraffic.utils import get_model
 
-config = ConfigParser('traj_loc_pred', 'STRNN', 'foursquare_tky', None, None)
+config = ConfigParser('traj_loc_pred', 'STRNN', 'foursquare_tky', other_args={"gpu": False})
 dataset = get_dataset(config)
 train_data, valid_data, test_data = dataset.get_data()
 data_feature = dataset.get_data_feature()

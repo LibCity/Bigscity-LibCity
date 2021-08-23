@@ -48,7 +48,7 @@
             "dataset_class": "TrajectoryDataset",
             "executor": "TrajLocPredExecutor",
             "evaluator": "TrajLocPredEvaluator",
-            "traj_encoder": "StandardTrajectoryEncoder"
+            "traj_encoder": "StrnnEncoder"
         },
         "SERM": {
             "dataset_class": "TrajectoryDataset",
