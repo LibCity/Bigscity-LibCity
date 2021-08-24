@@ -1,7 +1,8 @@
 import networkx as nx
+import math
 from logging import getLogger
-from libtraffic.model.abstract_map_matching_model import AbstractMapMatchingModel
-from libtraffic.utils.GPS_utils import *
+from libtraffic.model.abstract_traffic_tradition_model import AbstractMapMatchingModel
+from libtraffic.utils.GPS_utils import radian2angle, R_EARTH, angle2radian, dist
 
 
 class STMatching(AbstractMapMatchingModel):
@@ -10,10 +11,7 @@ class STMatching(AbstractMapMatchingModel):
     """
 
     def __init__(self, config, data_feature):
-
-        # config and data_feature
-        self.config = config
-        self.data_feature = data_feature
+        super.__init__(config, data_feature)
 
         # logger
         self._logger = getLogger()
@@ -79,7 +77,7 @@ class STMatching(AbstractMapMatchingModel):
         self._transmission_probability()
         self._logger.info('finish calculating transmission probability')
         if self.with_rd_speed and self.with_time:
-            self._spatial_analysis()
+            self._temporal_analysis()
             self._logger.info('finish spatial analysis')
         self._find_matched_sequence()
         self._logger.info('finish finding matched sequence')
@@ -124,8 +122,8 @@ class STMatching(AbstractMapMatchingModel):
         if c == 0:
             return a, edge[0]
         # otherwise, calculate the Vertical length
-        l = (a + b + c) / 2
-        s = math.sqrt(l * math.fabs(l - a) * math.fabs(l - b) * math.fabs(l - c))
+        p = (a + b + c) / 2
+        s = math.sqrt(p * math.fabs(p - a) * math.fabs(p - b) * math.fabs(p - c))
         return 2 * s / c, None
 
     def _get_candidates(self):
@@ -153,9 +151,13 @@ class STMatching(AbstractMapMatchingModel):
                 lon_origin = self.rd_nwk.nodes[origin]['lon']
                 lat_dest = self.rd_nwk.nodes[dest]['lat']
                 lon_dest = self.rd_nwk.nodes[dest]['lon']
-                if lat - self.lat_r <= lat_origin <= lat + self.lat_r and lon - self.lon_r <= lon_origin <= lon + self.lon_r or lat - self.lat_r <= lat_dest <= lat + self.lat_r and lon - self.lon_r <= lon_dest <= lon + self.lon_r:
+                if lat - self.lat_r <= lat_origin <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_origin <= lon + self.lon_r \
+                        or lat - self.lat_r <= lat_dest <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_dest <= lon + self.lon_r:
                     candidate_i.add((origin, dest))
-                elif lat - self.lat_r <= lat_origin / 2 + lat_dest / 2 <= lat + self.lat_r and lon - self.lon_r <= lon_origin / 2 + lon_dest / 2 <= lon + self.lon_r:
+                elif lat - self.lat_r <= lat_origin / 2 + lat_dest / 2 <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_origin / 2 + lon_dest / 2 <= lon + self.lon_r:
                     candidate_i.add((origin, dest))
             candidate_i_m = list()  # (edge, distance, point)
             for edge in candidate_i:
@@ -217,15 +219,15 @@ class STMatching(AbstractMapMatchingModel):
                             result = d / (
                                     nx.astar_path_length(self.rd_nwk, dct_j['node'], nd2_origin, weight='distance')
                                     + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i + 1][1]),
-                                        angle2radian(self.trajectory[i + 1][0]),
-                                        angle2radian(lat),
-                                        angle2radian(lon)
-                                    ) ** 2 - dct_k['distance'] ** 2
-                                )
-                            )
+                                        math.fabs(
+                                            dist(
+                                                angle2radian(self.trajectory[i + 1][1]),
+                                                angle2radian(self.trajectory[i + 1][0]),
+                                                angle2radian(lat),
+                                                angle2radian(lon)
+                                            ) ** 2 - dct_k['distance'] ** 2
+                                        )
+                                    )
                             )
                         elif dct_k['node'] is not None:
                             nd1_destination = edge_j[1]
@@ -234,15 +236,15 @@ class STMatching(AbstractMapMatchingModel):
                             result = d / (
                                     nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'], weight='distance')
                                     + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i][1]),
-                                        angle2radian(self.trajectory[i][0]),
-                                        angle2radian(lat),
-                                        angle2radian(lon)
-                                    ) ** 2 - dct_j['distance'] ** 2
-                                )
-                            )
+                                        math.fabs(
+                                            dist(
+                                                angle2radian(self.trajectory[i][1]),
+                                                angle2radian(self.trajectory[i][0]),
+                                                angle2radian(lat),
+                                                angle2radian(lon)
+                                            ) ** 2 - dct_j['distance'] ** 2
+                                        )
+                                    )
                             )
                         else:
                             nd1_destination = edge_j[1]
@@ -253,24 +255,25 @@ class STMatching(AbstractMapMatchingModel):
                             result = d / (
                                     nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin, weight='distance')
                                     + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i][1]),
-                                        angle2radian(self.trajectory[i][0]),
-                                        angle2radian(lat1),
-                                        angle2radian(lon1)
-                                    ) ** 2 - dct_j['distance'] ** 2
-                                )
-                            ) + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i + 1][1]),
-                                        angle2radian(self.trajectory[i + 1][0]),
-                                        angle2radian(lat2),
-                                        angle2radian(lon2)
-                                    ) ** 2 - dct_k['distance'] ** 2
-                                )
-                            )
+                                        math.fabs(
+                                            dist(
+                                                angle2radian(self.trajectory[i][1]),
+                                                angle2radian(self.trajectory[i][0]),
+                                                angle2radian(lat1),
+                                                angle2radian(lon1)
+                                            ) ** 2 - dct_j['distance'] ** 2
+                                        )
+                                    )
+                                    + math.sqrt(
+                                        math.fabs(
+                                            dist(
+                                                angle2radian(self.trajectory[i + 1][1]),
+                                                angle2radian(self.trajectory[i + 1][0]),
+                                                angle2radian(lat2),
+                                                angle2radian(lon2)
+                                            ) ** 2 - dct_k['distance'] ** 2
+                                        )
+                                    )
                             )
                         if 'V' in dct_j.keys():
                             dct_j['V'][edge_k] = result
@@ -352,4 +355,5 @@ class STMatching(AbstractMapMatchingModel):
                 res_lst.append(None)
 
         res_lst.reverse()
-        self.res_dct[self.tra_id] = list(map(lambda x: self.rd_nwk.edges[x]['rel_id'] if x is not None else None, res_lst))
+        self.res_dct[self.tra_id] = \
+            list(map(lambda x: self.rd_nwk.edges[x]['rel_id'] if x is not None else None, res_lst))

@@ -1,6 +1,6 @@
 import networkx as nx
 from logging import getLogger
-from libtraffic.model.abstract_map_matching_model import AbstractMapMatchingModel
+from libtraffic.model.abstract_traffic_tradition_model import AbstractMapMatchingModel
 from libtraffic.utils.GPS_utils import *
 import numpy as np
 
@@ -81,7 +81,7 @@ class IVMM(AbstractMapMatchingModel):
         self._transmission_probability()
         self._logger.info('finish calculating transmission probability')
         if self.with_rd_speed and self.with_time:
-            self._spatial_analysis()
+            self._temporal_analysis()
             self._logger.info('finish spatial analysis')
         self._score_matrix()
         self._logger.info('finish building score matrix')

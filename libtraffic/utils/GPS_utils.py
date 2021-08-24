@@ -95,5 +95,7 @@ def destination(phi1, lambda1, brng, distance, r=R_EARTH):
     """
     delta = distance / r
     phi2 = math.asin(math.sin(phi1) * math.cos(delta) + math.cos(phi1) * math.sin(delta) * math.cos(brng))
-    lambda2 = lambda1 + math.atan2(math.sin(brng) * math.sin(delta) * math.cos(phi1), math.cos(delta) - math.sin(phi1) * math.sin(phi2))
+    lambda2 = lambda1 + math.atan2(
+        math.sin(brng) * math.sin(delta) * math.cos(phi1), math.cos(delta) - math.sin(phi1) * math.sin(phi2)
+    )
     return phi2, lambda2
