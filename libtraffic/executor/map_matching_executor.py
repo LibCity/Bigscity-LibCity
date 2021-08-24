@@ -1,7 +1,6 @@
 from libtraffic.executor.abstract_executor import AbstractExecutor
 from libtraffic.utils.utils import ensure_dir
 from logging import getLogger
-from torch.utils.tensorboard import SummaryWriter
 
 
 class MapMatchingExecutor(AbstractExecutor):
