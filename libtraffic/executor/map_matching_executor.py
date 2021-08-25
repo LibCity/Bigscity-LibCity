@@ -24,7 +24,7 @@ class MapMatchingExecutor(AbstractExecutor):
             test_data
         """
         result = self.model.run(test_data)
-        batch = {'y_true': , 'y_pred': , 'rd_nwk': test_data['rd_nwk']}
+        batch = {'route': test_data['route'], 'result': result, 'rd_nwk': test_data['rd_nwk']}
         self.evaluator.collect(batch)
         self.evaluator.save_result(self.evaluate_res_dir)
 

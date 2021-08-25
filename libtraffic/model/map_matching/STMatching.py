@@ -11,7 +11,7 @@ class STMatching(AbstractMapMatchingModel):
     """
 
     def __init__(self, config, data_feature):
-        super.__init__(config, data_feature)
+        super().__init__(config, data_feature)
 
         # logger
         self._logger = getLogger()

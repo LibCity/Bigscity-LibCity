@@ -50,12 +50,14 @@ class MapMatchingDataset(AbstractDataset):
         self.rel_file = self.config.get('rel_file', self.dataset)
         self.dyna_file = self.config.get('dyna_file', self.dataset)
         self.usr_file = self.config.get('usr_file', self.dataset)
+        self.route_file = self.config.get('usr_file', self.dataset)
 
         # result
         self.trajectory = None
         self.rd_nwk = None
+        self.route = None
 
-        # load 4 files
+        # load 5 files
         if not self.cache_dataset or not os.path.exists(self.cache_file_name):
             if os.path.exists(self.data_path + self.geo_file + '.geo'):
                 self._load_geo()
@@ -76,6 +78,8 @@ class MapMatchingDataset(AbstractDataset):
                 self._load_dyna()
             else:
                 raise ValueError('Not found .dyna file!')
+            if os.path.exists(self.data_path + self.route_file + '.route'):
+                self._load_route()
 
     def _load_geo(self):
         """
@@ -211,6 +215,20 @@ class MapMatchingDataset(AbstractDataset):
 
         self._logger.info("Loaded file " + self.dyna_file + '.dyna, num of GPS samples=' + str(dynafile.shape[0]))
 
+    def _load_route(self):
+        """
+        载.dyna文件，格式: 每行一个 rel_id 或一组 rel_id
+        Returns:
+
+        """
+        routefile = pd.read_csv(self.data_path + self.route_file + '.route')
+        lst = routefile.values.tolist()
+        if type(lst[0][0]) is int:
+            array = np.array(list(map(lambda x: x[0], lst)))
+        else:
+            array = np.array(list(map(lambda x: eval(x[0]), lst)))
+        self.route = array
+
     def get_data(self):
         """
         返回训练数据、验证数据、测试数据
@@ -220,6 +238,7 @@ class MapMatchingDataset(AbstractDataset):
                 {
                 'trajectory': np.array (time, lon, lat) if with_time else (lon, lat)
                 'rd_nwk': networkx.MultiDiGraph
+                'route': ground truth, numpy array
                 }
         """
         if self.cache_dataset and os.path.exists(self.cache_file_name):
@@ -230,6 +249,7 @@ class MapMatchingDataset(AbstractDataset):
         res = dict()
         res['trajectory'] = self.trajectory
         res['rd_nwk'] = self.rd_nwk
+        res['route'] = self.route
         with open(self.cache_file_name, 'wb') as f:
             pickle.dump(res, f)
         self._logger.info('Saved at ' + self.cache_file_name)
