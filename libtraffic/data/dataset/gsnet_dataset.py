@@ -1,5 +1,4 @@
 import datetime
-import os
 import pickle
 
 
@@ -51,11 +50,11 @@ class GSNetDataset(TrafficStateCPTDataset, TrafficStateGridDataset):
 
         if ext_data is not None:
             indexs = []
-            for ts in timestamp_list:
+            for ts_ in ts:
                 if previous_ext:
-                    ts_index = self.idx_of_ext_timesolts[ts - self.offset_frame]
+                    ts_index = self.idx_of_ext_timesolts[ts_ - self.offset_frame]
                 else:
-                    ts_index = self.idx_of_ext_timesolts[ts]
+                    ts_index = self.idx_of_ext_timesolts[ts_]
                 indexs.append(ts_index)
             select_data = ext_data[indexs]
             data_list.append(select_data)
@@ -63,7 +62,7 @@ class GSNetDataset(TrafficStateCPTDataset, TrafficStateGridDataset):
         if len(data_list) > 0:
             data = np.concatenate(data_list, axis=1)
         else:
-            data = np.zeros((len(timestamp_list), 0))
+            data = np.zeros((len(ts), 0))
 
         return data
 
