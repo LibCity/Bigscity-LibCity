@@ -1,3 +1,5 @@
 {
-
+  "evaluator_config": {
+        "metrics": ["RMF", "AN", "AL"]
+    }
 }
