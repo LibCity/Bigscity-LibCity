@@ -27,11 +27,11 @@ class GTSDataset(TrafficStatePointDataset):
             dict: 包含数据集的相关特征的字典
         """
         datas = self.train_dataloader.dataset  # list of tuple
-        # tuple[0] : shape = (input_window, num_nodes, feature_dim)
-        # tuple[1] : shape = (output_window, num_nodes, feature_dim)
+        # tuple[0] : shape = (input_window, num_nodes(...), feature_dim)
+        # tuple[1] : shape = (output_window, num_nodes(...), feature_dim)
         train_datas = [data_tuple[0] for data_tuple in datas]
-        # (num_samples, input_window, num_nodes, feature_dim)
-        train_data = np.array(train_datas)[:, 0, :, 0]  # (num_samples, num_nodes)
+        # (num_samples, input_window, num_nodes(...), feature_dim)
+        train_data = np.array(train_datas)[:, 0, ..., 0]  # (num_samples, num_nodes)
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "ext_dim": self.ext_dim,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
                 "output_dim": self.output_dim, "train_data": train_data,
