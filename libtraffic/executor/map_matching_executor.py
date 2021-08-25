@@ -1,6 +1,6 @@
 from libtraffic.executor.abstract_executor import AbstractExecutor
 from logging import getLogger
-from libtraffic.utils import get_evaluator, ensure_dir
+from libtraffic.utils import get_evaluator
 
 
 class MapMatchingExecutor(AbstractExecutor):
@@ -27,9 +27,6 @@ class MapMatchingExecutor(AbstractExecutor):
         batch = {'route': test_data['route'], 'result': result, 'rd_nwk': test_data['rd_nwk']}
         self.evaluator.collect(batch)
         self.evaluator.save_result(self.evaluate_res_dir)
-
-    def train(self, train_dataloader, eval_dataloader):
-        assert True  # do nothing
 
     def load_model(self, cache_name):
         assert True  # do nothing

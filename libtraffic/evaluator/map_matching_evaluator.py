@@ -72,7 +72,6 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 d_tru += self.rel_to_distance[rel_id]
             self.evaluate_result['AL'] = d_lcs / d_tru
 
-
     def save_result(self, save_path, filename=None):
         """
         将评估结果保存到 save_path 文件夹下的 filename 文件中
@@ -98,7 +97,6 @@ class MapMatchingEvaluator(AbstractEvaluator):
         with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') as f:
             json.dump(self.evaluate_result, f)
             self._logger.info('Evaluate result is saved at ' + os.path.join(save_path, '{}.json'.format(filename)))
-
 
     def clear(self):
         pass
