@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 
 from libtraffic.data.dataset import TrafficStatePointDataset
@@ -129,10 +130,12 @@ class ASTGCNDataset(TrafficStatePointDataset):
                 targets(np.ndarray): 模型输出数据, shape: (num_samples, Tp, ..., feature_dim)
         """
         trend_samples, period_samples, closeness_samples, targets = [], [], [], []
+        flag = 0
         for idx in range(df.shape[0]):
             sample = self._get_sample_indices(df, idx)
             if (sample[0] is None) and (sample[1] is None) and (sample[2] is None):
                 continue
+            flag = 1
             trend_sample, period_sample, closeness_sample, target = sample
             if self.len_trend > 0:
                 trend_sample = np.expand_dims(trend_sample, axis=0)  # (1,Tw,N,F)
@@ -145,7 +148,10 @@ class ASTGCNDataset(TrafficStatePointDataset):
                 closeness_samples.append(closeness_sample)
             target = np.expand_dims(target, axis=0)  # (1,Tp,N,F)
             targets.append(target)
-
+        if flag == 0:
+            self._logger.warning('Parameter len_closeness/len_period/len_trend is too large '
+                                 'for the time range of the data!')
+            sys.exit()
         sources = []
         if len(closeness_samples) > 0:
             closeness_samples = np.concatenate(closeness_samples, axis=0)  # (num_samples,Th,N,F)

@@ -6,6 +6,10 @@ from logging import getLogger
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libtraffic.model import loss
 
+"""
+输入流入和流出的2维数据
+"""
+
 
 def calculate_normalized_laplacian(adj):
     adjacency = np.array(adj)

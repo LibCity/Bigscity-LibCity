@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import datetime
 
@@ -79,6 +80,10 @@ class TrafficStateCPTDataset(TrafficStateDataset):
             ]  # [[closeness], [period], [trend]]
         # 计算最大值，即最大的偏移距离
         largest_interval = max([k[-1] if len(k) != 0 else 0 for k in offset_mat])
+        if largest_interval >= len(self.timesolts):
+            self._logger.warning('Parameter len_closeness/len_period/len_trend is too large '
+                                 'for the time range of the data!')
+            sys.exit()
         # print('offset_mat', offset_mat)
         # 从最大的偏移处开始算，因为要向前偏移这么多
         x, y, ts_x, ts_y = [], [], [], []
