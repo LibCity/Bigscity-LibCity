@@ -5,7 +5,7 @@ from libtraffic.utils import ensure_dir
 from libtraffic.data.utils import generate_dataloader
 
 """
-跟现有的不太适配 之后看看如何修改
+需要有.ext文件！
 """
 
 

@@ -4,9 +4,12 @@ import torch.nn.functional as F
 import math
 import torch
 import torch.nn as nn
-
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
+
+"""
+输入流入和流出的2维数据
+"""
 
 
 class GraphConvolution(Module):

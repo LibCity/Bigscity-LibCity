@@ -11,7 +11,8 @@ from torch.nn import BatchNorm2d, Conv2d, Parameter, LayerNorm, BatchNorm1d
 
 
 """
-一堆硬编码 输入数据的时间长度没法变了？？后边看看如何改他的结构 去除硬编码
+一堆硬编码 输入数据的时间长度没法变了，必须输入维度=60，不能少
+后边看看如何改他的结构 去除硬编码
 """
 
 def scaled_laplacian(weight):
