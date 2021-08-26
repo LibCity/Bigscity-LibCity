@@ -45,7 +45,10 @@ class STMatching(AbstractMapMatchingModel):
         trajectory = data['trajectory']
 
         # set lon_radius and lat_radius based on the first Node of rd_nwk
-        self._set_lon_lat_radius(self.rd_nwk.nodes[0]['lon'], self.rd_nwk.nodes[0]['lat'])
+        self._set_lon_lat_radius(
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lon'],
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lat']
+        )
 
         # deal with every trajectories
         for key, value in trajectory.items():
@@ -300,10 +303,6 @@ class STMatching(AbstractMapMatchingModel):
         Returns:
 
         """
-        # first GPS sample
-        nodes = self.candidates[0]
-        for edge, dct in nodes.items():
-            dct['score'] = dct['N']
 
         pre = list()
         # for every GPS sample
@@ -324,7 +323,8 @@ class STMatching(AbstractMapMatchingModel):
                 nodes = self.candidates[i]
                 for edge, dct in nodes.items():
                     dct['score'] = dct['N']
-                pre.append(None)
+                    pre_i[edge] = None
+                pre.append(pre_i)
                 continue
             # j >= 0, calculate score of candidates of GPS sample i
             for edge, dct in self.candidates[i].items():
@@ -342,17 +342,23 @@ class STMatching(AbstractMapMatchingModel):
         res_lst = []
         e = None
         for i in range(len(pre)-1, -1, -1):
-            # if i have candidates
-            if pre[i] is not None:
-                # if there's not e, init one.
-                if e is None:
+
+            if e is None:
+                if pre[i] is not None:
+                    # if there's not e, and current i have candidates, init e.
                     e = max(self.candidates[i], key=lambda k: self.candidates[i][k]['score'])
+                    res_lst.append(e)
                 else:
-                    e = pre[i][e]
-                res_lst.append(e)
-            # if i have no candidates
+                    # if there's not e, and current i have no candidates, result is None
+                    res_lst.append(None)
             else:
-                res_lst.append(None)
+                if pre[i+1] is not None:
+                    # if there's an e, and current i+1 have candidates, do the 'pre' thing
+                    e = pre[i+1][e]
+                    res_lst.append(e)
+                else:
+                    # if there's an e, and current i+1 have no candidates, result is None
+                    res_lst.append(None)
 
         res_lst.reverse()
         self.res_dct[self.tra_id] = \

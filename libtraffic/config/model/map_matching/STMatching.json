@@ -2,6 +2,6 @@
   "k": 5,
   "r": 100,
   "mu": 0,
-  "delta": 20,
+  "sigma": 20,
   "window_size": 40
 }

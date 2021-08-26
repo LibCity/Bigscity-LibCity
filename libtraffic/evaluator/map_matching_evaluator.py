@@ -152,7 +152,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 else:
                     if last_point != edges[uncompleted_sequence[i]][0]:
                         path = nx.dijkstra_path(self.rd_nwk, source=last_point,
-                                                target=edges[uncompleted_sequence[i]][0])
+                                                target=edges[uncompleted_sequence[i]][0], weight='distance')
                         j = 0
                         for road in path:
                             if j != 0:
