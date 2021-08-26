@@ -18,6 +18,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
         self.result = {}  # 每一种指标的结果
         self._check_config()
         self._logger = getLogger()
+        self.rel_info = {}
         self.evaluate_result = {}
 
     def _check_config(self):
@@ -31,14 +32,17 @@ class MapMatchingEvaluator(AbstractEvaluator):
         self.rd_nwk = batch["rd_nwk"]
         self.truth_sequence = list(batch["route"])
         self.result = batch["result"]
-        self.find_completed_sequence()
-        # find the longest common subsequence
-        self.find_lcs()
-        self.rel_to_distance = {}
         for point1 in self.rd_nwk.adj:
             for point2 in self.rd_nwk.adj[point1]:
                 rel = self.rd_nwk.adj[point1][point2]
-                self.rel_to_distance[rel['rel_id']] = rel['distance']
+                self.rel_info[rel['rel_id']] = {}
+                self.rel_info[rel['rel_id']]["distance"] = rel['distance']
+                self.rel_info[rel['rel_id']]['point1'] = point1
+                self.rel_info[rel['rel_id']]['point2'] = point2
+        self.find_completed_sequence()
+        # find the longest common subsequence
+        self.find_lcs()
+        ensure_dir(self.res_dir)
 
     def evaluate(self):
         if 'RMF' in self.metrics:
@@ -46,16 +50,16 @@ class MapMatchingEvaluator(AbstractEvaluator):
             d_sub = 0
             d_total = 0
             for rel_id in self.truth_sequence:
-                d_total += self.rel_to_distance[rel_id]
+                d_total += self.rel_info[rel_id]['distance']
             i = j = k = 0
             while i < len(self.lcs):
                 while self.truth_sequence[j] != self.lcs[i]:
-                    d_sub += self.rel_to_distance[self.truth_sequence[j]]
+                    d_sub += self.rel_info[self.truth_sequence[j]]['distance']
                     j += 1
                     if j == len(self.truth_sequence):
                         break
                 while self.output_sequence[k] != self.lcs[i]:
-                    d_plus += self.rel_to_distance[self.output_sequence[j]]
+                    d_plus += self.rel_info[self.output_sequence[j]]['distance']
                     k += 1
                     if k == len(self.output_sequence):
                         break
@@ -67,9 +71,9 @@ class MapMatchingEvaluator(AbstractEvaluator):
             d_lcs = 0
             d_tru = 0
             for rel_id in self.lcs:
-                d_lcs += self.rel_to_distance[rel_id]
+                d_lcs += self.rel_info[rel_id]['distance']
             for rel_id in self.truth_sequence:
-                d_tru += self.rel_to_distance[rel_id]
+                d_tru += self.rel_info[rel_id]['distance']
             self.evaluate_result['AL'] = d_lcs / d_tru
 
     def save_result(self, save_path, filename=None):
@@ -86,7 +90,6 @@ class MapMatchingEvaluator(AbstractEvaluator):
             f.write('dyna_id,rel_id\n')
             for line in self.result:
                 f.write(str(line[0]) + ',' + str(line[1]) + '\n')
-
         self.evaluate()
         ensure_dir(save_path)
         if filename is None:
@@ -136,36 +139,33 @@ class MapMatchingEvaluator(AbstractEvaluator):
         uncompleted_sequence = []
         for line in self.result:
             uncompleted_sequence.append(line[1])
-        i = 0
-        while i < uncompleted_sequence.count(None):
+        while uncompleted_sequence.count(None) != 0:
             uncompleted_sequence.remove(None)
-            i += 1
         completed_sequence = []
         i = 0
         last_road = None
         last_point = None
-        edges = list(self.rd_nwk.edges)
         while i < len(uncompleted_sequence):
             if last_road is not None:
                 if last_road == uncompleted_sequence[i]:
                     i += 1
                 else:
-                    if last_point != edges[uncompleted_sequence[i]][0]:
+                    if last_point != self.rel_info[uncompleted_sequence[i]]['point1']:
                         path = nx.dijkstra_path(self.rd_nwk, source=last_point,
-                                                target=edges[uncompleted_sequence[i]][0], weight='distance')
+                                                    target=self.rel_info[uncompleted_sequence[i]]['point1'], weight='distance')
                         j = 0
                         for road in path:
                             if j != 0:
                                 completed_sequence.append(road)
                             j += 1
                     else:
-                        completed_sequence.append(edges[uncompleted_sequence[i]])
+                        completed_sequence.append(uncompleted_sequence[i])
                     last_road = uncompleted_sequence[i]
-                    last_point = edges[uncompleted_sequence[i]][1]
+                    last_point = self.rel_info[uncompleted_sequence[i]]['point2']
                     i += 1
             else:
                 completed_sequence.append(uncompleted_sequence[i])
                 last_road = uncompleted_sequence[i]
-                last_point = edges[uncompleted_sequence[i]][1]
+                last_point = self.rel_info[uncompleted_sequence[i]]['point2']
                 i += 1
         self.output_sequence = completed_sequence
