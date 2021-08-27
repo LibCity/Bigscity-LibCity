@@ -229,6 +229,8 @@ class MapMatchingDataset(AbstractDataset):
             array = np.array(list(map(lambda x: eval(x[0]), lst)))
         self.route = array
 
+        self._logger.info("Loaded file " + self.route_file + '.route, route length=' + str(routefile.shape[0]))
+
     def get_data(self):
         """
         返回训练数据、验证数据、测试数据

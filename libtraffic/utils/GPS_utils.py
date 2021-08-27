@@ -99,3 +99,15 @@ def destination(phi1, lambda1, brng, distance, r=R_EARTH):
         math.sin(brng) * math.sin(delta) * math.cos(phi1), math.cos(delta) - math.sin(phi1) * math.sin(phi2)
     )
     return phi2, lambda2
+
+
+def init_bearing(phi1, lambda1, phi2, lambda2):
+    """
+    initial bearing of a great circle route
+    :return: 0~360
+    """
+    y = math.sin(lambda2 - lambda1) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(lambda2 - lambda1)
+    theta = math.atan2(y, x)
+    brng = (theta * 180 / math.pi + 360) % 360
+    return brng

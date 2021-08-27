@@ -322,7 +322,7 @@
             "STMatching", "IVMM"
         ],
         "allowed_dataset": [
-            "test", "Seattle", "00000000"
+            "test", "Seattle", "00000000", "test3"
         ],
         "STMatching": {
             "dataset_class": "MapMatchingDataset",
