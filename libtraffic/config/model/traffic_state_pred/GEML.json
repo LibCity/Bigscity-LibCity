@@ -1,0 +1,23 @@
+{
+    "scaler": "minmax01",
+    "load_external": false,
+    "normal_external": false,
+    "ext_scaler": "none",
+    "add_time_in_day": true,
+    "add_day_in_week": false,
+    "use_row_column": true,
+    "max_epoch": 100,
+    "learner": "adam",
+    "learning_rate": 0.001,
+    "weight_decay": 1e-6,
+    "lr_beta1": 0.9,
+    "lr_beta2": 0.999,
+    "lr_decay": false,
+    "clip_grad_norm": false,
+    "use_early_stop": true,
+    "patience": 50,
+    "loss_p0": 0.5,
+    "loss_p1": 0.25,
+    "loss_p2": 0.25,
+    "embed_dim": 32
+}
