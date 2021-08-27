@@ -1,6 +1,7 @@
 import os
 import json
-import time
+import datetime
+import pandas as pd
 
 import networkx as nx
 
@@ -14,12 +15,12 @@ class MapMatchingEvaluator(AbstractEvaluator):
         self.metrics = config['evaluator_config']['metrics']  # 评估指标, 是一个 list
         self.allowed_metrics = ['RMF', 'AN', 'AL']
         self.config = config
+        self.save_modes = config.get('save_modes', ['csv', 'json'])
         self.res_dir = './libtraffic/cache/result_cache'
-        self.result = {}  # 每一种指标的结果
+        self.evaluate_result = {}  # 每一种指标的结果
         self._check_config()
         self._logger = getLogger()
         self.rel_info = {}
-        self.evaluate_result = {}
 
     def _check_config(self):
         if not isinstance(self.metrics, list):
@@ -30,7 +31,10 @@ class MapMatchingEvaluator(AbstractEvaluator):
 
     def collect(self, batch):
         self.rd_nwk = batch["rd_nwk"]
-        self.truth_sequence = list(batch["route"])
+        if batch["route"] is not None:
+            self.truth_sequence = list(batch["route"])
+        else:
+            self.truth_sequence = None
         self.result = batch["result"]
         for point1 in self.rd_nwk.adj:
             for point2 in self.rd_nwk.adj[point1]:
@@ -40,9 +44,9 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 self.rel_info[rel['rel_id']]['point1'] = point1
                 self.rel_info[rel['rel_id']]['point2'] = point2
         self.find_completed_sequence()
-        # find the longest common subsequence
-        self.find_lcs()
-        ensure_dir(self.res_dir)
+        if self.truth_sequence is not None:
+            # find the longest common subsequence
+            self.find_lcs()
 
     def evaluate(self):
         if 'RMF' in self.metrics:
@@ -84,22 +88,45 @@ class MapMatchingEvaluator(AbstractEvaluator):
             save_path: 保存路径
             filename: 保存文件名
         """
-        ensure_dir(self.res_dir)
-        file_name = self.config.get('dataset', '') + '.out'
-        with open(self.res_dir + '/' + file_name, 'w') as f:
-            f.write('dyna_id,rel_id\n')
-            for line in self.result:
-                f.write(str(line[0]) + ',' + str(line[1]) + '\n')
-        self.evaluate()
         ensure_dir(save_path)
-        if filename is None:
-            # 使用时间戳
-            filename = time.strftime(
-                "%Y_%m_%d_%H_%M_%S", time.localtime(time.time()))
-        print('evaluate result is ', json.dumps(self.evaluate_result, indent=1))
-        with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') as f:
-            json.dump(self.evaluate_result, f)
-            self._logger.info('Evaluate result is saved at ' + os.path.join(save_path, '{}.json'.format(filename)))
+        if filename is None:  # 使用时间戳
+            filename = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S') + '_' + \
+                       self.config['model'] + '_' + self.config['dataset']
+        dataframe = {'dyna_id': [], 'rel_id': []}
+
+        self._logger.info('Result is saved at ' +
+                          os.path.join(save_path, '{}.result.csv'.format(filename)))
+        for line in self.result:
+            dataframe['dyna_id'].append(str(line[0]))
+            dataframe['rel_id'].append(str(line[1]))
+        dataframe = pd.DataFrame(dataframe)
+        dataframe.to_csv(os.path.join(save_path, '{}.result.csv'.format(filename)), index=False)
+
+        self._logger.info('Completed sequence is saved at ' +
+                          os.path.join(save_path, '{}.out'.format(filename)))
+        with open(os.path.join(save_path, '{}.out'.format(filename)), 'w') as f:
+            f.write('rel_id\n')
+            for road in self.output_sequence:
+                f.write(str(road) + "\n")
+
+        if self.truth_sequence is not None:
+            self.evaluate()
+            if 'json' in self.save_modes:
+                self._logger.info('Evaluate result is ' + json.dumps(self.evaluate_result))
+                with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') as f:
+                    json.dump(self.evaluate_result, f)
+                self._logger.info('Evaluate result is saved at ' +
+                                  os.path.join(save_path, '{}.json'.format(filename)))
+
+            dataframe = {}
+            if 'csv' in self.save_modes:
+                for metric in self.metrics:
+                    dataframe[metric] = [self.evaluate_result[metric]]
+                dataframe = pd.DataFrame(dataframe)
+                dataframe.to_csv(os.path.join(save_path, '{}.csv'.format(filename)), index=False)
+                self._logger.info('Evaluate result is saved at ' +
+                                  os.path.join(save_path, '{}.csv'.format(filename)))
+                self._logger.info("\n" + str(dataframe))
 
     def clear(self):
         pass
@@ -151,13 +178,22 @@ class MapMatchingEvaluator(AbstractEvaluator):
                     i += 1
                 else:
                     if last_point != self.rel_info[uncompleted_sequence[i]]['point1']:
-                        path = nx.dijkstra_path(self.rd_nwk, source=last_point,
+                        try:
+                            path = nx.dijkstra_path(self.rd_nwk, source=last_point,
                                                     target=self.rel_info[uncompleted_sequence[i]]['point1'], weight='distance')
-                        j = 0
-                        for road in path:
-                            if j != 0:
-                                completed_sequence.append(road)
-                            j += 1
+                            j = 0
+                            while j < len(path) - 1:
+                                point1 = path[j]
+                                point2 = path[j + 1]
+                                for rel_id in self.rel_info.keys():
+                                    if self.rel_info[rel_id]["point1"] == point1 and self.rel_info[rel_id]["point2"] == point2:
+                                        completed_sequence.append(rel_id)
+                                        break
+                                j += 1
+                            completed_sequence.append(uncompleted_sequence[i])
+                        except:
+                            # shortest_path does not exist
+                            completed_sequence.append(uncompleted_sequence[i])
                     else:
                         completed_sequence.append(uncompleted_sequence[i])
                     last_road = uncompleted_sequence[i]

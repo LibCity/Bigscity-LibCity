@@ -48,7 +48,10 @@ class IVMM(AbstractMapMatchingModel):
         trajectory = data['trajectory']
 
         # set lon_radius and lat_radius based on the first Node of rd_nwk
-        self._set_lon_lat_radius(self.rd_nwk.nodes[0]['lon'], self.rd_nwk.nodes[0]['lat'])
+        self._set_lon_lat_radius(
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lon'],
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lat']
+        )
 
         # deal with every trajectories
         for key, value in trajectory.items():
