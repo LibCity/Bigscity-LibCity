@@ -60,14 +60,21 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 while self.truth_sequence[j] != self.lcs[i]:
                     d_sub += self.rel_info[self.truth_sequence[j]]['distance']
                     j += 1
-                    if j == len(self.truth_sequence):
-                        break
+                i += 1
+                j += 1
+            i = 0
+            while j < len(self.truth_sequence):
+                d_sub += self.rel_info[self.truth_sequence[j]]['distance']
+                j += 1
+            while i < len(self.lcs):
                 while self.output_sequence[k] != self.lcs[i]:
                     d_plus += self.rel_info[self.output_sequence[j]]['distance']
                     k += 1
-                    if k == len(self.output_sequence):
-                        break
                 i += 1
+                k += 1
+            while k < len(self.output_sequence):
+                d_sub += self.rel_info[self.output_sequence[k]]['distance']
+                k += 1
             self.evaluate_result['RMF'] = (d_plus + d_sub) / d_total
         if 'AN' in self.metrics:
             self.evaluate_result['AN'] = len(self.lcs) / len(self.truth_sequence)
@@ -100,7 +107,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
             dataframe['dyna_id'].append(str(line[0]))
             dataframe['rel_id'].append(str(line[1]))
         dataframe = pd.DataFrame(dataframe)
-        dataframe.to_csv(os.path.join(save_path, '{}.result.csv'.format(filename)), index=False)
+        dataframe.to_csv(os.path.join(save_path, '{}_result.csv'.format(filename)), index=False)
 
         self._logger.info('Completed sequence is saved at ' +
                           os.path.join(save_path, '{}.out'.format(filename)))
