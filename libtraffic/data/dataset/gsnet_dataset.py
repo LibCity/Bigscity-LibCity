@@ -3,14 +3,24 @@ import pickle
 
 
 import numpy as np
+import pandas as pd
 
 
 from libtraffic.data.dataset import TrafficStateGridDataset, TrafficStateCPTDataset
 
 
-class GSNetDataset(TrafficStateCPTDataset, TrafficStateGridDataset):
+class GSNetDataset(TrafficStateCPTDataset):
     def __init__(self, config):
+        # initialize here for calling self._load_rel() properly
+        self.weight_col_road_adj = config.get('weight_col_road_adj', 'road_adj')
+        self.weight_col_risk_adj = config.get('weight_col_risk_adj', 'risk_adj')
+        self.weight_col_poi_adj = config.get('weight_col_poi_adj', 'poi_adj')
+
         super(GSNetDataset, self).__init__(config)
+
+        # for properly loading the dyna file
+        self.len_row = config.get('grid_len_row', None)
+        self.len_column = config.get('grid_len_column', None)
 
         # NOTE: DOES NOT take into account time-of-day and day-of-week rows
         self.num_of_target_time_feature = self.config.get('num_of_target_time_feature', 0)
@@ -22,12 +32,83 @@ class GSNetDataset(TrafficStateCPTDataset, TrafficStateGridDataset):
             self.num_of_target_time_feature += 7
             self.grid_in_channel += 7
 
+        self.data_col_risk_mask = self.config.get('data_col_risk_mask', 'risk_mask')
+        self.data_col_grid_node_map = self.config.get('data_col_grid_node_map', 'grid_node_map')
+
+        self._load_dyna2(self.dataset)
+
     def _load_rel(self):
-        pass
+        try:
+            orig_weight_col = self.weight_col
+        except AttributeError:
+            orig_weight_col = None
+        try:
+            orig_adj_mx = self.adj_mx
+        except AttributeError:
+            orig_adj_mx = None
+        try:
+            orig_distance_df = self.distance_df
+        except AttributeError:
+            orig_distance_df = None
+
+        # code reuse
+        try:
+            self.weight_col = self.weight_col_road_adj
+            super(GSNetDataset, self)._load_rel()
+            self.road_adj = self.adj_mx
+
+            self.weight_col = self.weight_col_risk_adj
+            super(GSNetDataset, self)._load_rel()
+            self.risk_adj = self.adj_mx
+
+            self.weight_col = self.weight_col_poi_adj
+            super(GSNetDataset, self)._load_rel()
+            self.poi_adj = self.adj_mx
+        finally:
+            self.weight_col = orig_weight_col
+            self.adj_mx = orig_adj_mx
+            self.distance_df = orig_distance_df
 
     def _load_dyna(self, filename):
         # dynamic data must be 4D in this model
-        return super(GSNetDataset, self)._load_grid_4d(filename)
+        # fake grid-based geoids
+        orig_geo_ids = self.geo_ids
+        self.geo_ids = [i * self.len_column + j for i in range(self.len_row) for j in range(self.len_column)]
+
+        result = super(GSNetDataset, self)._load_grid_4d(filename)
+
+        self.geo_ids = orig_geo_ids
+        return result
+
+    # for grid-based auxillary matrices
+    def _load_dyna2(self, filename):
+        self._logger.info("Loading file " + filename + ".dyna")
+        # column first, reflecting the model's preference
+        df = pd.read_csv(self.data_path + filename + '.dyna').sort_values(['column_id', 'row_id'])
+
+        num_columns, num_rows = df['column_id'].max() + 1, df['row_id'].max() + 1
+        l1 = df[['column_id', 'row_id']].to_numpy().tolist()
+        l2 = [[i // num_rows, i % num_rows] for i in range(num_rows*num_columns)]
+        # avoids omission and duplication
+        if l1 != l2:
+            raise ValueError('Grid file not in regular format')
+
+        risk_mask_values = []
+        df.apply(lambda r: risk_mask_values.append(r['risk_mask']), axis=1)
+        grid_node_map_values = []
+        # avoids eval() hackery
+        df.apply(lambda r: grid_node_map_values.append(list(map(float, r['grid_node_map'].split()))), axis=1)
+
+        num_graph_nodes = len(df['grid_node_map'][0].split())
+        l3 = list(map(len, grid_node_map_values))
+        # tricky to embed a 3D matrix into a 2D table
+        if len(set(l3)) != 1:
+            raise ValueError('Grid node map is improbably rigged')
+        if l3[0] != num_graph_nodes:
+            raise ValueError('Dimensions of grid node map do not match graph node count')
+
+        self.risk_mask = np.array(risk_mask_values, dtype=np.float32).reshape(num_columns, num_rows)
+        self.grid_node_map = np.array(grid_node_map_values, dtype=np.float32).reshape(num_columns*num_rows, num_graph_nodes)
 
     def _get_external_array(self, ts, ext_data=None, previous_ext=False):
         # one-hot encoding that differs from ordinary datasets
@@ -67,11 +148,21 @@ class GSNetDataset(TrafficStateCPTDataset, TrafficStateGridDataset):
         return data
 
     def get_data_feature(self):
-        d = super(TrafficStateCPTDataset, self).get_data_feature()
+        d = {
+                "scaler": self.scaler,
+                "num_batches": self.num_batches,
+                "feature_dim": self.feature_dim, 
+                "ext_dim": self.ext_dim,
+                "output_dim": self.output_dim,
+                "len_row": self.len_row, 
+                "len_column": self.len_column
+        }
 
-        for k in ['risk_mask', 'road_adj', 'risk_adj', 'poi_adj', 'grid_node_map']:
-            with open(self.data_path + 'tmp/' + k + '.pkl', 'rb') as f:
-                d[k] = pickle.load(f)
+        d['risk_mask'] = self.risk_mask
+        d['road_adj'] = self.road_adj
+        d['risk_adj'] = self.risk_adj
+        d['poi_adj'] = self.poi_adj
+        d['grid_node_map'] = self.grid_node_map
 
         d['num_of_target_time_feature'] = self.num_of_target_time_feature
 
