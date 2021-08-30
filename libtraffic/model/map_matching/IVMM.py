@@ -2,7 +2,7 @@ import networkx as nx
 import math
 from logging import getLogger
 from libtraffic.model.abstract_traffic_tradition_model import AbstractMapMatchingModel
-from libtraffic.utils.GPS_utils import radian2angle, R_EARTH, angle2radian, dist
+from libtraffic.utils.GPS_utils import radian2angle, R_EARTH, angle2radian, dist, init_bearing
 import numpy as np
 
 
@@ -75,7 +75,6 @@ class IVMM(AbstractMapMatchingModel):
         self.trajectory self.rd_nwk
         Returns:
         """
-
         self._get_candidates()
         self._logger.info('finish getting candidates')
         self._observation_probability()
@@ -212,13 +211,25 @@ class IVMM(AbstractMapMatchingModel):
             else:
                 k = i
             d = dist(
+                angle2radian(self.trajectory[j][2]),
                 angle2radian(self.trajectory[j][1]),
-                angle2radian(self.trajectory[j][0]),
-                angle2radian(self.trajectory[k][1]),
-                angle2radian(self.trajectory[k][0])
+                angle2radian(self.trajectory[k][2]),
+                angle2radian(self.trajectory[k][1])
             )
             for edge_j, dct_j in self.candidates[j].items():
                 for edge_k, dct_k in self.candidates[k].items():
+                    brng_jk = init_bearing(
+                        angle2radian(self.trajectory[j][2]),
+                        angle2radian(self.trajectory[j][1]),
+                        angle2radian(self.trajectory[k][2]),
+                        angle2radian(self.trajectory[k][1])
+                    )
+                    brng_edge_j = init_bearing(
+                        angle2radian(self.rd_nwk.nodes[edge_j[0]]['lat']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[0]]['lon']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[1]]['lat']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[1]]['lon']),
+                    )
                     try:
                         if dct_j['node'] is not None and dct_k['node'] is not None:
                             result = d / nx.astar_path_length(self.rd_nwk, dct_j['node'], dct_k['node'],
@@ -226,68 +237,78 @@ class IVMM(AbstractMapMatchingModel):
                         elif dct_j['node'] is not None:
                             nd2_origin = edge_k[0]
                             lon, lat = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, dct_j['node'], nd2_origin, weight='distance')
-                                    + math.sqrt(
-                                        math.fabs(
-                                            dist(
-                                                angle2radian(self.trajectory[i + 1][1]),
-                                                angle2radian(self.trajectory[i + 1][0]),
-                                                angle2radian(lat),
-                                                angle2radian(lon)
-                                            ) ** 2 - dct_k['distance'] ** 2
-                                        )
-                                    )
+                            path_len = nx.astar_path_length(self.rd_nwk, dct_j['node'], nd2_origin, weight='distance')
+                            path_len += math.sqrt(
+                                math.fabs(
+                                    dist(
+                                        angle2radian(self.trajectory[k][2]),
+                                        angle2radian(self.trajectory[k][1]),
+                                        angle2radian(lat),
+                                        angle2radian(lon)
+                                    ) ** 2 - dct_k['distance'] ** 2
+                                )
                             )
+                            if edge_j[1] == dct_j['edge']:
+                                path_len += self.rd_nwk[edge_j[0]][edge_j[1]]['distance'] * 2
+                            result = d / path_len
+
                         elif dct_k['node'] is not None:
                             nd1_destination = edge_j[1]
                             lon, lat = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
                                 'lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'], weight='distance')
-                                    + math.sqrt(
-                                        math.fabs(
-                                            dist(
-                                                angle2radian(self.trajectory[i][1]),
-                                                angle2radian(self.trajectory[i][0]),
-                                                angle2radian(lat),
-                                                angle2radian(lon)
-                                            ) ** 2 - dct_j['distance'] ** 2
-                                        )
-                                    )
+                            path_len = nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'],
+                                                            weight='distance')
+                            path_len += math.sqrt(
+                                math.fabs(
+                                    dist(
+                                        angle2radian(self.trajectory[j][2]),
+                                        angle2radian(self.trajectory[j][1]),
+                                        angle2radian(lat),
+                                        angle2radian(lon)
+                                    ) ** 2 - dct_j['distance'] ** 2
+                                )
                             )
+                            if edge_k[1] == dct_k['node']:
+                                path_len += self.rd_nwk[edge_k[0]][edge_k[1]]['distance'] * 2
+                            result = d / path_len
                         else:
-                            nd1_destination = edge_j[1]
-                            lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
-                                'lat']
-                            nd2_origin = edge_k[0]
-                            lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin, weight='distance')
-                                    + math.sqrt(
-                                        math.fabs(
-                                            dist(
-                                                angle2radian(self.trajectory[i][1]),
-                                                angle2radian(self.trajectory[i][0]),
-                                                angle2radian(lat1),
-                                                angle2radian(lon1)
-                                            ) ** 2 - dct_j['distance'] ** 2
-                                        )
-                                    ) + math.sqrt(
-                                        math.fabs(
-                                            dist(
-                                                angle2radian(self.trajectory[i + 1][1]),
-                                                angle2radian(self.trajectory[i + 1][0]),
-                                                angle2radian(lat2),
-                                                angle2radian(lon2)
-                                            ) ** 2 - dct_k['distance'] ** 2
-                                        )
+                            if edge_j == edge_k and math.fabs(brng_edge_j - brng_jk) < 90:
+                                result = 1
+                            else:
+                                nd1_destination = edge_j[1]
+                                lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], \
+                                             self.rd_nwk.nodes[nd1_destination][
+                                                 'lat']
+                                nd2_origin = edge_k[0]
+                                lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
+                                result = d / (
+                                        nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin,
+                                                             weight='distance')
+                                        + math.sqrt(
+                                    math.fabs(
+                                        dist(
+                                            angle2radian(self.trajectory[j][2]),
+                                            angle2radian(self.trajectory[j][1]),
+                                            angle2radian(lat1),
+                                            angle2radian(lon1)
+                                        ) ** 2 - dct_j['distance'] ** 2
                                     )
-                            )
+                                )
+                                        + math.sqrt(
+                                    math.fabs(
+                                        dist(
+                                            angle2radian(self.trajectory[k][2]),
+                                            angle2radian(self.trajectory[k][1]),
+                                            angle2radian(lat2),
+                                            angle2radian(lon2)
+                                        ) ** 2 - dct_k['distance'] ** 2
+                                    )
+                                )
+                                )
                         if 'V' in dct_j.keys():
-                            dct_j['V'][edge_k] = result
+                            dct_j['V'][edge_k] = min(result, 1)
                         else:
-                            dct_j['V'] = {edge_k: result}
+                            dct_j['V'] = {edge_k: min(result, 1)}
                     except:
                         if 'V' in dct_j.keys():
                             dct_j['V'][edge_k] = 0
