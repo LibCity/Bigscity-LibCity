@@ -1,6 +1,4 @@
 {
-  "evaluator_config": {
-        "metrics": ["RMF", "AN", "AL"]
-    },
+  "evaluator_config": ["RMF", "AN", "AL"],
   "save_modes": ["csv", "json"]
 }
