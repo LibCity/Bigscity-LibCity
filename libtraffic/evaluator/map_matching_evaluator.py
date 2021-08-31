@@ -125,18 +125,18 @@ class MapMatchingEvaluator(AbstractEvaluator):
             lat_destination = self.rd_nwk.nodes[self.rel_info[rel_id]["point2"]]['lat']
             lon_destination = self.rd_nwk.nodes[self.rel_info[rel_id]["point2"]]['lon']
             if lat_last is None and lon_last is None:
-                evaluate_result['geometry']['coordinates'].append([lat_origin, lon_origin])
-                evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                evaluate_result['geometry']['coordinates'].append([lon_origin, lat_origin])
+                evaluate_result['geometry']['coordinates'].append([lon_destination, lat_destination])
                 lat_last = lat_destination
                 lon_last = lon_destination
             else:
                 if lat_last == lat_origin and lon_last == lon_origin:
-                    evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                    evaluate_result['geometry']['coordinates'].append([lon_destination, lat_destination])
                     lat_last = lat_destination
                     lon_last = lon_destination
                 else:
-                    evaluate_result['geometry']['coordinates'].append([lat_origin, lon_origin])
-                    evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                    evaluate_result['geometry']['coordinates'].append([lon_origin, lat_origin])
+                    evaluate_result['geometry']['coordinates'].append([lon_destination, lat_destination])
                     lat_last = lat_destination
                     lon_last = lon_destination
         json.dump(evaluate_result, open(save_path + '/' + filename + '_result.json', 'w', encoding='utf-8'),
