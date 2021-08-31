@@ -16,8 +16,10 @@
     "clip_grad_norm": false,
     "use_early_stop": true,
     "patience": 50,
+
+    "embed_dim": 32,
+
     "loss_p0": 0.5,
     "loss_p1": 0.25,
-    "loss_p2": 0.25,
-    "embed_dim": 32
+    "loss_p2": 0.25
 }
