@@ -9,7 +9,6 @@ class MapMatchingExecutor(AbstractExecutor):
         self.model = model
         self.config = config
         self.evaluator = get_evaluator(config)
-        self.res_dir = './libtraffic/cache/result_cache'
         self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
         self._logger = getLogger()
 

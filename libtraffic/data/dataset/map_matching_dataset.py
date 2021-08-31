@@ -217,7 +217,7 @@ class MapMatchingDataset(AbstractDataset):
 
     def _load_route(self):
         """
-        载.dyna文件，格式: 每行一个 rel_id 或一组 rel_id
+        加载.dyna文件，格式: 每行一个 rel_id 或一组 rel_id
         Returns:
 
         """

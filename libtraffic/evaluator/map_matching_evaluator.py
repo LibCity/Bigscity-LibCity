@@ -12,11 +12,10 @@ from libtraffic.evaluator.abstract_evaluator import AbstractEvaluator
 
 class MapMatchingEvaluator(AbstractEvaluator):
     def __init__(self, config):
-        self.metrics = config['evaluator_config']  # 评估指标, 是一个 list
+        self.metrics = config['metrics']  # 评估指标, 是一个 list
         self.allowed_metrics = ['RMF', 'AN', 'AL']
         self.config = config
         self.save_modes = config.get('save_modes', ['csv', 'json'])
-        self.res_dir = './libtraffic/cache/result_cache'
         self.evaluate_result = {}  # 每一种指标的结果
         self._check_config()
         self._logger = getLogger()
@@ -94,6 +93,10 @@ class MapMatchingEvaluator(AbstractEvaluator):
         Args:
             save_path: 保存路径
             filename: 保存文件名
+            yyyy_mm_dd_hh_mm_ss_model_dataset_result.csv: 模型原始输出
+            yyyy_mm_dd_hh_mm_ss_model_dataset_result.json(geojson): 原始输出扩充得到的连通路径
+            yyyy_mm_dd_hh_mm_ss_model_dataset.json: 评价结果
+            yyyy_mm_dd_hh_mm_ss_model_dataset.csv: 评价结果
         """
         ensure_dir(save_path)
         if filename is None:  # 使用时间戳
@@ -102,7 +105,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
         dataframe = {'dyna_id': [], 'rel_id': []}
 
         self._logger.info('Result is saved at ' +
-                          os.path.join(save_path, '{}.result.csv'.format(filename)))
+                          os.path.join(save_path, '{}_result.csv'.format(filename)))
         for line in self.result:
             dataframe['dyna_id'].append(str(line[0]))
             dataframe['rel_id'].append(str(line[1]))
@@ -110,7 +113,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
         dataframe.to_csv(os.path.join(save_path, '{}_result.csv'.format(filename)), index=False)
 
         self._logger.info('Completed sequence is saved at ' +
-                          os.path.join(save_path, '{}.out'.format(filename)))
+                          os.path.join(save_path, '{}_result.json'.format(filename)))
         evaluate_result = dict()
         evaluate_result['type'] = 'Feature'
         evaluate_result['properties'] = {}

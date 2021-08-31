@@ -1,11 +1,11 @@
 import networkx as nx
 import math
 from logging import getLogger
-from libtraffic.model.abstract_traffic_tradition_model import AbstractMapMatchingModel
+from libtraffic.model.abstract_traffic_tradition_model import AbstractTraditionModel
 from libtraffic.utils.GPS_utils import radian2angle, R_EARTH, angle2radian, dist, init_bearing
 
 
-class STMatching(AbstractMapMatchingModel):
+class STMatching(AbstractTraditionModel):
     """
     ST-Matching
     """
