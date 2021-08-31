@@ -1,19 +1,19 @@
 import networkx as nx
+import math
 from logging import getLogger
-from libtraffic.model.abstract_map_matching_model import AbstractMapMatchingModel
-from libtraffic.utils.GPS_utils import *
+from libtraffic.model.abstract_traffic_tradition_model import AbstractTraditionModel
+from libtraffic.utils.GPS_utils import radian2angle, R_EARTH, angle2radian, dist, init_bearing
 import numpy as np
 
-class IVMM(AbstractMapMatchingModel):
+
+class IVMM(AbstractTraditionModel):
     """
     IVMM
     """
 
     def __init__(self, config, data_feature):
 
-        # config and data_feature
-        self.config = config
-        self.data_feature = data_feature
+        super().__init__(config, data_feature)
 
         # logger
         self._logger = getLogger()
@@ -25,7 +25,6 @@ class IVMM(AbstractMapMatchingModel):
         self.sigma = config.get('sigma', 10)
         self.beta = config.get('beta', 40)
         self.window_size = config.get('window_size', 40)
-
 
         # data param
         self.with_time = data_feature.get('with_time', True)
@@ -49,7 +48,10 @@ class IVMM(AbstractMapMatchingModel):
         trajectory = data['trajectory']
 
         # set lon_radius and lat_radius based on the first Node of rd_nwk
-        self._set_lon_lat_radius(self.rd_nwk.nodes[0]['lon'], self.rd_nwk.nodes[0]['lat'])
+        self._set_lon_lat_radius(
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lon'],
+            self.rd_nwk.nodes[list(self.rd_nwk.nodes)[0]]['lat']
+        )
 
         # deal with every trajectories
         for key, value in trajectory.items():
@@ -73,7 +75,6 @@ class IVMM(AbstractMapMatchingModel):
         self.trajectory self.rd_nwk
         Returns:
         """
-
         self._get_candidates()
         self._logger.info('finish getting candidates')
         self._observation_probability()
@@ -81,7 +82,7 @@ class IVMM(AbstractMapMatchingModel):
         self._transmission_probability()
         self._logger.info('finish calculating transmission probability')
         if self.with_rd_speed and self.with_time:
-            self._spatial_analysis()
+            self._temporal_analysis()
             self._logger.info('finish spatial analysis')
         self._score_matrix()
         self._logger.info('finish building score matrix')
@@ -130,8 +131,8 @@ class IVMM(AbstractMapMatchingModel):
         if c == 0:
             return a, edge[0]
         # otherwise, calculate the Vertical length
-        l = (a + b + c) / 2
-        s = math.sqrt(l * math.fabs(l - a) * math.fabs(l - b) * math.fabs(l - c))
+        p = (a + b + c) / 2
+        s = math.sqrt(p * math.fabs(p - a) * math.fabs(p - b) * math.fabs(p - c))
         return 2 * s / c, None
 
     def _get_candidates(self):
@@ -159,9 +160,13 @@ class IVMM(AbstractMapMatchingModel):
                 lon_origin = self.rd_nwk.nodes[origin]['lon']
                 lat_dest = self.rd_nwk.nodes[dest]['lat']
                 lon_dest = self.rd_nwk.nodes[dest]['lon']
-                if lat - self.lat_r <= lat_origin <= lat + self.lat_r and lon - self.lon_r <= lon_origin <= lon + self.lon_r or lat - self.lat_r <= lat_dest <= lat + self.lat_r and lon - self.lon_r <= lon_dest <= lon + self.lon_r:
+                if lat - self.lat_r <= lat_origin <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_origin <= lon + self.lon_r \
+                        or lat - self.lat_r <= lat_dest <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_dest <= lon + self.lon_r:
                     candidate_i.add((origin, dest))
-                elif lat - self.lat_r <= lat_origin / 2 + lat_dest / 2 <= lat + self.lat_r and lon - self.lon_r <= lon_origin / 2 + lon_dest / 2 <= lon + self.lon_r:
+                elif lat - self.lat_r <= lat_origin / 2 + lat_dest / 2 <= lat + self.lat_r \
+                        and lon - self.lon_r <= lon_origin / 2 + lon_dest / 2 <= lon + self.lon_r:
                     candidate_i.add((origin, dest))
             candidate_i_m = list()  # (edge, distance, point)
             for edge in candidate_i:
@@ -206,13 +211,25 @@ class IVMM(AbstractMapMatchingModel):
             else:
                 k = i
             d = dist(
+                angle2radian(self.trajectory[j][2]),
                 angle2radian(self.trajectory[j][1]),
-                angle2radian(self.trajectory[j][0]),
-                angle2radian(self.trajectory[k][1]),
-                angle2radian(self.trajectory[k][0])
+                angle2radian(self.trajectory[k][2]),
+                angle2radian(self.trajectory[k][1])
             )
             for edge_j, dct_j in self.candidates[j].items():
                 for edge_k, dct_k in self.candidates[k].items():
+                    brng_jk = init_bearing(
+                        angle2radian(self.trajectory[j][2]),
+                        angle2radian(self.trajectory[j][1]),
+                        angle2radian(self.trajectory[k][2]),
+                        angle2radian(self.trajectory[k][1])
+                    )
+                    brng_edge_j = init_bearing(
+                        angle2radian(self.rd_nwk.nodes[edge_j[0]]['lat']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[0]]['lon']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[1]]['lat']),
+                        angle2radian(self.rd_nwk.nodes[edge_j[1]]['lon']),
+                    )
                     try:
                         if dct_j['node'] is not None and dct_k['node'] is not None:
                             result = d / nx.astar_path_length(self.rd_nwk, dct_j['node'], dct_k['node'],
@@ -220,68 +237,77 @@ class IVMM(AbstractMapMatchingModel):
                         elif dct_j['node'] is not None:
                             nd2_origin = edge_k[0]
                             lon, lat = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, dct_j['node'], nd2_origin, weight='distance')
-                                    + math.sqrt(
+                            path_len = nx.astar_path_length(self.rd_nwk, dct_j['node'], nd2_origin, weight='distance')
+                            path_len += math.sqrt(
                                 math.fabs(
                                     dist(
-                                        angle2radian(self.trajectory[i + 1][1]),
-                                        angle2radian(self.trajectory[i + 1][0]),
+                                        angle2radian(self.trajectory[k][2]),
+                                        angle2radian(self.trajectory[k][1]),
                                         angle2radian(lat),
                                         angle2radian(lon)
                                     ) ** 2 - dct_k['distance'] ** 2
                                 )
                             )
-                            )
+                            if edge_j[1] == dct_j['edge']:
+                                path_len += self.rd_nwk[edge_j[0]][edge_j[1]]['distance'] * 2
+                            result = d / path_len
+
                         elif dct_k['node'] is not None:
                             nd1_destination = edge_j[1]
                             lon, lat = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
                                 'lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'], weight='distance')
-                                    + math.sqrt(
+                            path_len = nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'],
+                                                            weight='distance')
+                            path_len += math.sqrt(
                                 math.fabs(
                                     dist(
-                                        angle2radian(self.trajectory[i][1]),
-                                        angle2radian(self.trajectory[i][0]),
+                                        angle2radian(self.trajectory[j][2]),
+                                        angle2radian(self.trajectory[j][1]),
                                         angle2radian(lat),
                                         angle2radian(lon)
                                     ) ** 2 - dct_j['distance'] ** 2
                                 )
                             )
-                            )
+                            if edge_k[1] == dct_k['node']:
+                                path_len += self.rd_nwk[edge_k[0]][edge_k[1]]['distance'] * 2
+                            result = d / path_len
                         else:
-                            nd1_destination = edge_j[1]
-                            lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
-                                'lat']
-                            nd2_origin = edge_k[0]
-                            lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
-                            result = d / (
-                                    nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin, weight='distance')
-                                    + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i][1]),
-                                        angle2radian(self.trajectory[i][0]),
-                                        angle2radian(lat1),
-                                        angle2radian(lon1)
-                                    ) ** 2 - dct_j['distance'] ** 2
+                            if edge_j == edge_k and math.fabs(brng_edge_j - brng_jk) < 90:
+                                result = 1
+                            else:
+                                nd1_destination = edge_j[1]
+                                lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], \
+                                    self.rd_nwk.nodes[nd1_destination]['lat']
+                                nd2_origin = edge_k[0]
+                                lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
+                                result = d / (
+                                        nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin,
+                                                             weight='distance')
+                                        + math.sqrt(
+                                            math.fabs(
+                                                dist(
+                                                    angle2radian(self.trajectory[j][2]),
+                                                    angle2radian(self.trajectory[j][1]),
+                                                    angle2radian(lat1),
+                                                    angle2radian(lon1)
+                                                ) ** 2 - dct_j['distance'] ** 2
+                                            )
+                                        )
+                                        + math.sqrt(
+                                            math.fabs(
+                                                dist(
+                                                    angle2radian(self.trajectory[k][2]),
+                                                    angle2radian(self.trajectory[k][1]),
+                                                    angle2radian(lat2),
+                                                    angle2radian(lon2)
+                                                ) ** 2 - dct_k['distance'] ** 2
+                                            )
+                                        )
                                 )
-                            ) + math.sqrt(
-                                math.fabs(
-                                    dist(
-                                        angle2radian(self.trajectory[i + 1][1]),
-                                        angle2radian(self.trajectory[i + 1][0]),
-                                        angle2radian(lat2),
-                                        angle2radian(lon2)
-                                    ) ** 2 - dct_k['distance'] ** 2
-                                )
-                            )
-                            )
                         if 'V' in dct_j.keys():
-                            dct_j['V'][edge_k] = result
+                            dct_j['V'][edge_k] = min(result, 1)
                         else:
-                            dct_j['V'] = {edge_k: result}
+                            dct_j['V'] = {edge_k: min(result, 1)}
                     except:
                         if 'V' in dct_j.keys():
                             dct_j['V'][edge_k] = 0
@@ -350,8 +376,8 @@ class IVMM(AbstractMapMatchingModel):
             for k in range(len(W)):
                 fai.append(sub_static_matrices[k] * W[k])
             traj_point = {"time": self.trajectory[i][0], "lon": self.trajectory[i][1],
-                               "lat": self.trajectory[i][2], "fai": fai, "candidates": self.candidates[i]}
-            self.traj_points.append(traj_point) #Φ(fai) is the weighted score matrix
+                          "lat": self.trajectory[i][2], "fai": fai, "candidates": self.candidates[i]}
+            self.traj_points.append(traj_point)  # Φ(fai) is the weighted score matrix
 
     def _interactive_voting(self):
         for traj_point in self.traj_points:
@@ -373,7 +399,7 @@ class IVMM(AbstractMapMatchingModel):
                 break
             else:
                 j += 1
-        #get the location of current traj_point
+        # get the location of current traj_point
         i += 1
         if i == len(self.candidates):
             # traj_point is in the last column
@@ -454,10 +480,10 @@ class IVMM(AbstractMapMatchingModel):
                 first_point = dct
                 first_score = dct["score"]
         candidate["fValue"] = first_score + last_score
-        if first_point != None:
+        if first_point is not None:
             for point in first_point["pre_set"]:
                 point["voted"] += 1
-        if last_point != None:
+        if last_point is not None:
             for point in last_point["pre_set"]:
                 point["voted"] += 1
         candidate["voted"] += 1

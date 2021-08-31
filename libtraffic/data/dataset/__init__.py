@@ -54,5 +54,6 @@ __all__ = [
     "CRANNDataset",
     "CCRNNDataset",
     "GeoSANDataset",
-    "DMVSTNetDataset"
+    "DMVSTNetDataset",
+    "MapMatchingDataset"
 ]
