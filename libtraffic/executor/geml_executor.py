@@ -102,7 +102,7 @@ class GEMLExecutor(TrafficStateExecutor):
                 lf = loss.explained_variance_score_torch
             else:
                 lf = loss.masked_mae_torch
-            return self.loss_p0 * (y_predicted, y_true) + self.loss_p1 * lf(y_in, y_in_true) + self.loss_p2 * lf(y_out,
+            return self.loss_p0 * lf(y_predicted, y_true) + self.loss_p1 * lf(y_in, y_in_true) + self.loss_p2 * lf(y_out,
                                                                                                                  y_out_true)
 
         return func

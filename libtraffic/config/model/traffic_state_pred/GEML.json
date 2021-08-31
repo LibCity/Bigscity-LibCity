@@ -18,6 +18,7 @@
     "patience": 50,
 
     "embed_dim": 32,
+    "p_interval": 1,
 
     "loss_p0": 0.5,
     "loss_p1": 0.25,

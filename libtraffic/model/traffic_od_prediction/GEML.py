@@ -187,7 +187,7 @@ class GEML(AbstractTrafficStateModel):
         self.loss_p1 = config.get('loss_p1', 0.25)
         self.loss_p2 = config.get('loss_p2', 0.25)
 
-        adj_mx = data_feature.get('adj_mx')
+        adj_mx = self.data_feature.get('adj_mx')
         self.geo_adj = generate_geo_adj(adj_mx) \
             .repeat(self.batch_size * self.input_window, 1) \
             .reshape((self.batch_size, self.input_window, self.num_nodes, self.num_nodes)) \
