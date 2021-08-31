@@ -99,46 +99,48 @@ class MapMatchingEvaluator(AbstractEvaluator):
         if filename is None:  # 使用时间戳
             filename = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S') + '_' + \
                        self.config['model'] + '_' + self.config['dataset']
+        dataframe = {'dyna_id': [], 'rel_id': []}
 
         self._logger.info('Result is saved at ' +
-                          os.path.join(save_path, '{}.result.json'.format(filename)))
-        result = dict()
-        result['type'] = 'Feature'
-        result['properties'] = {}
-        result['geometry'] = {}
-        result['geometry']['type'] = 'LineString'
-        result['geometry']['coordinates'] = []
+                          os.path.join(save_path, '{}.result.csv'.format(filename)))
+        for line in self.result:
+            dataframe['dyna_id'].append(str(line[0]))
+            dataframe['rel_id'].append(str(line[1]))
+        dataframe = pd.DataFrame(dataframe)
+        dataframe.to_csv(os.path.join(save_path, '{}_result.csv'.format(filename)), index=False)
+
+        self._logger.info('Completed sequence is saved at ' +
+                          os.path.join(save_path, '{}.out'.format(filename)))
+        evaluate_result = dict()
+        evaluate_result['type'] = 'Feature'
+        evaluate_result['properties'] = {}
+        evaluate_result['geometry'] = {}
+        evaluate_result['geometry']['type'] = 'LineString'
+        evaluate_result['geometry']['coordinates'] = []
         lat_last = None
         lon_last = None
-        for line in self.result:
-            rel_id = line[1]
+        for rel_id in self.output_sequence:
             lat_origin = self.rd_nwk.nodes[self.rel_info[rel_id]["point1"]]['lat']
             lon_origin = self.rd_nwk.nodes[self.rel_info[rel_id]["point1"]]['lon']
             lat_destination = self.rd_nwk.nodes[self.rel_info[rel_id]["point2"]]['lat']
             lon_destination = self.rd_nwk.nodes[self.rel_info[rel_id]["point2"]]['lon']
             if lat_last is None and lon_last is None:
-                result['geometry']['coordinates'].append([lat_origin, lon_origin])
-                result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                evaluate_result['geometry']['coordinates'].append([lat_origin, lon_origin])
+                evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
                 lat_last = lat_destination
                 lon_last = lon_destination
             else:
                 if lat_last == lat_origin and lon_last == lon_origin:
-                    result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                    evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
                     lat_last = lat_destination
                     lon_last = lon_destination
                 else:
-                    result['geometry']['coordinates'].append([lat_origin, lon_origin])
-                    result['geometry']['coordinates'].append([lat_destination, lon_destination])
+                    evaluate_result['geometry']['coordinates'].append([lat_origin, lon_origin])
+                    evaluate_result['geometry']['coordinates'].append([lat_destination, lon_destination])
                     lat_last = lat_destination
                     lon_last = lon_destination
-        json.dump(result, open(save_path + '/' + filename + '_result.json', 'w', encoding='utf-8'), ensure_ascii=False)
-
-        self._logger.info('Completed sequence is saved at ' +
-                          os.path.join(save_path, '{}.out'.format(filename)))
-        with open(os.path.join(save_path, '{}.out'.format(filename)), 'w') as f:
-            f.write('rel_id\n')
-            for road in self.output_sequence:
-                f.write(str(road) + "\n")
+        json.dump(evaluate_result, open(save_path + '/' + filename + '_result.json', 'w', encoding='utf-8'),
+                  ensure_ascii=False, indent=4)
 
         if self.truth_sequence is not None:
             self.evaluate()
