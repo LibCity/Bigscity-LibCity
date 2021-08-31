@@ -150,7 +150,7 @@ def generate_geo_adj(cost_matrix: np.matrix):
     return weight_matrix  # (N, N)
 
 
-def generate_semantic_adj(demand_matrix):
+def generate_semantic_adj(demand_matrix, device):
     # (B, T, N, N)
     adj_matrix = demand_matrix.clone()
     in_matrix = adj_matrix.permute(0, 1, 3, 2)
@@ -164,7 +164,7 @@ def generate_semantic_adj(demand_matrix):
 
     sum_degree_vector = torch.matmul(adj_matrix, degree_vector)
 
-    weight_matrix = torch.matmul(1 / sum_degree_vector + torch.full(sum_degree_vector.shape, 1e-3),
+    weight_matrix = torch.matmul(1 / sum_degree_vector + torch.full(sum_degree_vector.shape, 1e-3).to(device),
                                  degree_vector.permute((0, 1, 3, 2)))  # (B, T, N, N)
 
     weight_matrix[:, :, range(weight_matrix.shape[2]), range(weight_matrix.shape[3])] = 1
@@ -237,7 +237,7 @@ class GEML(AbstractTrafficStateModel):
 
     def predict(self, batch):
         x = batch['X']  # (B, T, N, N, 1)
-        self.semantic_adj = generate_semantic_adj(x.squeeze(dim=-1))
+        self.semantic_adj = generate_semantic_adj(x.squeeze(dim=-1), self.device)
         assert x.shape[-1] == 1 or print("The feature_dim must be 1")
         y_pred = []
         y_in_pred = []
