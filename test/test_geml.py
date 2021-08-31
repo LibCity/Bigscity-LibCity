@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from libtraffic.model.traffic_demand_prediction.GEML import GEML
+from libtraffic.model.traffic_od_prediction.GEML import GEML
 
 config = {
     "input_window": 12,
