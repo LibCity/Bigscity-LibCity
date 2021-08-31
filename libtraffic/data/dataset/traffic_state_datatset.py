@@ -347,6 +347,54 @@ class TrafficStateDataset(AbstractDataset):
         self._logger.info("Loaded file " + filename + '.grid' + ', shape=' + str(data.shape))
         return data
 
+    def _load_od_4d(self, filename):
+        """
+                加载.od文件，格式[dyna_id, type, time, origin_id, destination_id properties(若干列)],
+                .geo文件中的id顺序应该跟.dyna中一致,
+                其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
+
+                Args:
+                    filename(str): 数据文件名，不包含后缀
+
+                Returns:
+                    np.ndarray: 数据数组, 4d-array: (len_time, len_row, len_column, feature_dim)
+                """
+        self._logger.info("Loading file " + filename + '.od')
+        odfile = pd.read_csv(self.data_path + filename + '.od')
+        if self.data_col != '':  # 根据指定的列加载数据集
+            if isinstance(self.data_col, list):
+                data_col = self.data_col.copy()
+            else:  # str
+                data_col = [self.data_col].copy()
+            data_col.insert(0, 'time')
+            data_col.insert(1, 'origin_id')
+            data_col.insert(2, 'destination_id')
+            odfile = odfile[data_col]
+        else:  # 不指定则加载所有列
+            odfile = odfile[odfile.columns[2:]]  # 从time列开始所有列
+        # 求时间序列
+        self.timesolts = list(odfile['time'][:int(odfile.shape[0] / self.num_nodes / self.num_nodes)])
+        self.idx_of_timesolts = dict()
+        if not odfile['time'].isna().any():  # 时间没有空值
+            self.timesolts = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), self.timesolts))
+            self.timesolts = np.array(self.timesolts, dtype='datetime64[ns]')
+            for idx, _ts in enumerate(self.timesolts):
+                self.idx_of_timesolts[_ts] = idx
+
+        feature_dim = len(odfile.columns) - 3
+        df = odfile[odfile.columns[-feature_dim:]]
+        len_time = len(self.timesolts)
+        data = np.zeros((self.num_nodes, self.num_nodes, len_time, feature_dim))
+        for i in range(self.num_nodes):
+            origin_index = i * len_time * self.num_nodes  # 每个起点占据len_t*n行
+            for j in range(self.num_nodes):
+                destination_index = j * len_time  # 每个终点占据len_t行
+                index = origin_index + destination_index
+                data[i][j] = df[index:index + len_time].values
+        data = data.transpose((2, 0, 1, 3))  # (len_time, num_nodes, num_nodes, feature_dim)
+        self._logger.info("Loaded file " + filename + '.od' + ', shape=' + str(data.shape))
+        return data
+
     def _load_grid_od_4d(self, filename):
         """
         加载.gridod文件，格式[dyna_id, type, time, origin_row_id, origin_column_id,
