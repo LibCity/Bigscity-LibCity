@@ -164,7 +164,7 @@ def generate_semantic_adj(demand_matrix, device):
 
     sum_degree_vector = torch.matmul(adj_matrix, degree_vector)
 
-    weight_matrix = torch.matmul(1 / sum_degree_vector + torch.full(sum_degree_vector.shape, 1e-3).to(device),
+    weight_matrix = torch.matmul(1 / (sum_degree_vector + torch.full(sum_degree_vector.shape, 1e-3).to(device)),
                                  degree_vector.permute((0, 1, 3, 2)))  # (B, T, N, N)
 
     weight_matrix[:, :, range(weight_matrix.shape[2]), range(weight_matrix.shape[3])] = 1
