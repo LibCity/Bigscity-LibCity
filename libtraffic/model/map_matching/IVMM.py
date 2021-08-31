@@ -277,33 +277,32 @@ class IVMM(AbstractMapMatchingModel):
                             else:
                                 nd1_destination = edge_j[1]
                                 lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], \
-                                             self.rd_nwk.nodes[nd1_destination][
-                                                 'lat']
+                                    self.rd_nwk.nodes[nd1_destination]['lat']
                                 nd2_origin = edge_k[0]
                                 lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
                                 result = d / (
                                         nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin,
                                                              weight='distance')
                                         + math.sqrt(
-                                    math.fabs(
-                                        dist(
-                                            angle2radian(self.trajectory[j][2]),
-                                            angle2radian(self.trajectory[j][1]),
-                                            angle2radian(lat1),
-                                            angle2radian(lon1)
-                                        ) ** 2 - dct_j['distance'] ** 2
-                                    )
-                                )
+                                            math.fabs(
+                                                dist(
+                                                    angle2radian(self.trajectory[j][2]),
+                                                    angle2radian(self.trajectory[j][1]),
+                                                    angle2radian(lat1),
+                                                    angle2radian(lon1)
+                                                ) ** 2 - dct_j['distance'] ** 2
+                                            )
+                                        )
                                         + math.sqrt(
-                                    math.fabs(
-                                        dist(
-                                            angle2radian(self.trajectory[k][2]),
-                                            angle2radian(self.trajectory[k][1]),
-                                            angle2radian(lat2),
-                                            angle2radian(lon2)
-                                        ) ** 2 - dct_k['distance'] ** 2
-                                    )
-                                )
+                                            math.fabs(
+                                                dist(
+                                                    angle2radian(self.trajectory[k][2]),
+                                                    angle2radian(self.trajectory[k][1]),
+                                                    angle2radian(lat2),
+                                                    angle2radian(lon2)
+                                                ) ** 2 - dct_k['distance'] ** 2
+                                            )
+                                        )
                                 )
                         if 'V' in dct_j.keys():
                             dct_j['V'][edge_k] = min(result, 1)

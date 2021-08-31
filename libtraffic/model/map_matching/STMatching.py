@@ -249,7 +249,8 @@ class STMatching(AbstractMapMatchingModel):
                             nd1_destination = edge_j[1]
                             lon, lat = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
                                 'lat']
-                            path_len = nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'], weight='distance')
+                            path_len = nx.astar_path_length(self.rd_nwk, nd1_destination, dct_k['node'],
+                                                            weight='distance')
                             path_len += math.sqrt(
                                             math.fabs(
                                                 dist(
@@ -268,12 +269,13 @@ class STMatching(AbstractMapMatchingModel):
                                 result = 1
                             else:
                                 nd1_destination = edge_j[1]
-                                lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], self.rd_nwk.nodes[nd1_destination][
-                                    'lat']
+                                lon1, lat1 = self.rd_nwk.nodes[nd1_destination]['lon'], \
+                                    self.rd_nwk.nodes[nd1_destination]['lat']
                                 nd2_origin = edge_k[0]
                                 lon2, lat2 = self.rd_nwk.nodes[nd2_origin]['lon'], self.rd_nwk.nodes[nd2_origin]['lat']
                                 result = d / (
-                                        nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin, weight='distance')
+                                        nx.astar_path_length(self.rd_nwk, nd1_destination, nd2_origin,
+                                                             weight='distance')
                                         + math.sqrt(
                                             math.fabs(
                                                 dist(

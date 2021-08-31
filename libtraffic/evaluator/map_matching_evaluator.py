@@ -210,14 +210,17 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 else:
                     if last_point != self.rel_info[uncompleted_sequence[i]]['point1']:
                         try:
-                            path = nx.dijkstra_path(self.rd_nwk, source=last_point,
-                                                    target=self.rel_info[uncompleted_sequence[i]]['point1'], weight='distance')
+                            path = nx.dijkstra_path(self.rd_nwk,
+                                                    source=last_point,
+                                                    target=self.rel_info[uncompleted_sequence[i]]['point1'],
+                                                    weight='distance')
                             j = 0
                             while j < len(path) - 1:
                                 point1 = path[j]
                                 point2 = path[j + 1]
                                 for rel_id in self.rel_info.keys():
-                                    if self.rel_info[rel_id]["point1"] == point1 and self.rel_info[rel_id]["point2"] == point2:
+                                    if self.rel_info[rel_id]["point1"] == point1 and \
+                                            self.rel_info[rel_id]["point2"] == point2:
                                         completed_sequence.append(rel_id)
                                         break
                                 j += 1
