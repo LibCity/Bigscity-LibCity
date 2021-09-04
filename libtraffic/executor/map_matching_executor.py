@@ -1,9 +1,9 @@
-from libtraffic.executor.abstract_executor import AbstractExecutor
 from logging import getLogger
+from libtraffic.executor.abstract_tradition_executor import AbstractTraditionExecutor
 from libtraffic.utils import get_evaluator
 
 
-class MapMatchingExecutor(AbstractExecutor):
+class MapMatchingExecutor(AbstractTraditionExecutor):
 
     def __init__(self, config, model):
         self.model = model

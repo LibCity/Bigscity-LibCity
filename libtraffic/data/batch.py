@@ -118,3 +118,14 @@ class Batch(object):
                 raise TypeError(
                     'Batch to_tensor, only support int, float, array of int, no_pad_float.\
                     and you give {}'.format(self.feature_name[key]))
+
+    def to_ndarray(self):
+        for key in self.data:
+            if self.feature_name[key] == 'int':
+                self.data[key] = np.array(self.data[key])
+            elif self.feature_name[key] == 'float':
+                self.data[key] = np.array(self.data[key])
+            else:
+                raise TypeError(
+                    'Batch to_tensor, only support int, float, array of int, no_pad_float.\
+                    and you give {}'.format(self.feature_name[key]))
