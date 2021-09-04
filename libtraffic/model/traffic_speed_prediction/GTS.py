@@ -5,203 +5,7 @@ from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from torch.nn import functional as F
 import torch.nn as nn
-import scipy.sparse as sp
-from scipy.sparse import linalg
-import numpy as np
-import torch
-import torch.nn as nn
-from logging import getLogger
-from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from libtraffic.model import loss
 
-"""
-为什么这个模型速度比DCRNN快呢？修改之后是不是会变慢。
-"""
-class GCONV(nn.Module):
-    def __init__(self, num_nodes,  max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, adj_mx, bias_start=0.0):
-        super().__init__()
-        self._num_nodes = num_nodes
-        self._max_diffusion_step = max_diffusion_step
-        self._supports = supports
-        self._device = device
-        self._num_matrices = self._max_diffusion_step + 1  # Ks
-        self._output_dim = output_dim
-        input_size = input_dim + hid_dim
-        self._input_dim = input_dim
-        self._hidden_dim = hid_dim
-        self._input_size = input_size
-        shape = (input_size * self._num_matrices, self._output_dim)
-        self._shape = shape
-        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self._adj_mx = adj_mx
-        torch.nn.init.xavier_normal_(self.weight)
-        torch.nn.init.constant_(self.biases, bias_start)
-
-    @staticmethod
-    def _concat(x, x_):
-        x_ = x_.unsqueeze(0)
-        return torch.cat([x, x_], dim=0)
-
-    def forward(self, inputs, state):
-        # 对X(t)和H(t-1)做图卷积，并加偏置bias
-        # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
-        
-        batch_size = inputs.shape[0]
-
-        inputs = torch.reshape(inputs, (batch_size, self._num_nodes, -1))
-
-        state = torch.reshape(state, (batch_size, self._num_nodes, -1))
-
-        inputs_and_state = torch.cat([inputs, state], dim=2)
-
-        # (batch_size, num_nodes, total_arg_size(input_dim+state_dim))
-        input_size = inputs_and_state.size(2)  # =total_arg_size
-
-        x = inputs_and_state
-
-        # T0=I x0=T0*x=x
-        x0 = x.permute(1, 2, 0)  # (num_nodes, total_arg_size, batch_size)
-        
-        x0 = torch.reshape(x0, shape=[self._num_nodes, input_size * batch_size])
-        
-        x = torch.unsqueeze(x0, 0)  # (1, num_nodes, total_arg_size * batch_size)
-
-        # 3阶[T0,T1,T2]Chebyshev多项式近似g(theta)
-        # 把图卷积公式中的~L替换成了随机游走拉普拉斯D^(-1)*W
-        if self._max_diffusion_step == 0:
-            pass
-        else:
-            # T1=L x1=T1*x=L*x
-            x1 = torch.mm(self._adj_mx, x0)
-
-            x = self._concat(x, x1)  # (2, num_nodes, total_arg_size * batch_size)
-
-            for k in range(2, self._max_diffusion_step + 1):
-                # T2=2LT1-T0=2L^2-1 x2=T2*x=2L^2x-x=2L*x1-x0...
-                # T3=2LT2-T1=2L(2L^2-1)-L x3=2L*x2-x1...
-                x2 = 2 * torch.sparse.mm(self._adj_mx, x1) - x0
-                x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
-                x1, x0 = x2, x1  # 循环
-        # x.shape (Ks, num_nodes, total_arg_size * batch_size)
-        # Ks = self._max_diffusion_step + 1
-        x = torch.reshape(x, shape=[self._num_matrices, self._num_nodes, input_size, batch_size])
-             
-
-        x = x.permute(3, 1, 2, 0)  # (batch_size, num_nodes, input_size, num_matrices)
-        
-        x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * self._num_matrices])
-        
-        x = torch.matmul(x, self.weight)  # (batch_size * self._num_nodes, self._output_dim)
-        
-        x += self.biases
-        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
-        return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
-
-
-class FC(nn.Module):
-    def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0):
-        super().__init__()
-        self._num_nodes = num_nodes
-        self._device = device
-        self._output_dim = output_dim
-        input_size = input_dim + hid_dim
-        shape = (input_size, self._output_dim)
-        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
-        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        torch.nn.init.xavier_normal_(self.weight)
-        torch.nn.init.constant_(self.biases, bias_start)
-
-    def forward(self, inputs, state, adj_mx):
-        batch_size = inputs.shape[0]
-        # Reshape input and state to (batch_size * self._num_nodes, input_dim/state_dim)
-        inputs = torch.reshape(inputs, (batch_size * self._num_nodes, -1))
-        state = torch.reshape(state, (batch_size * self._num_nodes, -1))
-        inputs_and_state = torch.cat([inputs, state], dim=-1)
-        # (batch_size * self._num_nodes, input_size(input_dim+state_dim))
-        value = torch.sigmoid(torch.matmul(inputs_and_state, self.weight))
-        # (batch_size * self._num_nodes, self._output_dim)
-        value += self.biases
-        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
-        return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
-
-class DCGRUCell(torch.nn.Module):
-    def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step,  num_nodes, device, nonlinearity='tanh',
-                 filter_type="laplacian", use_gc_for_ru=True):
-        """
-        :param num_units:
-        :param adj_mx:
-        :param max_diffusion_step:
-        :param num_nodes:
-        :param nonlinearity:
-        :param filter_type: "laplacian", "random_walk", "dual_random_walk".
-        :param use_gc_for_ru: whether to use Graph convolution to calculate the reset and update gates.
-        """
-        super().__init__()
-        self._activation = torch.tanh if nonlinearity == 'tanh' else torch.relu
-        # support other nonlinearities up here?
-        self._adj_mx = adj_mx
-        self._num_nodes = num_nodes
-        self._num_units = num_units
-        self._device = device
-        self._max_diffusion_step = max_diffusion_step
-        self._supports = []
-        self._use_gc_for_ru = use_gc_for_ru
-        self.device = device
-
-        
-        if self._use_gc_for_ru:
-            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                             input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units, adj_mx = adj_mx, bias_start=1.0)
-        else:
-            self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
-                          hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
-        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, adj_mx = adj_mx, bias_start=0.0)
-
-    def _build_sparse_matrix(self, L):
-        L = L.tocoo()
-        indices = np.column_stack((L.row, L.col))
-        # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
-        indices = indices[np.lexsort((indices[:, 0], indices[:, 1]))]
-        L = torch.sparse_coo_tensor(indices.T, L.data, L.shape, device=self.device)
-        return L
-
-    def _calculate_random_walk_matrix(self, adj_mx):
-
-        # tf.Print(adj_mx, [adj_mx], message="This is adj: ")
-
-        adj_mx = adj_mx + torch.eye(int(adj_mx.shape[0])).to(self.device)
-        d = torch.sum(adj_mx, 1)
-        d_inv = 1. / d
-        d_inv = torch.where(torch.isinf(d_inv), torch.zeros(d_inv.shape).to(self.device), d_inv)
-        d_mat_inv = torch.diag(d_inv)
-        random_walk_mx = torch.mm(d_mat_inv, adj_mx)
-        return random_walk_mx
-
-    def forward(self, inputs, hx):
-        """Gated recurrent unit (GRU) with Graph Convolution.
-        :param inputs: (B, num_nodes * input_dim)
-        :param hx: (B, num_nodes * rnn_units)
-        :return
-        - Output: A `2-D` tensor with shape `(B, num_nodes * rnn_units)`.
-        """
-        adj_mx = self._calculate_random_walk_matrix(self._adj_mx).t()
-        output_size = 2 * self._num_units
-        value = torch.sigmoid(self._fn(inputs, hx))
-        value = torch.reshape(value, (-1, self._num_nodes, output_size))
-        
-        r, u = torch.split(tensor=value, split_size_or_sections=self._num_units, dim=-1)
-        r = torch.reshape(r, (-1, self._num_nodes * self._num_units))
-        u = torch.reshape(u, (-1, self._num_nodes * self._num_units))
-
-
-        c = self._gconv(inputs, r * hx)
-        if self._activation is not None:
-            c = self._activation(c)
-
-        new_state = u * hx + (1.0 - u) * c
-        return new_state
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -248,6 +52,181 @@ def gumbel_softmax(device, logits, temperature, hard=False, eps=1e-10):
     return y
 
 
+class GCONV(nn.Module):
+    def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, adj_mx,
+                 bias_start=0.0):
+        super().__init__()
+        self._num_nodes = num_nodes
+        self._max_diffusion_step = max_diffusion_step
+        self._supports = supports
+        self._device = device
+        self._num_matrices = self._max_diffusion_step + 1  # Ks
+        self._output_dim = output_dim
+        input_size = input_dim + hid_dim
+        shape = (input_size * self._num_matrices, self._output_dim)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        self.adj_mx = adj_mx
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
+
+    @staticmethod
+    def _concat(x, x_):
+        x_ = x_.unsqueeze(0)
+        return torch.cat([x, x_], dim=0)
+
+    def forward(self, inputs, state):
+        # 对X(t)和H(t-1)做图卷积，并加偏置bias
+        # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
+        batch_size = inputs.shape[0]
+        inputs = torch.reshape(inputs, (batch_size, self._num_nodes, -1))
+        state = torch.reshape(state, (batch_size, self._num_nodes, -1))
+        inputs_and_state = torch.cat([inputs, state], dim=2)
+        # (batch_size, num_nodes, total_arg_size(input_dim+state_dim))
+        input_size = inputs_and_state.size(2)  # =total_arg_size
+
+        x = inputs_and_state
+        # T0=I x0=T0*x=x
+        x0 = x.permute(1, 2, 0)  # (num_nodes, total_arg_size, batch_size)
+        x0 = torch.reshape(x0, shape=[self._num_nodes, input_size * batch_size])
+        x = torch.unsqueeze(x0, 0)  # (1, num_nodes, total_arg_size * batch_size)
+
+        # 3阶[T0,T1,T2]Chebyshev多项式近似g(theta)
+        # 把图卷积公式中的~L替换成了随机游走拉普拉斯D^(-1)*W
+        if self._max_diffusion_step == 0:
+            pass
+        else:
+            # T1=L x1=T1*x=L*x
+            x1 = torch.sparse.mm(self.adj_mx, x0)  # supports: n*n; x0: n*(total_arg_size * batch_size)
+            x = self._concat(x, x1)  # (2, num_nodes, total_arg_size * batch_size)
+            for k in range(2, self._max_diffusion_step + 1):
+                # T2=2LT1-T0=2L^2-1 x2=T2*x=2L^2x-x=2L*x1-x0...
+                # T3=2LT2-T1=2L(2L^2-1)-L x3=2L*x2-x1...
+                x2 = 2 * torch.sparse.mm(self.adj_mx, x1) - x0
+                x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
+                x1, x0 = x2, x1  # 循环
+        # x.shape (Ks, num_nodes, total_arg_size * batch_size)
+        # Ks = len(supports) * self._max_diffusion_step + 1
+        x = torch.reshape(x, shape=[self._num_matrices, self._num_nodes, input_size, batch_size])
+        x = x.permute(3, 1, 2, 0)  # (batch_size, num_nodes, input_size, num_matrices)
+        x = torch.reshape(x, shape=[batch_size * self._num_nodes, input_size * self._num_matrices])
+        x = torch.matmul(x, self.weight)  # (batch_size * self._num_nodes, self._output_dim)
+        x += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
+        return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
+
+
+class FC(nn.Module):
+    def __init__(self, num_nodes, device, input_dim, hid_dim, output_dim, bias_start=0.0):
+        super().__init__()
+        self._num_nodes = num_nodes
+        self._device = device
+        self._output_dim = output_dim
+        input_size = input_dim + hid_dim
+        shape = (input_size, self._output_dim)
+        self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
+        self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
+        torch.nn.init.xavier_normal_(self.weight)
+        torch.nn.init.constant_(self.biases, bias_start)
+
+    def forward(self, inputs, state):
+        batch_size = inputs.shape[0]
+        # Reshape input and state to (batch_size * self._num_nodes, input_dim/state_dim)
+        inputs = torch.reshape(inputs, (batch_size * self._num_nodes, -1))
+        state = torch.reshape(state, (batch_size * self._num_nodes, -1))
+        inputs_and_state = torch.cat([inputs, state], dim=-1)
+        # (batch_size * self._num_nodes, input_size(input_dim+state_dim))
+        value = torch.sigmoid(torch.matmul(inputs_and_state, self.weight))
+        # (batch_size * self._num_nodes, self._output_dim)
+        value += self.biases
+        # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
+        return torch.reshape(value, [batch_size, self._num_nodes * self._output_dim])
+
+
+class DCGRUCell(nn.Module):
+    def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
+                 filter_type="laplacian", use_gc_for_ru=True):
+        """
+        Args:
+            input_dim:
+            num_units:
+            adj_mx:
+            max_diffusion_step:
+            num_nodes:
+            device:
+            nonlinearity:
+            filter_type: "laplacian", "random_walk", "dual_random_walk"
+            use_gc_for_ru: whether to use Graph convolution to calculate the reset and update gates.
+        """
+
+        super().__init__()
+        self._activation = torch.tanh if nonlinearity == 'tanh' else torch.relu
+        self._num_nodes = num_nodes
+        self._num_units = num_units
+        self._device = device
+        self._adj_mx = self._calculate_random_walk_matrix(adj_mx).t()
+        self._max_diffusion_step = max_diffusion_step
+        self._supports = []
+        self._use_gc_for_ru = use_gc_for_ru
+        self.device = device
+
+        if self._use_gc_for_ru:
+            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+                             input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units,
+                             adj_mx=self._adj_mx, bias_start=1.0)
+        else:
+            self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
+                          hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
+        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units,
+                            adj_mx=self._adj_mx, bias_start=0.0)
+
+    @staticmethod
+    def _build_sparse_matrix(lap, device):
+        lap = lap.tocoo()
+        indices = np.column_stack((lap.row, lap.col))
+        # this is to ensure row-major ordering to equal torch.sparse.sparse_reorder(L)
+        indices = indices[np.lexsort((indices[:, 0], indices[:, 1]))]
+        lap = torch.sparse_coo_tensor(indices.T, lap.data, lap.shape, device=device)
+        return lap
+
+    def _calculate_random_walk_matrix(self, adj_mx):
+
+        # tf.Print(adj_mx, [adj_mx], message="This is adj: ")
+
+        adj_mx = adj_mx + torch.eye(int(adj_mx.shape[0])).to(self._device)
+        d = torch.sum(adj_mx, 1)
+        d_inv = 1. / d
+        d_inv = torch.where(torch.isinf(d_inv), torch.zeros(d_inv.shape).to(self._device), d_inv)
+        d_mat_inv = torch.diag(d_inv)
+        random_walk_mx = torch.mm(d_mat_inv, adj_mx)
+        return random_walk_mx
+
+    def forward(self, inputs, hx):
+        """
+        Gated recurrent unit (GRU) with Graph Convolution.
+        Args:
+            inputs: (B, num_nodes * input_dim)
+            hx: (B, num_nodes * rnn_units)
+        Returns:
+            torch.tensor: shape (B, num_nodes * rnn_units)
+        """
+        output_size = 2 * self._num_units
+        value = torch.sigmoid(self._fn(inputs, hx))  # (batch_size, num_nodes * output_size)
+        value = torch.reshape(value, (-1, self._num_nodes, output_size))    # (batch_size, num_nodes, output_size)
+
+        r, u = torch.split(tensor=value, split_size_or_sections=self._num_units, dim=-1)
+        r = torch.reshape(r, (-1, self._num_nodes * self._num_units))  # (batch_size, num_nodes * _num_units)
+        u = torch.reshape(u, (-1, self._num_nodes * self._num_units))  # (batch_size, num_nodes * _num_units)
+
+        c = self._gconv(inputs, r * hx)  # (batch_size, num_nodes * _num_units)
+        if self._activation is not None:
+            c = self._activation(c)
+
+        new_state = u * hx + (1.0 - u) * c
+        return new_state  # (batch_size, num_nodes * _num_units)
+
+
 class Seq2SeqAttrs:
     def __init__(self, config, data_feature):
         self.max_diffusion_step = int(config.get('max_diffusion_step', 2))
@@ -267,7 +246,7 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, data_feature)
         self.device = device
-        self.seq_len = int(config.get('input_window',1))  # for the encoder
+        self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type))
@@ -307,7 +286,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         Seq2SeqAttrs.__init__(self, config, data_feature)
         self.device = device
         self.output_dim = config.get('output_dim', 1)
-        self.horizon = int(config.get('output_window',1))
+        self.horizon = int(config.get('output_window', 1))
         self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList()
         self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
@@ -340,11 +319,6 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         output = projected.view(-1, self.num_nodes * self.output_dim)
         return output, torch.stack(hidden_states)
 
-"""
-虽然输出受到output_dim的控制
-但是推断邻接矩阵的过程应该不适合输入多维数据，例如流入和流出。（但是此时代码可以运行）
-"""
-
 
 class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
     def __init__(self, config, data_feature):
@@ -353,17 +327,17 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         :param config: 源于各种配置的配置字典
         :param data_feature: 从数据集Dataset类的`get_data_feature()`接口返回的必要的数据相关的特征
         """
-        
+
         super().__init__(config, data_feature)
         self.config = config
         self.device = config.get('device', torch.device('cpu'))
         self.adj_mx = torch.Tensor(data_feature.get('adj_mx')).to(self.device)
         Seq2SeqAttrs.__init__(self, self.config, data_feature)
 
-        self.seq_len = int(config.get('input_window',1))  # for the encoder
-        self.horizon = int(config.get('output_window',1))  # for the decoder
-        self.input_window = config.get('input_window', 1)
-        self.output_window = config.get('output_window', 1)
+        self.seq_len = int(config.get('input_window', 1))  # for the encoder
+        self.horizon = int(config.get('output_window', 1))  # for the decoder
+        # self.input_window = config.get('input_window', 1)
+        # self.output_window = config.get('output_window', 1)
 
         self.encoder_model = EncoderModel(self.config, data_feature, self.adj_mx, self.device)
         self.decoder_model = DecoderModel(self.config, data_feature, self.adj_mx, self.device)
@@ -384,6 +358,7 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.ext_dim = self.data_feature.get('ext_dim', 1)
         train_feas = self.data_feature.get('train_data')  # (num_samples, num_nodes)
+
         self.node_feas = torch.Tensor(train_feas).to(self.device)
 
         self.kernal_size = config.get('kernal_size', 10)
@@ -441,16 +416,15 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         :return: output: (self.horizon, batch_size, self.num_nodes * self.output_dim)
         """
         batch_size = encoder_hidden_state.size(1)
-        go_symbol = torch.zeros((batch_size, self.num_nodes * self.decoder_model.output_dim),
-                                device=self.device)
+        go_symbol = torch.zeros((batch_size, self.num_nodes * self.decoder_model.output_dim), device=self.device)
         decoder_hidden_state = encoder_hidden_state
         decoder_input = go_symbol
 
         outputs = []
 
         for t in range(self.decoder_model.horizon):
-            decoder_output, decoder_hidden_state = self.decoder_model(decoder_input,
-                                                                      decoder_hidden_state)
+            decoder_output, decoder_hidden_state = \
+                self.decoder_model(decoder_input, decoder_hidden_state)
             decoder_input = decoder_output
             outputs.append(decoder_output)
             if self.training and self.use_curriculum_learning:
