@@ -189,9 +189,6 @@ class DCGRUCell(nn.Module):
         return lap
 
     def _calculate_random_walk_matrix(self, adj_mx):
-
-        # tf.Print(adj_mx, [adj_mx], message="This is adj: ")
-
         adj_mx = adj_mx + torch.eye(int(adj_mx.shape[0])).to(self._device)
         d = torch.sum(adj_mx, 1)
         d_inv = 1. / d
@@ -335,8 +332,8 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.horizon = int(config.get('output_window', 1))  # for the decoder
 
-        self.encoder_model = EncoderModel(self.config, data_feature, self.device)
-        self.decoder_model = DecoderModel(self.config, data_feature, self.device)
+        self.encoder_model = EncoderModel(self.config, data_feature, self.adj_mx, self.device)
+        self.decoder_model = DecoderModel(self.config, data_feature, self.adj_mx, self.device)
         self._logger = getLogger()
 
         # 此处 adj_mx 作用是在训练自动图结构推断时起到参考作用
@@ -505,9 +502,9 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         mask = torch.eye(self.num_nodes, self.num_nodes).bool().to(self.device)
         adj.masked_fill_(mask, 0)
 
-        encoder_hidden_state = self.encoder(inputs, adj)
+        encoder_hidden_state = self.encoder(inputs)
         self._logger.debug("Encoder complete, starting decoder")
-        outputs = self.decoder(encoder_hidden_state, adj, labels, batches_seen=batches_seen)
+        outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
         self._logger.debug("Decoder complete")
 
         # print(f"shape of output = {outputs.shape}")
