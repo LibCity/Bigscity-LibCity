@@ -9,6 +9,7 @@ from libtraffic.data.dataset.traffic_state_grid_dataset import \
     TrafficStateGridDataset
 from libtraffic.data.dataset.traffic_state_grid_od_dataset import \
     TrafficStateGridOdDataset
+from libtraffic.data.dataset.traffic_state_od_dataset import TrafficStateOdDataset
 from libtraffic.data.dataset.acfm_dataset import ACFMDataset
 from libtraffic.data.dataset.tgclstm_dataset import TGCLSTMDataset
 from libtraffic.data.dataset.astgcn_dataset import ASTGCNDataset
@@ -36,6 +37,7 @@ __all__ = [
     "TrafficStateCPTDataset",
     "TrafficStatePointDataset",
     "TrafficStateGridDataset",
+    "TrafficStateOdDataset",
     "TrafficStateGridOdDataset",
     "ACFMDataset",
     "TGCLSTMDataset",
