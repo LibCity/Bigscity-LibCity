@@ -336,8 +336,6 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
 
         self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.horizon = int(config.get('output_window', 1))  # for the decoder
-        # self.input_window = config.get('input_window', 1)
-        # self.output_window = config.get('output_window', 1)
 
         self.encoder_model = EncoderModel(self.config, data_feature, self.adj_mx, self.device)
         self.decoder_model = DecoderModel(self.config, data_feature, self.adj_mx, self.device)
