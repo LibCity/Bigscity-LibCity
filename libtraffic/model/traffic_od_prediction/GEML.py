@@ -5,7 +5,7 @@ import torch.nn as nn
 from libtraffic.model import loss
 from libtraffic.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
-
+# TODO Adjust parameters to make the model converge, or denormalization the loss
 class SLSTM(nn.Module):
     def __init__(self, feature_dim, hidden_dim, device, p_interval):
         super(SLSTM, self).__init__()

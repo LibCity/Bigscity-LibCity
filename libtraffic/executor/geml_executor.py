@@ -3,6 +3,7 @@ from functools import partial
 
 import numpy as np
 import torch
+import os
 
 from libtraffic.executor.traffic_state_executor import TrafficStateExecutor
 from libtraffic.model import loss
