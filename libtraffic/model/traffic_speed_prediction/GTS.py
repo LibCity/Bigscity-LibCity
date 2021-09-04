@@ -53,12 +53,11 @@ def gumbel_softmax(device, logits, temperature, hard=False, eps=1e-10):
 
 
 class GCONV(nn.Module):
-    def __init__(self, num_nodes, max_diffusion_step, supports, device, input_dim, hid_dim, output_dim, adj_mx,
+    def __init__(self, num_nodes, max_diffusion_step, device, input_dim, hid_dim, output_dim, adj_mx,
                  bias_start=0.0):
         super().__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
-        self._supports = supports
         self._device = device
         self._num_matrices = self._max_diffusion_step + 1  # Ks
         self._output_dim = output_dim
@@ -166,18 +165,17 @@ class DCGRUCell(nn.Module):
         self._device = device
         self._adj_mx = self._calculate_random_walk_matrix(adj_mx).t()
         self._max_diffusion_step = max_diffusion_step
-        self._supports = []
         self._use_gc_for_ru = use_gc_for_ru
         self.device = device
 
         if self._use_gc_for_ru:
-            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+            self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units,
                              adj_mx=self._adj_mx, bias_start=1.0)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
                           hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
-        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
+        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._device,
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units,
                             adj_mx=self._adj_mx, bias_start=0.0)
 
@@ -337,8 +335,8 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.horizon = int(config.get('output_window', 1))  # for the decoder
 
-        self.encoder_model = EncoderModel(self.config, data_feature, self.adj_mx, self.device)
-        self.decoder_model = DecoderModel(self.config, data_feature, self.adj_mx, self.device)
+        self.encoder_model = EncoderModel(self.config, data_feature, self.device)
+        self.decoder_model = DecoderModel(self.config, data_feature, self.device)
         self._logger = getLogger()
 
         # 此处 adj_mx 作用是在训练自动图结构推断时起到参考作用
@@ -393,7 +391,7 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.cl_decay_steps / (
                 self.cl_decay_steps + np.exp(batches_seen / self.cl_decay_steps))
 
-    def encoder(self, inputs, adj):
+    def encoder(self, inputs):
         """
         Encoder forward pass
         :param inputs: shape (seq_len, batch_size, num_sensor * input_dim)
@@ -405,7 +403,7 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
 
         return encoder_hidden_state
 
-    def decoder(self, encoder_hidden_state, adj, labels=None, batches_seen=None):
+    def decoder(self, encoder_hidden_state, labels=None, batches_seen=None):
         """
         Decoder forward pass
         :param encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
