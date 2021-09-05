@@ -67,7 +67,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
                 j += 1
             while i < len(self.lcs):
                 while self.output_sequence[k] != self.lcs[i]:
-                    d_plus += self.rel_info[self.output_sequence[j]]['distance']
+                    d_plus += self.rel_info[self.output_sequence[k]]['distance']
                     k += 1
                 i += 1
                 k += 1
