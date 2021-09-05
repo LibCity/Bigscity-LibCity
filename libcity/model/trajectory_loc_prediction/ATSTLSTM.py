@@ -116,7 +116,7 @@ class ATSTLSTM(AbstractModel):
     def calculate_loss(self, batch):
         """ 计算模型损失（不包含正则项）
         Args:
-            batch (libtraffic.data.batch): 输入
+            batch (libcity.data.batch): 输入
         Returns:
             (torch.tensor.Tensor): shape () 损失
         """

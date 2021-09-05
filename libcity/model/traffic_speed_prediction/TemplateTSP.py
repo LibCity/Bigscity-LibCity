@@ -31,7 +31,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
         # 6.从config中取用到的其他参数，主要是用于构造模型结构的参数（必须）
-        # 这些涉及到模型结构的参数应该放在libtraffic/config/model/model_name.json中（必须）
+        # 这些涉及到模型结构的参数应该放在libcity/config/model/model_name.json中（必须）
         # 例如: self.blocks = config['blocks']
         # ...
         # 7.构造深度模型的层次结构（必须）
@@ -87,7 +87,7 @@ class TemplateTSP(AbstractTrafficStateModel):
         """
         # 如果self.forward()的结果满足要求，可以直接返回
         # 如果不符合要求，例如self.forward()进行了单时间步的预测，但是模型训练时使用的是每个batch的数据进行的多步预测，
-        # 则可以参考libtraffic/model/traffic_speed_prediction/STGCN.py中的predict()函数，进行多步预测
+        # 则可以参考libcity/model/traffic_speed_prediction/STGCN.py中的predict()函数，进行多步预测
         # 多步预测的原则是: 先进行一步预测，用一步预测的结果进行二步预测，**而不是使用一步预测的真值进行二步预测!**
         # 以self.forward()的结果符合要求为例:
         return self.forward(batch)
