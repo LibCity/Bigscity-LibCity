@@ -3,7 +3,6 @@ from logging import getLogger
 from libtraffic.utils import get_evaluator, ensure_dir
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
 import time
 import os
 
@@ -17,12 +16,10 @@ class AbstractTraditionExecutor(AbstractExecutor):
 
         self.cache_dir = './libtraffic/cache/model_cache'
         self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
-        self.summary_writer_dir = './libtraffic/log/runs'
+
         ensure_dir(self.cache_dir)
         ensure_dir(self.evaluate_res_dir)
-        ensure_dir(self.summary_writer_dir)
 
-        self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
         self._scaler = self.model.get_data_feature().get('scaler')
 

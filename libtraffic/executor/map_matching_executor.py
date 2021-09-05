@@ -12,9 +12,6 @@ class MapMatchingExecutor(AbstractTraditionExecutor):
         self.evaluate_res_dir = './libtraffic/cache/evaluate_cache'
         self._logger = getLogger()
 
-    def train(self, train_dataloader, eval_dataloader):
-        assert True  # do nothing
-
     def evaluate(self, test_data):
         """
         use model to test data
@@ -27,8 +24,3 @@ class MapMatchingExecutor(AbstractTraditionExecutor):
         self.evaluator.collect(batch)
         self.evaluator.save_result(self.evaluate_res_dir)
 
-    def load_model(self, cache_name):
-        assert True  # do nothing
-
-    def save_model(self, cache_name):
-        assert True  # do nothing
