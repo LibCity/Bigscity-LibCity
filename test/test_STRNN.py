@@ -1,6 +1,6 @@
-from libtraffic.config import ConfigParser
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_model
+from libcity.config import ConfigParser
+from libcity.data import get_dataset
+from libcity.utils import get_model
 
 config = ConfigParser('traj_loc_pred', 'STRNN', 'foursquare_tky', other_args={"gpu": False})
 dataset = get_dataset(config)

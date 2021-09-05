@@ -1,8 +1,8 @@
 import os
 
-from libtraffic.config import ConfigParser
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_executor, get_model
+from libcity.config import ConfigParser
+from libcity.data import get_dataset
+from libcity.utils import get_executor, get_model
 
 task = 'traj_loc_pred'
 model = 'DeepMove'

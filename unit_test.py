@@ -1,7 +1,7 @@
 import torch
-from libtraffic.config import ConfigParser
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_model
+from libcity.config import ConfigParser
+from libcity.data import get_dataset
+from libcity.utils import get_model
 
 #############################################
 # The parameter to control the unit testing #
