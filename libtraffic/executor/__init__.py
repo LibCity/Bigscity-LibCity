@@ -6,6 +6,7 @@ from libtraffic.executor.map_matching_executor import MapMatchingExecutor
 from libtraffic.executor.mtgnn_executor import MTGNNExecutor
 from libtraffic.executor.traffic_state_executor import TrafficStateExecutor
 from libtraffic.executor.traj_loc_pred_executor import TrajLocPredExecutor
+from libtraffic.executor.abstract_tradition_executor import AbstractTraditionExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -15,5 +16,6 @@ __all__ = [
     "HyperTuning",
     "GeoSANExecutor",
     "MapMatchingExecutor",
-    "GEMLExecutor"
+    "GEMLExecutor",
+    "AbstractTraditionExecutor"
 ]
