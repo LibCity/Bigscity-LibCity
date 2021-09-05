@@ -1,5 +1,5 @@
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_logger, get_executor, get_model
+from libcity.data import get_dataset
+from libcity.utils import get_logger, get_executor, get_model
 
 if __name__ == '__main__':
     config = {
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     model = get_model(config, data_feature)
     executor = get_executor(config, model)
     executor.train(train_data, valid_data)
-    model_cache_file = './libtraffic/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
+    model_cache_file = './libcity/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
     executor.save_model(model_cache_file)
     executor.load_model(model_cache_file)
     # 评估，评估结果将会放在 cache/evaluate_cache 下

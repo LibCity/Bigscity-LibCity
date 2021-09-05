@@ -1,7 +1,7 @@
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_executor
-from libtraffic.utils import get_model
-from libtraffic.utils import get_logger
+from libcity.data import get_dataset
+from libcity.utils import get_executor
+from libcity.utils import get_model
+from libcity.utils import get_logger
 
 
 config = {
@@ -75,7 +75,7 @@ print(data_feature['adj_mx'].sum())
 model = get_model(config, data_feature)
 
 # 加载执行器
-model_cache_file = './libtraffic/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
+model_cache_file = './libcity/cache/model_cache/' + config['model'] + '_' + config['dataset'] + '.m'
 executor = get_executor(config, model)
 # 训练
 executor.train(train_data, valid_data)

@@ -4,8 +4,8 @@
 
 import argparse
 
-from libtraffic.pipeline import hyper_parameter
-from libtraffic.utils import hyper_arguments, str2bool, str2float
+from libcity.pipeline import hyper_parameter
+from libcity.utils import hyper_arguments, str2bool, str2float
 
 
 def add_other_args(parser):

@@ -1,6 +1,6 @@
-from libtraffic.config import ConfigParser
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_model, get_evaluator
+from libcity.config import ConfigParser
+from libcity.data import get_dataset
+from libcity.utils import get_model, get_evaluator
 # load config
 config = ConfigParser('traj_loc_pred', 'ATSTLSTM', 'foursquare_tky', other_args={'min_sessions': 5})
 

@@ -1,6 +1,6 @@
-from libtraffic.config import ConfigParser
-from libtraffic.data import get_dataset
-from libtraffic.utils import get_model, get_executor
+from libcity.config import ConfigParser
+from libcity.data import get_dataset
+from libcity.utils import get_model, get_executor
 
 # 加载配置文件
 config = ConfigParser(task='traj_loc_pred', model='TemplateTLP',
