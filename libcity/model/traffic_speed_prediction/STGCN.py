@@ -27,6 +27,8 @@ def calculate_scaled_laplacian(adj):
         for j in range(n):
             if d[i] > 0 and d[j] > 0:
                 lap[i, j] /= np.sqrt(d[i] * d[j])
+    lap[np.isinf(lap)] = 0
+    lap[np.isnan(lap)] = 0
     lam = np.linalg.eigvals(lap).max().real
     return 2 * lap / lam - np.eye(n)
 

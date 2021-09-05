@@ -32,6 +32,7 @@ class RNN(AbstractTrafficStateModel):
             self.num_directions = 1
         self.input_size = self.num_nodes * self.feature_dim
 
+        self._logger.info('You select rnn_type {} in RNN!'.format(self.rnn_type))
         if self.rnn_type.upper() == 'GRU':
             self.rnn = nn.GRU(input_size=self.input_size, hidden_size=self.hidden_size,
                               num_layers=self.num_layers, dropout=self.dropout,
