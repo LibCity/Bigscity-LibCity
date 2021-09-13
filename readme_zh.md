@@ -4,7 +4,7 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.github.io/Bigscity-LibCity-Website)|[Docs](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://libcity.github.io/Bigscity-LibCity-Website)|[Docs](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
 
 LibCity 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
@@ -45,7 +45,7 @@ git clone https://github.com/LibCity/Bigscity-LibCity
 cd Bigscity-LibCity
 ```
 
-有关环境配置的更多详细信息，请参见 [文档](https://bigscity-libcity-docs.readthedocs.io/zh/latest/get_started/install.html).
+有关环境配置的更多详细信息，请参见 [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/get_started/install.html).
 
 ## Quick-Start
 
@@ -59,7 +59,7 @@ python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 
 该脚本将在默认配置下，在 METR_LA 数据集上运行 GRU 模型，以进行交通状态预测任务。
 
-更多细节请访问 [文档](https://bigscity-libcity-docs.readthedocs.io/zh/latest/get_started/quick_start.html) 。
+更多细节请访问 [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/get_started/quick_start.html) 。
 
 ## Contribution
 
