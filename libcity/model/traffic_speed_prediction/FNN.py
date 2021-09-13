@@ -12,6 +12,7 @@ class FNN(AbstractTrafficStateModel):
         super().__init__(config, data_feature)
 
         self._scaler = self.data_feature.get('scaler')
+        self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
 
@@ -30,13 +31,13 @@ class FNN(AbstractTrafficStateModel):
 
     def forward(self, batch):
         inputs = batch['X']
-        batch_size, num_nodes = inputs.shape[0], inputs.shape[2]
+        batch_size = inputs.shape[0]
         inputs = inputs.permute(0, 2, 1, 3)
-        inputs = inputs.reshape(batch_size, num_nodes, -1)
+        inputs = inputs.reshape(batch_size, self.num_nodes, -1)
         outputs = self.fc1(inputs)
         outputs = self.relu(outputs)
         outputs = self.fc2(outputs)
-        outputs = outputs.reshape(batch_size, num_nodes, self.output_window, self.output_dim)
+        outputs = outputs.reshape(batch_size, self.num_nodes, self.output_window, self.output_dim)
         return outputs.permute(0, 2, 1, 3)
 
     def calculate_loss(self, batch):
