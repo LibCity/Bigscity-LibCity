@@ -115,7 +115,6 @@ def train(data, config):
 
 def main():
     config = {
-        'model': 'Tradition_SVR',
         'dataset': 'METR_LA',
         'train_rate': 0.8,
         'input_window': 12,
