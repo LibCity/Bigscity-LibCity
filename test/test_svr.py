@@ -1,15 +1,64 @@
 import pandas as pd
 import numpy as np
-import json
 from sklearn.svm import SVR
-from libcity.model.loss import *
+from sklearn.metrics import r2_score, explained_variance_score
 
-config = {
-    'dataset': 'METR_LA',
-    'train_rate': 0.8,
-    'seq_len': 12,
-    'pre_len': 3
-}
+
+def r2_score_np(preds, labels):
+    preds = preds.flatten()
+    labels = labels.flatten()
+    return r2_score(labels, preds)
+
+
+def masked_rmse_np(preds, labels, null_val=np.nan):
+    return np.sqrt(masked_mse_np(preds=preds, labels=labels,
+                   null_val=null_val))
+
+
+def masked_mse_np(preds, labels, null_val=np.nan):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if np.isnan(null_val):
+            mask = ~np.isnan(labels)
+        else:
+            mask = np.not_equal(labels, null_val)
+        mask = mask.astype('float32')
+        mask /= np.mean(mask)
+        rmse = np.square(np.subtract(preds, labels)).astype('float32')
+        rmse = np.nan_to_num(rmse * mask)
+        return np.mean(rmse)
+
+
+def masked_mae_np(preds, labels, null_val=np.nan):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if np.isnan(null_val):
+            mask = ~np.isnan(labels)
+        else:
+            mask = np.not_equal(labels, null_val)
+        mask = mask.astype('float32')
+        mask /= np.mean(mask)
+        mae = np.abs(np.subtract(preds, labels)).astype('float32')
+        mae = np.nan_to_num(mae * mask)
+        return np.mean(mae)
+
+
+def masked_mape_np(preds, labels, null_val=np.nan):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if np.isnan(null_val):
+            mask = ~np.isnan(labels)
+        else:
+            mask = np.not_equal(labels, null_val)
+        mask = mask.astype('float32')
+        mask /= np.mean(mask)
+        mape = np.abs(np.divide(np.subtract(
+            preds, labels).astype('float32'), labels))
+        mape = np.nan_to_num(mask * mape)
+        return np.mean(mape)
+
+
+def explained_variance_score_np(preds, labels):
+    preds = preds.flatten()
+    labels = labels.flatten()
+    return explained_variance_score(labels, preds)
 
 
 def preprocess_data(data, config):
@@ -17,8 +66,8 @@ def preprocess_data(data, config):
     num = config.get('num', time_len)
     train_rate = config.get('train_rate', 0.8)
 
-    seq_len = config.get('seq_len', 12)
-    pre_len = config.get('pre_len', 3)
+    input_window = config.get('input_window', 12)
+    output_window = config.get('output_window', 3)
 
     data = data[0:int(num)]
 
@@ -27,122 +76,117 @@ def preprocess_data(data, config):
     train_data = data[0:train_size]
     test_data = data[train_size:time_len]
 
-    length = data.shape[1]
-
-    trainX, trainY, testX, testY = [], [], [], []
-    for i in range(len(train_data)):
-        a = train_data[i]
-        for j in range(length - seq_len - pre_len):
-            a1 = a[j:j + seq_len + pre_len]
-            trainX.append(a1[0:seq_len])
-            trainY.append(a1[seq_len:seq_len + pre_len])
-    for i in range(len(test_data)):
-        b = test_data[i]
-        for j in range(length - seq_len - pre_len):
-            b1 = b[j:j + seq_len + pre_len]
-            testX.append(b1[0:seq_len])
-            testY.append(b1[seq_len:seq_len + pre_len])
-    return trainX, trainY, testX, testY
+    trainX, trainY, testX, testy = [], [], [], []
+    for i in range(len(train_data) - input_window - output_window):
+        a = train_data[i: i + input_window + output_window]
+        trainX.append(a[0: input_window])
+        trainY.append(a[input_window: input_window + output_window])
+    for i in range(len(test_data) - input_window - output_window):
+        b = test_data[i: i + input_window + output_window]
+        testX.append(b[0: input_window])
+        testy.append(b[input_window: input_window + output_window])
+    return trainX, trainY, testX, testy
 
 
-def get_data(dataset):
-    # path
-    path = '../raw_data/' + dataset + '/'
-    config_path = path + 'config.json'
-    dyna_path = path + dataset + '.dyna'
-    geo_path = path + dataset + '.geo'
-
-    # read config
-    with open(config_path, 'r') as f:
-        json_obj = json.load(f)
-        for key in json_obj:
-            if key not in config:
-                config[key] = json_obj[key]
-
-    # read geo
-    geo_file = pd.read_csv(geo_path)
-    geo_ids = list(geo_file['geo_id'])
-
-    # read dyna
-    dyna_file = pd.read_csv(dyna_path)
-    data_col = config.get('data_col', '')
-    if data_col != '':  # 根据指定的列加载数据集
-        if isinstance(data_col, list):
-            data_col = data_col.copy()
-        else:  # str
-            data_col = [data_col].copy()
-        data_col.insert(0, 'time')
-        data_col.insert(1, 'entity_id')
-        dyna_file = dyna_file[data_col]
-    else:  # 不指定则加载所有列
-        dyna_file = dyna_file[dyna_file.columns[2:]]  # 从time列开始所有列
-
-    # 求时间序列
-    time_slots = list(dyna_file['time'][:int(dyna_file.shape[0] / len(geo_ids))])
-
-    idx_of_timeslots = dict()
-    if not dyna_file['time'].isna().any():  # 时间没有空值
-        time_slots = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), time_slots))
-        time_slots = np.array(time_slots, dtype='datetime64[ns]')
-        for idx, _ts in enumerate(time_slots):
-            idx_of_timeslots[_ts] = idx
-
-    # 转3-d数组
-    feature_dim = len(dyna_file.columns) - 2
-    df = dyna_file[dyna_file.columns[-feature_dim:]]
-    len_time = len(time_slots)
-    data = []
-    for i in range(0, df.shape[0], len_time):
-        data.append(df[i:i + len_time].values)
-    data = np.array(data, dtype=float)  # (len(self.geo_ids), len_time, feature_dim)
-    data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
-    return data
-
-
-def run_SVR(config, trainX, trainY, testX, testY):
-    seq_len = config.get('seq_len', 12)
-    pre_len = config.get('pre_len', 3)
-
-    a_X = np.array(trainX)  # (, 12, 1)
-    a_X = np.reshape(a_X, [-1, seq_len])  # (, 12)
-    a_Y = np.array(trainY)  # (, 3, 1)
-    a_Y = np.reshape(a_Y, [-1, pre_len])  # (, 3)
-    a_Y = np.mean(a_Y, axis=1)  # (, 1)
-    t_X = np.array(testX)  # (, 12, 1)
-    t_X = np.reshape(t_X, [-1, seq_len])  # (, 12)
-    t_Y = np.array(testY)  # (, 3, 1)
-    t_Y = np.reshape(t_Y, [-1, pre_len])  # (, 3)
-    t_Y = np.mean(t_Y, axis=1)
-
-    print("----begin training----")
-    svr_model = SVR(kernel='rbf')
-    svr_model.fit(a_X, a_Y)
-    print("----end training-----")
-    print('=====================')
-    print('=====================')
-    print('=====================')
+def evaluate(result, testy):
+    metrics = ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
+    time_len = testy.shape[0]
+    df = []
     print("----begin testing----")
-    pre = svr_model.predict(t_X)  # (, 1)
+    for i in range(time_len):
+        line = {}
+        for metric in metrics:
+            if metric == 'masked_MAE':
+                line[metric] = masked_mae_np(result[i, :], testy[i, :], 0)
+            elif metric == 'masked_MSE':
+                line[metric] = masked_mse_np(result[i, :], testy[i, :], 0)
+            elif metric == 'masked_RMSE':
+                line[metric] = masked_rmse_np(result[i, :], testy[i, :], 0)
+            elif metric == 'masked_MAPE':
+                line[metric] = masked_mape_np(result[i, :], testy[i, :], 0)
+            elif metric == 'MAE':
+                line[metric] = masked_mae_np(result[i, :], testy[i, :])
+            elif metric == 'MSE':
+                line[metric] = masked_mse_np(result[i, :], testy[i, :])
+            elif metric == 'RMSE':
+                line[metric] = masked_rmse_np(result[i, :], testy[i, :])
+            elif metric == 'MAPE':
+                line[metric] = masked_mape_np(result[i, :], testy[i, :])
+            elif metric == 'R2':
+                line[metric] = r2_score_np(result[i, :], testy[i, :])
+            elif metric == 'EVAR':
+                line[metric] = explained_variance_score_np(result[i, :], testy[i, :])
+                pass
+            else:
+                raise ValueError(
+                    'Error parameter evaluator_mode={}.'.format(metric))
+        df.append(line)
 
-    result1 = np.array(pre)
-    testY1 = np.array(t_Y)
+    df = pd.DataFrame(df, columns=metrics)
+    print(df)
+    df.to_csv("sz_metrics.csv")
 
-    y_true = np.array(testY1)  #(,3)
-    y_pred = np.array(result1)  #(,3)
 
-    # metric
-    print('masked_MAE: ', masked_mae_np(y_pred, y_true, 0))
-    print('masked_MAPE: ', masked_mape_np(y_pred, y_true, 0))
-    print('masked_MSE: ', masked_mse_np(y_pred, y_true, 0))
-    print('masked_RMSE: ', masked_rmse_np(y_pred, y_true, 0))
+def train(data, config):
+    num_nodes = data.shape[1]  # num_nodes 156
+    input_window = config.get("input_window", 12)
+    output_window = config.get("output_window", 3)
 
-    print("----end testing----")
+    result = []
+    testy = []
+    print("----begin training----")
+    for i in range(num_nodes):
+        data1 = np.mat(data)
+        a = data1[:, i]  # (time_len, feature) = (2365,1)
+        ax, ay, tx, ty = preprocess_data(a, config)
+        ax = np.array(ax)  # (train_size, input_window, feature) = (2365,12,1)
+        ax = np.reshape(ax, [-1, input_window])  # (train_size, input_window * feature) = (156,12)
+        ay = np.array(ay)  # (train_size, output_window, feature) = (2365, 3, 1)
+        ay = np.reshape(ay, [-1, output_window])  # (train_size, output_window * feature) = (2365, 3)
+        ay = np.mean(ay, axis=1)  # (train_size,) = (2365,)
+        tx = np.array(tx)  # (test_size, input_window, feature) = (581, 12, 1)
+        tx = np.reshape(tx, [-1, input_window])  # (test_size, input_window * feature) = (581, 12)
+        ty = np.array(ty)  # (test_size, output_window, feature) = (581, 3 ,1)
+        ty = np.reshape(ty, [-1, output_window])  # (test_size, output_window * feature) = (581, 3)
+        svr_model = SVR(kernel='rbf')
+        svr_model.fit(ax, ay)
+        pre = svr_model.predict(tx)  # (test_size, feature) = (581, )
+        pre = np.array(np.transpose(np.mat(pre)))  # (test_size, 1)
+        ty = np.mean(ty, axis=1)  # (test_size, )
+        ty = np.array(np.transpose(np.mat(ty)))  # (test_size, 1)
+        result.append(pre)
+        testy.append(ty)
+
+    print("----end training-----")
+
+    print('=====================')
+    print('=====================')
+    print('=====================')
+
+    result = np.array(result)  # (num_nodes, test_size, feature) = (156, 581, 1)
+    testy = np.array(testy)  # (num_nodes, test_size, feature) = (156, 581, 1)
+
+    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, feature) = (581, 156, 1)
+    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, feature) = (581, 156, 1)
+
+    return result, testy
 
 
 def main():
-    data = get_data(config.get('dataset', ''))
-    trainX, trainY, testX, testY = preprocess_data(data, config)
-    run_SVR(config, trainX, trainY, testX, testY)
+    config = {
+        'dataset': 'METR_LA',
+        'train_rate': 0.8,
+        'input_window': 12,
+        'output_window': 3
+    }
+    data = pd.read_csv("./sz_speed.csv")
+    # trainX, trainY, testX, testy = preprocess_data(data, config)
+    # print(len(trainX), len(trainY), len(testX), len(testy))
+    # 2365 2365 581 581
+    # print(trainX[0].shape, trainY[0].shape, testX[0].shape, testy[0].shape)
+    # (12, 156) (3, 156) (12, 156) (3, 156)
+    result, testy = train(data, config)
+    evaluate(result, testy)
 
 
 if __name__ == '__main__':
