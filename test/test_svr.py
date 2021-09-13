@@ -1,77 +1,16 @@
 import pandas as pd
 import numpy as np
 from sklearn.svm import SVR
-from sklearn.metrics import r2_score, explained_variance_score
-
-
-def r2_score_np(preds, labels):
-    preds = preds.flatten()
-    labels = labels.flatten()
-    return r2_score(labels, preds)
-
-
-def masked_rmse_np(preds, labels, null_val=np.nan):
-    return np.sqrt(masked_mse_np(preds=preds, labels=labels,
-                   null_val=null_val))
-
-
-def masked_mse_np(preds, labels, null_val=np.nan):
-    with np.errstate(divide='ignore', invalid='ignore'):
-        if np.isnan(null_val):
-            mask = ~np.isnan(labels)
-        else:
-            mask = np.not_equal(labels, null_val)
-        mask = mask.astype('float32')
-        mask /= np.mean(mask)
-        rmse = np.square(np.subtract(preds, labels)).astype('float32')
-        rmse = np.nan_to_num(rmse * mask)
-        return np.mean(rmse)
-
-
-def masked_mae_np(preds, labels, null_val=np.nan):
-    with np.errstate(divide='ignore', invalid='ignore'):
-        if np.isnan(null_val):
-            mask = ~np.isnan(labels)
-        else:
-            mask = np.not_equal(labels, null_val)
-        mask = mask.astype('float32')
-        mask /= np.mean(mask)
-        mae = np.abs(np.subtract(preds, labels)).astype('float32')
-        mae = np.nan_to_num(mae * mask)
-        return np.mean(mae)
-
-
-def masked_mape_np(preds, labels, null_val=np.nan):
-    with np.errstate(divide='ignore', invalid='ignore'):
-        if np.isnan(null_val):
-            mask = ~np.isnan(labels)
-        else:
-            mask = np.not_equal(labels, null_val)
-        mask = mask.astype('float32')
-        mask /= np.mean(mask)
-        mape = np.abs(np.divide(np.subtract(
-            preds, labels).astype('float32'), labels))
-        mape = np.nan_to_num(mask * mape)
-        return np.mean(mape)
-
-
-def explained_variance_score_np(preds, labels):
-    preds = preds.flatten()
-    labels = labels.flatten()
-    return explained_variance_score(labels, preds)
+from libcity.model.loss import *
 
 
 def preprocess_data(data, config):
     time_len = data.shape[0]
-    num = config.get('num', time_len)
     train_rate = config.get('train_rate', 0.8)
 
     input_window = config.get('input_window', 12)
     output_window = config.get('output_window', 3)
 
-    data = data[0:int(num)]
-
-    time_len = data.shape[0]
     train_size = int(time_len * train_rate)
     train_data = data[0:train_size]
     test_data = data[train_size:time_len]
