@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.svm import SVR
 from libcity.model.loss import *
+from libcity.data import get_dataset
 
 
 def preprocess_data(data, config):
@@ -27,8 +28,8 @@ def preprocess_data(data, config):
     return trainX, trainY, testX, testy
 
 
-def evaluate(result, testy):
-    metrics = ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
+def evaluate(result, testy, config):
+    metrics =  config.get('matrics', ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
     time_len = testy.shape[0]
     df = []
     print("----begin testing----")
@@ -76,25 +77,26 @@ def train(data, config):
     print("----begin training----")
     for i in range(num_nodes):
         data1 = np.mat(data)
-        a = data1[:, i]  # (time_len, feature) = (2365,1)
+        a = data1[:, i]  # (time_len, feature)
         ax, ay, tx, ty = preprocess_data(a, config)
-        ax = np.array(ax)  # (train_size, input_window, feature) = (2365,12,1)
-        ax = np.reshape(ax, [-1, input_window])  # (train_size, input_window * feature) = (156,12)
-        ay = np.array(ay)  # (train_size, output_window, feature) = (2365, 3, 1)
-        ay = np.reshape(ay, [-1, output_window])  # (train_size, output_window * feature) = (2365, 3)
-        ay = np.mean(ay, axis=1)  # (train_size,) = (2365,)
-        tx = np.array(tx)  # (test_size, input_window, feature) = (581, 12, 1)
-        tx = np.reshape(tx, [-1, input_window])  # (test_size, input_window * feature) = (581, 12)
-        ty = np.array(ty)  # (test_size, output_window, feature) = (581, 3 ,1)
-        ty = np.reshape(ty, [-1, output_window])  # (test_size, output_window * feature) = (581, 3)
+        ax = np.array(ax)  # (train_size, input_window, feature)
+        ax = np.reshape(ax, [-1, input_window])  # (train_size, input_window * feature)
+        ay = np.array(ay)  # (train_size, output_window, feature)
+        ay = np.reshape(ay, [-1, output_window])  # (train_size, output_window * feature)
+        ay = np.mean(ay, axis=1)  # (train_size,)
+        tx = np.array(tx)  # (test_size, input_window, feature)
+        tx = np.reshape(tx, [-1, input_window])  # (test_size, input_window * feature)
+        ty = np.array(ty)  # (test_size, output_window, feature)
+        ty = np.reshape(ty, [-1, output_window])  # (test_size, output_window * feature)
         svr_model = SVR(kernel='rbf')
         svr_model.fit(ax, ay)
-        pre = svr_model.predict(tx)  # (test_size, feature) = (581, )
-        pre = np.array(np.transpose(np.mat(pre)))  # (test_size, 1)
+        pre = svr_model.predict(tx)  # (test_size, feature)
+        pre = np.array(np.transpose(np.mat(pre)))
         ty = np.mean(ty, axis=1)  # (test_size, )
         ty = np.array(np.transpose(np.mat(ty)))  # (test_size, 1)
         result.append(pre)
         testy.append(ty)
+
 
     print("----end training-----")
 
@@ -102,30 +104,38 @@ def train(data, config):
     print('=====================')
     print('=====================')
 
-    result = np.array(result)  # (num_nodes, test_size, feature) = (156, 581, 1)
-    testy = np.array(testy)  # (num_nodes, test_size, feature) = (156, 581, 1)
+    result = np.array(result)  # (num_nodes, test_size, feature)
+    testy = np.array(testy)  # (num_nodes, test_size, feature)
 
-    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, feature) = (581, 156, 1)
-    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, feature) = (581, 156, 1)
+    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, feature)
+    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, feature)
 
     return result, testy
 
 
 def main():
     config = {
+        'model': 'Tradition_SVR',
         'dataset': 'METR_LA',
         'train_rate': 0.8,
         'input_window': 12,
-        'output_window': 3
+        'output_window': 3,
+        'dataset_class': 'TrafficStatePointDataset',
+
+        'metrics' : ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
     }
-    data = pd.read_csv("./sz_speed.csv")
+    dataset = get_dataset(config)
+    data = dataset._load_dyna_3d("METR_LA")
+    data = data.squeeze()
     # trainX, trainY, testX, testy = preprocess_data(data, config)
     # print(len(trainX), len(trainY), len(testX), len(testy))
-    # 2365 2365 581 581
+    #27402 27402 6840 6840
     # print(trainX[0].shape, trainY[0].shape, testX[0].shape, testy[0].shape)
-    # (12, 156) (3, 156) (12, 156) (3, 156)
+    #(12, 207) (3, 207) (12, 207) (3, 207)
+    # exit(0)
+
     result, testy = train(data, config)
-    evaluate(result, testy)
+    evaluate(result, testy, config)
 
 
 if __name__ == '__main__':
