@@ -64,7 +64,7 @@ def evaluate(result, testy, config):
 
     df = pd.DataFrame(df, columns=metrics)
     print(df)
-    df.to_csv("sz_metrics.csv")
+    df.to_csv("metr_la.csv")
 
 
 def train(data, config):
