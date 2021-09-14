@@ -62,7 +62,7 @@ def get_data(dataset):
     for i in range(0, df.shape[0], len_time):
         data.append(df[i:i + len_time].values)
     data = np.array(data, dtype=float)  # (num_nodes, len_time, feature_dim)
-    data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
+    data = data.swapaxes(0, 1)  # (len_time, num_nodes, feature_dim)
     return data
 
 
