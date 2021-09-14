@@ -74,7 +74,7 @@ def get_data(dataset):
 def preprocess_data(data, config):
     time_len = data.shape[0]
     train_rate = config.get('train_rate', 0.8)
-    eval_rate = config.get('eval_rate',0.1)
+    eval_rate = config.get('eval_rate', 0.1)
 
     input_window = config.get('input_window', 12)
     output_window = config.get('output_window', 3)
@@ -98,7 +98,7 @@ def preprocess_data(data, config):
 
 def test(result, testy, config):
     metrics = config.get('metrics',
-            ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
+                ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
     time_len = testy.shape[0]
     df = []
     for i in range(time_len):
@@ -159,11 +159,10 @@ def train(data, config):
         svr_model = SVR(kernel='rbf')
         svr_model.fit(ax, ay)
         pre = svr_model.predict(tx)  # (test_size, )
-        pre = np.array(np.transpose(np.mat(pre))) # (test_size, 1)
+        pre = np.array(np.transpose(np.mat(pre)))  # (test_size, 1)
         pre = pre.repeat(output_window, axis=1)  # (test_size, output_window)
         result.append(pre)
         testy.append(ty)
-        break
 
     result = np.array(result)  # (num_nodes, test_size, output_window)
     testy = np.array(testy)  # (num_nodes, test_size, output_window)
