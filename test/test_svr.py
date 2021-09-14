@@ -1,16 +1,21 @@
 import pandas as pd
 import numpy as np
 from sklearn.svm import SVR
-from libcity.model.loss import *
+import sys
+import os
 import json
+root_path = os.path.abspath(__file__)
+root_path = '/'.join(root_path.split('/')[:-2])
+sys.path.append(root_path)
+from libcity.model.loss import *
 
 
 config = {
     'dataset': 'METR_LA',
-    'train_rate': 0.8,
+    'train_rate': 0.7,
+    'eval_rate': 0.1,
     'input_window': 12,
     'output_window': 3,
-
     'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
 }
 
@@ -69,11 +74,12 @@ def get_data(dataset):
 def preprocess_data(data, config):
     time_len = data.shape[0]
     train_rate = config.get('train_rate', 0.8)
+    eval_rate = config.get('eval_rate',0.1)
 
     input_window = config.get('input_window', 12)
     output_window = config.get('output_window', 3)
 
-    train_size = int(time_len * train_rate)
+    train_size = int(time_len * (train_rate + eval_rate))
     train_data = data[0:train_size]
     test_data = data[train_size:time_len]
 
@@ -82,6 +88,7 @@ def preprocess_data(data, config):
         a = train_data[i: i + input_window + output_window]
         trainX.append(a[0: input_window])
         trainY.append(a[input_window: input_window + output_window])
+
     for i in range(len(test_data) - input_window - output_window):
         b = test_data[i: i + input_window + output_window]
         testX.append(b[0: input_window])
@@ -89,7 +96,7 @@ def preprocess_data(data, config):
     return trainX, trainY, testX, testy
 
 
-def evaluate(result, testy, config):
+def test(result, testy, config):
     metrics = config.get('metrics',
             ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
     time_len = testy.shape[0]
@@ -117,6 +124,7 @@ def evaluate(result, testy, config):
                 line[metric] = r2_score_np(result[i, :], testy[i, :])
             elif metric == 'EVAR':
                 line[metric] = explained_variance_score_np(result[i, :], testy[i, :])
+                pass
             else:
                 raise ValueError(
                     'Error parameter evaluator_mode={}.'.format(metric))
@@ -124,7 +132,7 @@ def evaluate(result, testy, config):
 
     df = pd.DataFrame(df, columns=metrics)
     print(df)
-    df.to_csv("result.csv")
+    df.to_csv("test_result.csv")
 
 
 def train(data, config):
@@ -150,17 +158,17 @@ def train(data, config):
         ty = np.reshape(ty, [-1, output_window])  # (test_size * feature, output_window)
         svr_model = SVR(kernel='rbf')
         svr_model.fit(ax, ay)
-        pre = svr_model.predict(tx)  # (test_size, feature)
-        pre = np.array(np.transpose(np.mat(pre)))
+        pre = svr_model.predict(tx)  # (test_size, )
+        pre = np.array(np.transpose(np.mat(pre))) # (test_size, 1)
         pre = pre.repeat(output_window, axis=1)  # (test_size, output_window)
         result.append(pre)
         testy.append(ty)
+        break
 
-    result = np.array(result)  # (num_nodes, test_size, feature)
-    testy = np.array(testy)  # (num_nodes, test_size, feature)
-
-    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, feature)
-    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, feature)
+    result = np.array(result)  # (num_nodes, test_size, output_window)
+    testy = np.array(testy)  # (num_nodes, test_size, output_window)
+    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, output_window)
+    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, output_window)
 
     return result, testy
 
@@ -168,7 +176,7 @@ def train(data, config):
 def main():
     data = get_data(config.get('dataset', ''))
     result, testy = train(data, config)
-    evaluate(result, testy, config)
+    test(result, testy, config)
 
 
 if __name__ == '__main__':
