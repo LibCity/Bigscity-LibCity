@@ -2,31 +2,29 @@ import pandas as pd
 import numpy as np
 import json
 from statsmodels.tsa.api import VAR
-from libcity.model.loss import *
-import torch
 from libcity.utils import StandardScaler
 import time
+import sys
+import os
+root_path = os.path.abspath(__file__)
+root_path = '/'.join(root_path.split('/')[:-2])
+sys.path.append(root_path)
+from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, masked_rmse_np, r2_score_np, explained_variance_score_np
 
 config = {
     'dataset': 'METR_LA',
-    'input_windows': 12,
-    'output_windows': 12,
     'train_rate': 0.8,
     'seq_len': 12,
     'pre_len': 12,
+    'maxlags': 1,
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'MAE', 'MSE', 'RMSE', 'MAPE', 'R2', 'EVAR']
 }
 
 
 def preprocess_data(data, config):
-    time_len = data.shape[0]
-    num = config.get('num', time_len)
     train_rate = config.get('train_rate', 0.8)
-
     seq_len = config.get('seq_len', 12)
     pre_len = config.get('pre_len', 12)
-
-    data = data[0:int(num)]
 
     time_len = data.shape[0]
     train_size = int(time_len * train_rate)
@@ -53,7 +51,7 @@ def preprocess_data(data, config):
 
 def get_data(dataset):
     # path
-    path = '../raw_data/' + dataset + '/'
+    path = 'raw_data/' + dataset + '/'
     config_path = path + 'config.json'
     dyna_path = path + dataset + '.dyna'
     geo_path = path + dataset + '.geo'
@@ -86,13 +84,6 @@ def get_data(dataset):
     # 求时间序列
     time_slots = list(dyna_file['time'][:int(dyna_file.shape[0] / len(geo_ids))])
 
-    idx_of_timeslots = dict()
-    if not dyna_file['time'].isna().any():  # 时间没有空值
-        time_slots = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), time_slots))
-        time_slots = np.array(time_slots, dtype='datetime64[ns]')
-        for idx, _ts in enumerate(time_slots):
-            idx_of_timeslots[_ts] = idx
-
     # 转3-d数组
     feature_dim = len(dyna_file.columns) - 2
     df = dyna_file[dyna_file.columns[-feature_dim:]]
@@ -100,12 +91,12 @@ def get_data(dataset):
     data = []
     for i in range(0, df.shape[0], len_time):
         data.append(df[i:i + len_time].values)
-    data = np.array(data, dtype=float)  # (len(self.geo_ids), len_time, feature_dim)
-    data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
+    data = np.array(data, dtype=float)  # (num_nodes, len_time, feature_dim)
+    data = data.swapaxes(0, 1)  # (len_time, num_nodes, feature_dim)
     return data
 
 
-def run_VAR(config, data, trainX, trainY, testX, testY):
+def run_VAR(config, data, testX, testY):
     print("----begin training----")
     ts, points = data.shape[:2]
     data = data.reshape(ts, -1)[:int(ts * 0.7)] + np.random.randn(int(ts * 0.7), points) / 10000
@@ -114,78 +105,79 @@ def run_VAR(config, data, trainX, trainY, testX, testY):
 
     s = time.time()
     model = VAR(data)
-    results = model.fit(maxlags=1, ic='aic')
+    maxlags = config.get("maxlag", 1)
+    results = model.fit(maxlags=maxlags, ic='aic')
     e = time.time()
     print(1, e - s)
 
-    input_windows = config.get('input_windows', 12)
-    output_windows = config.get('output_windows', 12)
-    trainX = np.array(trainX)
-    trainY = np.array(trainY)
-    trainX = trainX[:len(trainX) // points * points].reshape(-1, input_windows, points)
-    trainY = trainY[:len(trainY) // points * points].reshape(-1, output_windows, points)
-    print(trainX.shape, trainY.shape)  # B, T, N * F
+    seq_len = config.get('seq_len', 12)
+    pre_len = config.get('pre_len', 12)
+    testX = np.array(testX)
+    testY = np.array(testY)
+    testX = testX[:len(testX) // points * points].reshape(-1, seq_len, points)
+    testY = testY[:len(testY) // points * points].reshape(-1, pre_len, points)
+    print(testX.shape, testY.shape)  # B, T, N * F
 
     s = time.time()
-    y_pred, y_true = [[] for i in range(12)], [[] for i in range(12)]
-    for sample, target in zip(trainX, trainY):
+    y_pred, y_true = [[] for i in range(pre_len)], [[] for i in range(pre_len)]
+    for sample, target in zip(testX, testY):
         # print(sample.shape, target.shape)  T, N * F
-        sample = scaler.transform(sample[-1:])
-        out = results.forecast(sample, 12)
+        sample = scaler.transform(sample[-maxlags:])
+        out = results.forecast(sample, pre_len)
         # print(out.shape) T, N * F
         out = scaler.inverse_transform(out)
-        for i in range(12):
+        for i in range(pre_len):
             y_pred[i].append(out[i])
             y_true[i].append(target[i])
     e = time.time()
     print(2, e - s)
-    y_pred = torch.Tensor(y_pred)  # T, B, N, F
-    y_true = torch.Tensor(y_true)
+    y_pred = np.array(y_pred)  # T, B, N, F
+    y_true = np.array(y_true)
     print("----end training-----")
-    print('=====================')
-    print('=====================')
-    print('=====================')
-    print("----begin testing----")
+    return y_pred, y_true
+
+
+def evaluate(result, testy):
+    metrics = config.get('metrics',
+                         ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
     df = []
-    len_timeslots = 12
-    for i in range(1, len_timeslots + 1):
-        line = {}
-        for metric in config['metrics']:
-            if metric == 'masked_MAE':
-                line[metric] = masked_mae_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
-            elif metric == 'masked_MSE':
-                line[metric] = masked_mse_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
-            elif metric == 'masked_RMSE':
-                line[metric] = masked_rmse_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
-            elif metric == 'masked_MAPE':
-                line[metric] = masked_mape_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
-            elif metric == 'MAE':
-                line[metric] = masked_mae_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            elif metric == 'MSE':
-                line[metric] = masked_mse_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            elif metric == 'RMSE':
-                line[metric] = masked_rmse_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            elif metric == 'MAPE':
-                line[metric] = masked_mape_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            elif metric == 'R2':
-                line[metric] = r2_score_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            elif metric == 'EVAR':
-                line[metric] = explained_variance_score_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
-            else:
-                raise ValueError('Error parameter evaluator_mode={}, please set `single` or `average`.'.format('single'))
-        df.append(line)
+    line = {}
+    for metric in metrics:
+        if metric == 'masked_MAE':
+            line[metric] = masked_mae_np(result, testy, 0)
+        elif metric == 'masked_MSE':
+            line[metric] = masked_mse_np(result, testy, 0)
+        elif metric == 'masked_RMSE':
+            line[metric] = masked_rmse_np(result, testy, 0)
+        elif metric == 'masked_MAPE':
+            line[metric] = masked_mape_np(result, testy, 0)
+        elif metric == 'MAE':
+            line[metric] = masked_mae_np(result, testy)
+        elif metric == 'MSE':
+            line[metric] = masked_mse_np(result, testy)
+        elif metric == 'RMSE':
+            line[metric] = masked_rmse_np(result, testy)
+        elif metric == 'MAPE':
+            line[metric] = masked_mape_np(result, testy)
+        elif metric == 'R2':
+            line[metric] = r2_score_np(result, testy)
+        elif metric == 'EVAR':
+            line[metric] = explained_variance_score_np(result, testy)
+        else:
+            raise ValueError(
+                'Error parameter evaluator_mode={}.'.format(metric))
+    df.append(line)
 
-    df = pd.DataFrame(df, columns=config['metrics'])
+    df = pd.DataFrame(df, columns=metrics)
     print(df)
-    df.to_csv("sz_metrics.csv")
-
-    print("----end testing----")
+    df.to_csv("result.csv")
 
 
 def main():
     data = get_data(config.get('dataset', ''))
     trainX, trainY, testX, testY = preprocess_data(data, config)
-    run_VAR(config, data, trainX, trainY, testX, testY)
+    y_pred, y_true = run_VAR(config, data, testX, testY)
+    evaluate(y_pred, y_true)
 
 
 if __name__ == '__main__':
