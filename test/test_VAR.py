@@ -2,13 +2,13 @@ import pandas as pd
 import numpy as np
 import json
 from statsmodels.tsa.api import VAR
-from libcity.utils import StandardScaler
 import time
 import sys
 import os
 root_path = os.path.abspath(__file__)
 root_path = '/'.join(root_path.split('/')[:-2])
 sys.path.append(root_path)
+from libcity.utils import StandardScaler
 from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, masked_rmse_np, r2_score_np, explained_variance_score_np
 
 config = {
