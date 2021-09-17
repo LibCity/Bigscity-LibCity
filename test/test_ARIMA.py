@@ -154,13 +154,14 @@ def order_select_pred(data):
 
 
 def arima(data):
+    output_window = config.get('output_window', 3)
     y_pred = []  # (num_sequences, num_nodes, len_time, num_features)
     data = data.swapaxes(1, 2)  # (num_sequences, num_nodes, len_time, feature_dim)
     for time_slot in data:
         y_pred_ele = []  # (num_nodes, len_time, num_features)
         # Different nodes should be predict by different ARIMA models instance.
         for seq in time_slot:
-            pred = order_select_pred(seq).forecast(steps=3)
+            pred = order_select_pred(seq).forecast(steps=output_window)
             pred = pred.reshape((-1, seq.shape[1]))  # (len_time, num_features)
             y_pred_ele.append(pred)
         y_pred.append(y_pred_ele)
