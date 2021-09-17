@@ -11,7 +11,16 @@ from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, mas
 root_path = os.path.abspath(__file__)
 
 config = {
+    'p_range': [0, 4],
+    'd_range': [0, 3],
+    'q_range': [0, 4],
+
     'dataset': 'METR_LA',
+    'train_rate': 0.7,
+    'eval_rate': 0.1,
+    'input_window': 12,
+    'output_window': 3,
+
     'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
 }
 
@@ -59,7 +68,31 @@ def get_data(dataset):
     for i in range(0, df.shape[0], len_time):
         data.append(df[i:i + len_time].values)
     data = np.array(data, dtype=float)  # (num_nodes, len_time, feature_dim)
+    data = data.swapaxes(0, 1)  # (len_time, num_nodes, feature_dim)
     return data
+
+
+def preprocess_data(data):
+    train_rate = config.get('train_rate', 0.7)
+    eval_rate = config.get('eval_rate', 0.1)
+
+    input_window = config.get('input_window', 12)
+    output_window = config.get('output_window', 3)
+
+    x, y = [], []
+    for i in range(len(data) - input_window - output_window):
+        a = data[i: i + input_window + output_window]
+        x.append(a[0: input_window])
+        y.append(a[input_window: input_window + output_window])
+    x = np.array(x)
+    y = np.array(y)
+
+    train_size = int(x.shape[0] * (train_rate + eval_rate))
+    trainX = x[:train_size]
+    trainY = y[:train_size]
+    testX = x[train_size:x.shape[0]]
+    testY = y[train_size:x.shape[0]]
+    return trainX, trainY, testX, testY
 
 
 def evaluate(result, testy):
@@ -102,13 +135,16 @@ def evaluate(result, testy):
 # Try to find the best (p,d,q) parameters for ARIMA
 def order_select_pred(data):
     # data: (T, F)
-    res = ARIMA(data, (0, 0, 0)).fit()
+    res = ARIMA(data, order=(0, 0, 0)).fit()
     bic = res.bic
-    for p in range(0, 4):
-        for d in range(0, 3):
-            for q in range(0, 4):
+    p_range = config.get('p_range', [0, 4])
+    d_range = config.get('d_range', [0, 3])
+    q_range = config.get('q_range', [0, 4])
+    for p in range(p_range[0], p_range[1]):
+        for d in range(d_range[0], d_range[1]):
+            for q in range(q_range[0], q_range[1]):
                 try:
-                    cur_res = ARIMA(data, (p, d, q)).fit()
+                    cur_res = ARIMA(data, order=(p, d, q)).fit()
                     if cur_res.bic < bic:
                         bic = cur_res.bic
                         res = cur_res
@@ -117,21 +153,25 @@ def order_select_pred(data):
     return res  # (T, F)
 
 
-def arima(data: np.ndarray):
-    y_pred = []
-    y_true = []
-
-    # Different nodes should be predict by different ARIMA models instance.
-    for row in data:
-        y_true.append(row)
-        y_pred.append(order_select_pred(row))
-    return y_pred, y_true  # (N, T, F)
+def arima(data):
+    y_pred = []  # (num_sequences, num_nodes, len_time, num_features)
+    data = data.swapaxes(1, 2)  # (num_sequences, num_nodes, len_time, feature_dim)
+    for time_slot in data:
+        y_pred_ele = []  # (num_nodes, len_time, num_features)
+        # Different nodes should be predict by different ARIMA models instance.
+        for seq in time_slot:
+            pred = order_select_pred(seq).forecast(steps=3)
+            pred = pred.reshape((-1, seq.shape[1]))  # (len_time, num_features)
+            y_pred_ele.append(pred)
+        y_pred.append(y_pred_ele)
+    return np.array(y_pred).swapaxes(1, 2)  # (num_sequences,  len_time, num_nodes, num_features)
 
 
 def main():
     data = get_data(config.get('dataset', ''))
-    y_pred, y_true = arima(data)
-    evaluate(y_pred, y_true)
+    trainX, trainY, testX, testY = preprocess_data(data)
+    y_pred = arima(testX)
+    evaluate(y_pred, testY)
 
 
 if __name__ == '__main__':
