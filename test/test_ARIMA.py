@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,8 @@ from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, mas
     explained_variance_score_np
 
 root_path = os.path.abspath(__file__)
+root_path = '/'.join(root_path.split('/')[:-2])
+sys.path.append(root_path)
 
 config = {
     'p_range': [0, 4],
