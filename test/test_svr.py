@@ -71,32 +71,30 @@ def get_data(dataset):
     return data
 
 
-def preprocess_data(data, config):
-    time_len = data.shape[0]
-    train_rate = config.get('train_rate', 0.8)
+def preprocess_data(data):
+    train_rate = config.get('train_rate', 0.7)
     eval_rate = config.get('eval_rate', 0.1)
 
     input_window = config.get('input_window', 12)
     output_window = config.get('output_window', 3)
 
-    train_size = int(time_len * (train_rate + eval_rate))
-    train_data = data[0:train_size]
-    test_data = data[train_size:time_len]
+    x, y = [], []
+    for i in range(len(data) - input_window - output_window):
+        a = data[i: i + input_window + output_window]
+        x.append(a[0: input_window])
+        y.append(a[input_window: input_window + output_window])
+    x = np.array(x)
+    y = np.array(y)
 
-    trainX, trainY, testX, testy = [], [], [], []
-    for i in range(len(train_data) - input_window - output_window):
-        a = train_data[i: i + input_window + output_window]
-        trainX.append(a[0: input_window])
-        trainY.append(a[input_window: input_window + output_window])
-
-    for i in range(len(test_data) - input_window - output_window):
-        b = test_data[i: i + input_window + output_window]
-        testX.append(b[0: input_window])
-        testy.append(b[input_window: input_window + output_window])
-    return trainX, trainY, testX, testy
+    train_size = int(x.shape[0] * (train_rate + eval_rate))
+    trainX = x[:train_size]
+    trainY = y[:train_size]
+    testX = x[train_size:x.shape[0]]
+    testY = y[train_size:x.shape[0]]
+    return trainX, trainY, testX, testY
 
 
-def test(result, testy, config):
+def evaluate(result, testy):
     metrics = config.get('metrics',
                 ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
     time_len = testy.shape[0]
@@ -132,7 +130,7 @@ def test(result, testy, config):
 
     df = pd.DataFrame(df, columns=metrics)
     print(df)
-    df.to_csv("test_result.csv")
+    df.to_csv("result.csv")
 
 
 def train(data, config):
@@ -158,24 +156,24 @@ def train(data, config):
         ty = np.reshape(ty, [-1, output_window])  # (test_size * feature, output_window)
         svr_model = SVR(kernel='rbf')
         svr_model.fit(ax, ay)
-        pre = svr_model.predict(tx)  # (test_size, )
-        pre = np.array(np.transpose(np.mat(pre)))  # (test_size, 1)
-        pre = pre.repeat(output_window, axis=1)  # (test_size, output_window)
+        pre = svr_model.predict(tx)  # (test_size * feature, )
+        pre = np.array(np.transpose(np.mat(pre)))  # (test_size * feature, 1)
+        pre = pre.repeat(output_window, axis=1)  # (test_size * feature, output_window)
         result.append(pre)
         testy.append(ty)
 
-    result = np.array(result)  # (num_nodes, test_size, output_window)
-    testy = np.array(testy)  # (num_nodes, test_size, output_window)
-    result = result.transpose(1, 0, 2)  # (test_size, num_nodes, output_window)
-    testy = testy.transpose(1, 0, 2)  # (test_size, num_nodes, output_window)
+    result = np.array(result)  # (num_nodes, test_size * feature, output_window)
+    testy = np.array(testy)  # (num_nodes, test_size * feature, output_window)
+    result = result.transpose(1, 0, 2)  # (test_size * feature, num_nodes, output_window)
+    testy = testy.transpose(1, 0, 2)  # (test_size * feature, num_nodes, output_window)
 
     return result, testy
 
 
 def main():
     data = get_data(config.get('dataset', ''))
-    result, testy = train(data, config)
-    test(result, testy, config)
+    result, testy = train(data)
+    evaluate(result, testy)
 
 
 if __name__ == '__main__':
