@@ -13,39 +13,35 @@ from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, mas
 
 config = {
     'dataset': 'METR_LA',
-    'train_rate': 0.8,
-    'seq_len': 12,
-    'pre_len': 12,
+    'train_rate': 0.7,
+    'eval_rate': 0.1,
+    'input_window': 12,
+    'output_windows': 3,
     'maxlags': 1,
     'metrics': ['masked_MAE', 'masked_MSE', 'masked_RMSE', 'masked_MAPE', 'MAE', 'MSE', 'RMSE', 'MAPE', 'R2', 'EVAR']
 }
 
 
-def preprocess_data(data, config):
-    train_rate = config.get('train_rate', 0.8)
-    seq_len = config.get('seq_len', 12)
-    pre_len = config.get('pre_len', 12)
+def preprocess_data(data):
+    train_rate = config.get('train_rate', 0.7)
+    eval_rate = config.get('eval_rate', 0.1)
 
-    time_len = data.shape[0]
-    train_size = int(time_len * train_rate)
-    train_data = data[0:train_size]
-    test_data = data[train_size:time_len]
+    input_window = config.get('input_window', 12)
+    output_window = config.get('output_window', 3)
 
-    length = data.shape[1]
+    x, y = [], []
+    for i in range(len(data) - input_window - output_window):
+        a = data[i: i + input_window + output_window]
+        x.append(a[0: input_window])
+        y.append(a[input_window: input_window + output_window])
+    x = np.array(x)
+    y = np.array(y)
 
-    trainX, trainY, testX, testY = [], [], [], []
-    for i in range(len(train_data)):
-        a = train_data[i]
-        for j in range(length - seq_len - pre_len):
-            a1 = a[j:j + seq_len + pre_len]
-            trainX.append(a1[0:seq_len])
-            trainY.append(a1[seq_len:seq_len + pre_len])
-    for i in range(len(test_data)):
-        b = test_data[i]
-        for j in range(length - seq_len - pre_len):
-            b1 = b[j:j + seq_len + pre_len]
-            testX.append(b1[0:seq_len])
-            testY.append(b1[seq_len:seq_len + pre_len])
+    train_size = int(x.shape[0] * (train_rate + eval_rate))
+    trainX = x[:train_size]
+    trainY = y[:train_size]
+    testX = x[train_size:x.shape[0]]
+    testY = y[train_size:x.shape[0]]
     return trainX, trainY, testX, testY
 
 
@@ -110,23 +106,23 @@ def run_VAR(config, data, testX, testY):
     e = time.time()
     print(1, e - s)
 
-    seq_len = config.get('seq_len', 12)
-    pre_len = config.get('pre_len', 12)
+    input_window = config.get('input_window', 12)
+    output_window = config.get('output_window', 3)
     testX = np.array(testX)
     testY = np.array(testY)
-    testX = testX[:len(testX) // points * points].reshape(-1, seq_len, points)
-    testY = testY[:len(testY) // points * points].reshape(-1, pre_len, points)
+    testX = testX[:len(testX) // points * points].reshape(-1, input_window, points)
+    testY = testY[:len(testY) // points * points].reshape(-1, output_window, points)
     print(testX.shape, testY.shape)  # B, T, N * F
 
     s = time.time()
-    y_pred, y_true = [[] for i in range(pre_len)], [[] for i in range(pre_len)]
+    y_pred, y_true = [[] for i in range(output_window)], [[] for i in range(output_window)]
     for sample, target in zip(testX, testY):
         # print(sample.shape, target.shape)  T, N * F
         sample = scaler.transform(sample[-maxlags:])
-        out = results.forecast(sample, pre_len)
+        out = results.forecast(sample, output_window)
         # print(out.shape) T, N * F
         out = scaler.inverse_transform(out)
-        for i in range(pre_len):
+        for i in range(output_window):
             y_pred[i].append(out[i])
             y_true[i].append(target[i])
     e = time.time()
@@ -175,7 +171,7 @@ def evaluate(result, testy):
 
 def main():
     data = get_data(config.get('dataset', ''))
-    trainX, trainY, testX, testY = preprocess_data(data, config)
+    trainX, trainY, testX, testY = preprocess_data(data)
     y_pred, y_true = run_VAR(config, data, testX, testY)
     evaluate(y_pred, y_true)
 
