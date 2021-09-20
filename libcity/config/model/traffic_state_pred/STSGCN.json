@@ -1,33 +1,38 @@
 {
-    "module_type": "individual",
-    "act_type": "GLU",
-    "temporal_emb": true,
-    "spatial_emb": true,
-    "use_mask": false,
-    "first_layer_embedding_size": 64,
-    "filters": [
-        [64, 64, 64],
-        [64, 64, 64],
-        [64, 64, 64],
-        [64, 64, 64]
-    ],
-    "rho": 1,
+  "module_type": "individual",
+  "act_type": "GLU",
+  "temporal_emb": true,
+  "spatial_emb": true,
+  "use_mask": false,
+  "first_layer_embedding_size": 64,
+  "filters": [
+    [64, 64, 64],
+    [64, 64, 64],
+    [64, 64, 64],
+    [64, 64, 64]
+  ],
+  "rho": 1,
 
-    "scaler": "standard",
-    "load_external": true,
-    "normal_external": false,
-    "ext_scaler": "none",
-    "add_time_in_day": true,
-    "add_day_in_week": false,
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
 
-    "max_epoch": 100,
-    "learner": "adam",
-    "learning_rate": 0.001,
-    "lr_decay": false,
-    "lr_scheduler": "multisteplr",
-    "lr_decay_ratio": 0.1,
-    "steps": [5, 20, 40, 70],
-    "clip_grad_norm": false,
-    "use_early_stop": true,
-    "patience": 50
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_decay": false,
+  "lr_scheduler": "multisteplr",
+  "lr_decay_ratio": 0.1,
+  "steps": [
+    5,
+    20,
+    40,
+    70
+  ],
+  "clip_grad_norm": false,
+  "use_early_stop": true,
+  "patience": 50
 }
