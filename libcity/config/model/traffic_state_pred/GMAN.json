@@ -1,4 +1,7 @@
 {
+  "L": 5,
+  "K": 8,
+
   "batch_size": 4,
   "scaler": "standard",
   "load_external": true,
@@ -13,8 +16,5 @@
   "lr_decay_ratio": 0.7,
   "lr_patience": 5,
   "use_early_stop": true,
-  "patience": 10,
-
-  "L": 5,
-  "K": 8
+  "patience": 10
 }

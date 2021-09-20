@@ -1,11 +1,19 @@
 {
-    "batch_size": 64,
-    "scaler": "minmax01",
-    "load_external": true,
-    "normal_external": false,
-    "add_time_in_day": true,
-    "add_day_in_week": false,
-    "max_epoch": 500,
-    "learner": "adam",
-    "learning_rate": 0.0003
+  "conv_depth": 5,
+  "conv_height": 3,
+  "hidden_size": 16,
+
+  "scaler": "minmax01",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": false,
+
+  "max_epoch": 500,
+  "learner": "adam",
+  "learning_rate": 0.0003,
+  "lr_decay": false,
+  "clip_grad_norm": false,
+  "use_early_stop": false
 }

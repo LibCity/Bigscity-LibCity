@@ -15,9 +15,14 @@ The model reproduction work in the library has been assisted by several develope
 ||LSTPM|[ssdrywz](https://github.com/ssdrywz), [Jerry18231174](https://github.com/Jerry18231174), [WenMellors](https://github.com/WenMellors)|
 ||GeoSAN|[Reinhard-Tichy](https://github.com/Reinhard-Tichy)|
 ||HSTLSTM|[Creddittale](https://github.com/Creddittale), [WenMellors](https://github.com/WenMellors)|
+|Time Series Prediction|HA|[XBR-1111](https://github.com/XBR-1111), [aptx1231](https://github.com/aptx1231)|
+||ARIMA|[l782993610](https://github.com/l782993610), [aptx1231](https://github.com/aptx1231)|
+||VAR|[excelsior399](https://github.com/excelsior399), [aptx1231](https://github.com/aptx1231)|
+||SVR|[buaacjw](https://github.com/buaacjw), [aptx1231](https://github.com/aptx1231)|
 |Traffic State Prediction|RNN-2|[aptx1231](https://github.com/aptx1231)|
 ||Seq2Seq|[aptx1231](https://github.com/aptx1231)|
 ||AutoEncoder|[aptx1231](https://github.com/aptx1231)|
+||FNN|[NickHan-cs](https://github.com/NickHan-cs)|
 |Traffic Flow Prediction|ACFM|[aptx1231](https://github.com/aptx1231)|
 ||ACFMCommon|[aptx1231](https://github.com/aptx1231)|
 ||AGCRN|[aptx1231](https://github.com/aptx1231)|
@@ -46,13 +51,14 @@ The model reproduction work in the library has been assisted by several develope
 |                                     | STMGAT         | [aptx1231](https://github.com/aptx1231)                      |
 |                                     | TGCN           | [Asabaka](https://github.com/Asabaka), [aptx1231](https://github.com/aptx1231) |
 |                                     | TGCLSTM        | [NickHan-cs](https://github.com/NickHan-cs), [aptx1231](https://github.com/aptx1231) |
-|                                     | GTS            | [t123yh](https://github.com/t123yh), [h9tyf](https://github.com/h9tyf), [aptx1231](https://github.com/aptx1231) |
+|                                     | GTS            | [aptx1231](https://github.com/aptx1231), [buaacjw](https://github.com/buaacjw), [t123yh](https://github.com/t123yh), [h9tyf](https://github.com/h9tyf) |
 |                                     | GMAN           | [huangjiawei128](https://github.com/huangjiawei128), [fry412](https://github.com/fry412) |
 |                                     | ATDM           | [zhangjiahui-buaa](https://github.com/zhangjiahui-buaa)      |
 |                                     | HGCN           | [XBR-1111](https://github.com/XBR-1111), [Matty-blu](https://github.com/Matty-blu), [nan0054](https://github.com/nan0054) |
-|                                     | STAGGCN        | [LarryHawkingYoung](https://github.com/LarryHawkingYoung), [cpxhylty](https://github.com/cpxhylty) |
+|                                     | STAGGCN        | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231) |
 | | DKFN | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231) |
 | | STTN | [NickHan-cs](https://github.com/NickHan-cs) |
+|Traffic Od Prediction|GEML|[l782993610](https://github.com/l782993610)|
 |On-Demand Service Prediction|CCRNN|[aptx1231](https://github.com/aptx1231)|
 |                                     |STG2Seq|[aptx1231](https://github.com/aptx1231), [Stevezzy](https://github.com/Stevezzy)|
 ||DMVSTNet|[l782993610](https://github.com/l782993610), [WANDY666](https://github.com/WANDY666)|

@@ -28,6 +28,7 @@ class TrafficStateExecutor(AbstractExecutor):
         self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
         self._scaler = self.model.get_data_feature().get('scaler')
+        self._logger.info(self.model)
         for name, param in self.model.named_parameters():
             self._logger.info(str(name) + '\t' + str(param.shape) + '\t' +
                               str(param.device) + '\t' + str(param.requires_grad))
