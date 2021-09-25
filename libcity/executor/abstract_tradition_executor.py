@@ -23,7 +23,6 @@ class AbstractTraditionExecutor(AbstractExecutor):
         self._logger = getLogger()
         self._scaler = self.model.get_data_feature().get('scaler')
 
-        # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
         self.output_dim = self.config.get('output_dim', 1)
 
     def evaluate(self, test_dataloader):
@@ -42,7 +41,6 @@ class AbstractTraditionExecutor(AbstractExecutor):
             output = self.model.run(batch)
             y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
             y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
-
             y_truths.append(y_true)
             y_preds.append(y_pred)
 
@@ -60,13 +58,13 @@ class AbstractTraditionExecutor(AbstractExecutor):
 
     def train(self, train_dataloader, eval_dataloader):
         """
-        对于传统模型，不需要训练
+        train model
 
         Args:
             train_dataloader(torch.Dataloader): Dataloader
             eval_dataloader(torch.Dataloader): Dataloader
         """
-        assert True  # do nothing
+        raise NotImplementedError
 
     def save_model(self, cache_name):
         """
