@@ -1,28 +1,32 @@
-import pandas as pd
-import numpy as np
-from sklearn.svm import SVR
 import sys
 import os
 import json
+import pandas as pd
+import numpy as np
+from tqdm import tqdm
+from sklearn.svm import SVR
 root_path = os.path.abspath(__file__)
 root_path = '/'.join(root_path.split('/')[:-2])
 sys.path.append(root_path)
-from libcity.model.loss import *
+from libcity.evaluator.utils import evaluate_model
+from libcity.utils import preprocess_data
 
 
 config = {
+    'model': 'SVR',
+    'kernel': 'rbf',
     'dataset': 'METR_LA',
     'train_rate': 0.7,
     'eval_rate': 0.1,
     'input_window': 12,
     'output_window': 3,
-    'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
-}
+    'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE',
+                'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']}
 
 
 def get_data(dataset):
     # path
-    path = '../raw_data/' + dataset + '/'
+    path = 'raw_data/' + dataset + '/'
     config_path = path + 'config.json'
     dyna_path = path + dataset + '.dyna'
     geo_path = path + dataset + '.geo'
@@ -55,10 +59,6 @@ def get_data(dataset):
     # 求时间序列
     time_slots = list(dyna_file['time'][:int(dyna_file.shape[0] / len(geo_ids))])
 
-    if not dyna_file['time'].isna().any():  # 时间没有空值
-        time_slots = list(map(lambda x: x.replace('T', ' ').replace('Z', ''), time_slots))
-        time_slots = np.array(time_slots, dtype='datetime64[ns]')
-
     # 转3-d数组
     feature_dim = len(dyna_file.columns) - 2
     df = dyna_file[dyna_file.columns[-feature_dim:]]
@@ -66,114 +66,48 @@ def get_data(dataset):
     data = []
     for i in range(0, df.shape[0], len_time):
         data.append(df[i:i + len_time].values)
-    data = np.array(data, dtype=float)  # (num_nodes, len_time, feature_dim)
-    data = data.swapaxes(0, 1)  # (len_time, num_nodes, feature_dim)
+    data = np.array(data, dtype=float)  # (N, T, F)
+    data = data.swapaxes(0, 1)  # (T, N, F)
     return data
 
 
-def preprocess_data(data):
-    train_rate = config.get('train_rate', 0.7)
-    eval_rate = config.get('eval_rate', 0.1)
-
-    input_window = config.get('input_window', 12)
-    output_window = config.get('output_window', 3)
-
-    x, y = [], []
-    for i in range(len(data) - input_window - output_window):
-        a = data[i: i + input_window + output_window]
-        x.append(a[0: input_window])
-        y.append(a[input_window: input_window + output_window])
-    x = np.array(x)
-    y = np.array(y)
-
-    train_size = int(x.shape[0] * (train_rate + eval_rate))
-    trainX = x[:train_size]
-    trainY = y[:train_size]
-    testX = x[train_size:x.shape[0]]
-    testY = y[train_size:x.shape[0]]
-    return trainX, trainY, testX, testY
-
-
-def evaluate(result, testy):
-    metrics = config.get('metrics',
-                ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
-    time_len = testy.shape[0]
-    df = []
-    for i in range(time_len):
-        line = {}
-        for metric in metrics:
-            if metric == 'masked_MAE':
-                line[metric] = masked_mae_np(result[i, :], testy[i, :], 0)
-            elif metric == 'masked_MSE':
-                line[metric] = masked_mse_np(result[i, :], testy[i, :], 0)
-            elif metric == 'masked_RMSE':
-                line[metric] = masked_rmse_np(result[i, :], testy[i, :], 0)
-            elif metric == 'masked_MAPE':
-                line[metric] = masked_mape_np(result[i, :], testy[i, :], 0)
-            elif metric == 'MAE':
-                line[metric] = masked_mae_np(result[i, :], testy[i, :])
-            elif metric == 'MSE':
-                line[metric] = masked_mse_np(result[i, :], testy[i, :])
-            elif metric == 'RMSE':
-                line[metric] = masked_rmse_np(result[i, :], testy[i, :])
-            elif metric == 'MAPE':
-                line[metric] = masked_mape_np(result[i, :], testy[i, :])
-            elif metric == 'R2':
-                line[metric] = r2_score_np(result[i, :], testy[i, :])
-            elif metric == 'EVAR':
-                line[metric] = explained_variance_score_np(result[i, :], testy[i, :])
-                pass
-            else:
-                raise ValueError(
-                    'Error parameter evaluator_mode={}.'.format(metric))
-        df.append(line)
-
-    df = pd.DataFrame(df, columns=metrics)
-    print(df)
-    df.to_csv("result.csv")
-
-
-def train(data, config):
-    num_nodes = data.shape[1]  # num_nodes
-    input_window = config.get("input_window", 12)
+def run_SVR(data):
+    ts, num_nodes, f = data.shape
     output_window = config.get("output_window", 3)
+    kernel = config.get('kernel', 'rbf')
 
-    result = []
-    testy = []
+    y_pred = []
+    y_true = []
+    for i in tqdm(range(num_nodes), 'num_nodes'):
+        trainx, trainy, testx, testy = preprocess_data(data[:, i, :], config)  # (T, F)
+        # (train_size, in/out, F), (test_size, in/out, F)
+        trainx = np.reshape(trainx, (trainx.shape[0], -1))  # (train_size, in * F)
+        trainy = np.reshape(trainy, (trainy.shape[0], -1))  # (train_size, out * F)
+        trainy = np.mean(trainy, axis=1)  # (train_size,)
+        testx = np.reshape(testx, (testx.shape[0], -1))  # (test_size, in * F)
+        print(trainx.shape, trainy.shape, testx.shape, testy.shape)
 
-    for i in range(num_nodes):
-        data1 = np.mat(data)
-        a = data1[:, i]  # (time_len, feature)
-        ax, ay, tx, ty = preprocess_data(a, config)
-        ax = np.array(ax)  # (train_size, input_window, feature)
-        ax = np.reshape(ax, [-1, input_window])  # (train_size * feature, input_window)
-        ay = np.array(ay)  # (train_size, output_window, feature)
-        ay = np.reshape(ay, [-1, output_window])  # (train_size * feature, output_window)
-        ay = np.mean(ay, axis=1)  # (train_size,)
-        tx = np.array(tx)  # (test_size, input_window, feature)
-        tx = np.reshape(tx, [-1, input_window])  # (test_size * feature, input_window)
-        ty = np.array(ty)  # (test_size, output_window, feature)
-        ty = np.reshape(ty, [-1, output_window])  # (test_size * feature, output_window)
-        svr_model = SVR(kernel='rbf')
-        svr_model.fit(ax, ay)
-        pre = svr_model.predict(tx)  # (test_size * feature, )
-        pre = np.array(np.transpose(np.mat(pre)))  # (test_size * feature, 1)
-        pre = pre.repeat(output_window, axis=1)  # (test_size * feature, output_window)
-        result.append(pre)
-        testy.append(ty)
+        svr_model = SVR(kernel=kernel)
+        svr_model.fit(trainx, trainy)
+        pre = svr_model.predict(testx)  # (test_size, )
+        pre = np.expand_dims(pre, axis=1)  # (test_size, 1)
+        pre = pre.repeat(output_window * f, axis=1)  # (test_size, out * F)
+        y_pred.append(pre.reshape(pre.shape[0], output_window, f))
+        y_true.append(testy)
 
-    result = np.array(result)  # (num_nodes, test_size * feature, output_window)
-    testy = np.array(testy)  # (num_nodes, test_size * feature, output_window)
-    result = result.transpose(1, 0, 2)  # (test_size * feature, num_nodes, output_window)
-    testy = testy.transpose(1, 0, 2)  # (test_size * feature, num_nodes, output_window)
-
-    return result, testy
+    y_pred = np.array(y_pred)  # (N, test_size, out, F)
+    y_true = np.array(y_true)  # (N, test_size, out, F)
+    y_pred = y_pred.transpose((1, 2, 0, 3))  # (test_size, out, N, F)
+    y_true = y_true.transpose((1, 2, 0, 3))  # (test_size, out, N, F)
+    return y_pred, y_true
 
 
 def main():
+    print(config)
     data = get_data(config.get('dataset', ''))
-    result, testy = train(data)
-    evaluate(result, testy)
+    y_pred, y_true = run_SVR(data)
+    evaluate_model(y_pred=y_pred, y_true=y_true, metrics=config['metrics'],
+                   path=config['model']+'_'+config['dataset']+'_metrics.csv')
 
 
 if __name__ == '__main__':

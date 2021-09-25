@@ -6,16 +6,21 @@ import os
 root_path = os.path.abspath(__file__)
 root_path = '/'.join(root_path.split('/')[:-2])
 sys.path.append(root_path)
-from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, masked_rmse_np, r2_score_np, explained_variance_score_np
+from libcity.evaluator.utils import evaluate_model
+
 
 config = {
+    'model': 'HA',
+    'lag': [7*24*12, 1],
+    'weight': [0.2, 0.8],
+    'n_sample': [4, 4],
     'dataset': 'METR_LA',
-    'lag': [7*24*12, 24*12, 1],
-    'weight': [0.2, 0, 0.8],
     'train_rate': 0.7,
     'eval_rate': 0.1,
-    'n_sample': 4,
-    'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
+    'input_window': 12,
+    'output_windows': 3,
+    'metrics': ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE',
+                'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR']
 }
 
 
@@ -61,81 +66,55 @@ def get_data(dataset):
     data = []
     for i in range(0, df.shape[0], len_time):
         data.append(df[i:i + len_time].values)
-    data = np.array(data, dtype=float)  # (num_nodes, len_time, feature_dim)
-    data = data.swapaxes(0, 1)  # (len_time, num_nodes, feature_dim)
+    data = np.array(data, dtype=float)  # (N, T, F)
+    data = data.swapaxes(0, 1)  # (T, N, F)
     return data
 
 
 def historical_average(data):
-    t, p, f = data.shape
-    lag = config.get('lag', 7 * 24 * 12)
+    t, n, f = data.shape
     train_rate = config.get('train_rate', 0.7)
     eval_rate = config.get('eval_rate', 0.1)
-    weight = config.get('weight', 1)
+    output_window = config.get('output_window', 3)
+    lag = config.get('lag', 7 * 24 * 12)
+    weight = config.get('weight', 1.0)
     n_sample = config.get('n_sample', 4)
     if isinstance(lag, int):
         lag = [lag]
-        weight = [1]
-    else:
-        assert isinstance(weight, list)
-        assert sum(weight) == 1
+    if isinstance(weight, int) or isinstance(weight, float):
+        weight = [weight]
+    if isinstance(n_sample, int):
+        n_sample = [n_sample]
+    assert sum(weight) == 1
+    assert int(t * (train_rate + eval_rate)) > max(np.array(n_sample) * np.array(lag))
+
     y_true = []
     y_pred = []
     for i in range(int(t * (train_rate + eval_rate)), t):
         # y_true
-        y_true.append(data[i, :, :])
-
+        y_true.append(data[i, :, :])  # (N, F)
         # y_pred
         y_pred_i = 0
         for j in range(len(lag)):
-            y_pred_i += weight[j] * np.mean(data[i - n_sample * lag[j]:i:lag[j], :, :], axis=0)
-        y_pred.append(y_pred_i)
+            # 隔lag[j]时间步采样n_sample[j]次, 得到(n_sample[j], N, F)取平均值得到(N, F), 最后用weight[j]加权
+            y_pred_i += weight[j] * np.mean(data[i - n_sample[j] * lag[j]:i:lag[j], :, :], axis=0)
+        y_pred.append(y_pred_i)  # (N, F)
 
-    y_pred = np.array(y_pred)
-    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)  # (test_size, N, F)
+    y_true = np.array(y_true)  # (test_size, N, F)
+    y_pred = np.expand_dims(y_pred, axis=1)  # (test_size, 1, N, F)
+    y_true = np.expand_dims(y_true, axis=1)  # (test_size, 1, N, F)
+    y_pred = np.repeat(y_pred, output_window, axis=1)  # (test_size, out, N, F)
+    y_true = np.repeat(y_true, output_window, axis=1)  # (test_size, out, N, F)
     return y_pred, y_true
 
 
-def evaluate(result, testy):
-    metrics = config.get('metrics',
-                         ['MAE', 'MAPE', 'MSE', 'RMSE', 'masked_MAE', 'masked_MAPE', 'masked_MSE', 'masked_RMSE', 'R2', 'EVAR'])
-    df = []
-    line = {}
-    for metric in metrics:
-        if metric == 'masked_MAE':
-            line[metric] = masked_mae_np(result, testy, 0)
-        elif metric == 'masked_MSE':
-            line[metric] = masked_mse_np(result, testy, 0)
-        elif metric == 'masked_RMSE':
-            line[metric] = masked_rmse_np(result, testy, 0)
-        elif metric == 'masked_MAPE':
-            line[metric] = masked_mape_np(result, testy, 0)
-        elif metric == 'MAE':
-            line[metric] = masked_mae_np(result, testy)
-        elif metric == 'MSE':
-            line[metric] = masked_mse_np(result, testy)
-        elif metric == 'RMSE':
-            line[metric] = masked_rmse_np(result, testy)
-        elif metric == 'MAPE':
-            line[metric] = masked_mape_np(result, testy)
-        elif metric == 'R2':
-            line[metric] = r2_score_np(result, testy)
-        elif metric == 'EVAR':
-            line[metric] = explained_variance_score_np(result, testy)
-        else:
-            raise ValueError(
-                'Error parameter evaluator_mode={}.'.format(metric))
-    df.append(line)
-
-    df = pd.DataFrame(df, columns=metrics)
-    print(df)
-    df.to_csv("result.csv")
-
-
 def main():
+    print(config)
     data = get_data(config.get('dataset', ''))
     y_pred, y_true = historical_average(data)
-    evaluate(y_pred, y_true)
+    evaluate_model(y_pred=y_pred, y_true=y_true, metrics=config['metrics'],
+                   path=config['model']+'_'+config['dataset']+'_metrics.csv')
 
 
 if __name__ == '__main__':
