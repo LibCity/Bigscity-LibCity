@@ -17,8 +17,8 @@ The model reproduction work in the library has been assisted by several develope
 ||HSTLSTM|[Creddittale](https://github.com/Creddittale), [WenMellors](https://github.com/WenMellors)|
 |Time Series Prediction|HA|[XBR-1111](https://github.com/XBR-1111), [aptx1231](https://github.com/aptx1231)|
 ||ARIMA|[l782993610](https://github.com/l782993610), [aptx1231](https://github.com/aptx1231)|
-||VAR|[excelsior399](https://github.com/excelsior399), [aptx1231](https://github.com/aptx1231)|
-||SVR|[buaacjw](https://github.com/buaacjw), [aptx1231](https://github.com/aptx1231)|
+||VAR|[aptx1231](https://github.com/aptx1231), [excelsior399](https://github.com/excelsior399)|
+||SVR| [aptx1231](https://github.com/aptx1231), [buaacjw](https://github.com/buaacjw) |
 |Traffic State Prediction|RNN-2|[aptx1231](https://github.com/aptx1231)|
 ||Seq2Seq|[aptx1231](https://github.com/aptx1231)|
 ||AutoEncoder|[aptx1231](https://github.com/aptx1231)|
