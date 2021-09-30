@@ -15,8 +15,5 @@
   "step_size": 20,
   "lr_decay_ratio": 0.3,
   "clip_grad_norm": false,
-  "use_early_stop": true,
-  "output_window": 12,
-  "input_window": 12,
-  "batch_size": 64
+  "use_early_stop": true
 }

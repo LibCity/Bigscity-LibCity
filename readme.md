@@ -4,7 +4,7 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.github.io/Bigscity-LibCity-Website)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://lib-city.com/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
 
 LibCity is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 

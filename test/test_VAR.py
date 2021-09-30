@@ -3,17 +3,18 @@ import numpy as np
 import json
 import sys
 import os
+from statsmodels.tsa.api import VAR
 root_path = os.path.abspath(__file__)
 root_path = '/'.join(root_path.split('/')[:-2])
 sys.path.append(root_path)
+from libcity.utils import StandardScaler
 from libcity.evaluator.utils import evaluate_model
+from libcity.utils import preprocess_data
 
 
 config = {
-    'model': 'HA',
-    'lag': [7*24*12, 1],
-    'weight': [0.2, 0.8],
-    'n_sample': [4, 4],
+    'model': 'VAR',
+    'maxlags': 1,
     'dataset': 'METR_LA',
     'train_rate': 0.7,
     'eval_rate': 0.1,
@@ -71,49 +72,37 @@ def get_data(dataset):
     return data
 
 
-def historical_average(data):
-    t, n, f = data.shape
+def run_VAR(data, inputs):
+    ts, points, f = data.shape
     train_rate = config.get('train_rate', 0.7)
     eval_rate = config.get('eval_rate', 0.1)
     output_window = config.get('output_window', 3)
-    lag = config.get('lag', 7 * 24 * 12)
-    weight = config.get('weight', 1.0)
-    n_sample = config.get('n_sample', 4)
-    if isinstance(lag, int):
-        lag = [lag]
-    if isinstance(weight, int) or isinstance(weight, float):
-        weight = [weight]
-    if isinstance(n_sample, int):
-        n_sample = [n_sample]
-    assert sum(weight) == 1
-    assert int(t * (train_rate + eval_rate)) > max(np.array(n_sample) * np.array(lag))
+    maxlags = config.get("maxlag", 1)
 
-    y_true = []
-    y_pred = []
-    for i in range(int(t * (train_rate + eval_rate)), t):
-        # y_true
-        y_true.append(data[i, :, :])  # (N, F)
-        # y_pred
-        y_pred_i = 0
-        for j in range(len(lag)):
-            # 隔lag[j]时间步采样n_sample[j]次, 得到(n_sample[j], N, F)取平均值得到(N, F), 最后用weight[j]加权
-            y_pred_i += weight[j] * np.mean(data[i - n_sample[j] * lag[j]:i:lag[j], :, :], axis=0)
-        y_pred.append(y_pred_i)  # (N, F)
+    data = data.reshape(ts, -1)[:int(ts * (train_rate + eval_rate))]  # (train_size, N * F)
+    scaler = StandardScaler(data.mean(), data.std())
+    data = scaler.transform(data)
 
-    y_pred = np.array(y_pred)  # (test_size, N, F)
-    y_true = np.array(y_true)  # (test_size, N, F)
-    y_pred = np.expand_dims(y_pred, axis=1)  # (test_size, 1, N, F)
-    y_true = np.expand_dims(y_true, axis=1)  # (test_size, 1, N, F)
-    y_pred = np.repeat(y_pred, output_window, axis=1)  # (test_size, out, N, F)
-    y_true = np.repeat(y_true, output_window, axis=1)  # (test_size, out, N, F)
-    return y_pred, y_true
+    model = VAR(data)
+    results = model.fit(maxlags=maxlags, ic='aic')
+
+    inputs = inputs.reshape(inputs.shape[0], inputs.shape[1], -1)  # (num_samples, out, N * F)
+    y_pred = []  # (num_samples, out, N, F)
+    for sample in inputs:  # (out, N * F)
+        sample = scaler.transform(sample[-maxlags:])  # (T, N, F)
+        out = results.forecast(sample, output_window)  # (out, N * F)
+        out = scaler.inverse_transform(out)  # (out, N * F)
+        y_pred.append(out.reshape(output_window, points, f))
+    y_pred = np.array(y_pred)  # (num_samples, out, N, F)
+    return y_pred
 
 
 def main():
     print(config)
     data = get_data(config.get('dataset', ''))
-    y_pred, y_true = historical_average(data)
-    evaluate_model(y_pred=y_pred, y_true=y_true, metrics=config['metrics'],
+    trainx, trainy, testx, testy = preprocess_data(data, config)
+    y_pred = run_VAR(data, testx)
+    evaluate_model(y_pred=y_pred, y_true=testy, metrics=config['metrics'],
                    path=config['model']+'_'+config['dataset']+'_metrics.csv')
 
 

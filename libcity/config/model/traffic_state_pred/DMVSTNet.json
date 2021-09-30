@@ -1,4 +1,13 @@
 {
+  "line_order": 2,
+  "line_negsamplesize": 5,
+  "line_dimension": 32,
+  "line_batchsize": 5,
+  "line_epochs": 2,
+  "line_learning_rate": 0.025,
+  "line_negativepower": 0.75,
+  "semantic_dim": 6,
+
   "scaler": "minmax01",
   "load_external": true,
   "normal_external": false,
@@ -6,6 +15,7 @@
   "add_time_in_day": true,
   "add_day_in_week": false,
   "use_row_column": true,
+
   "max_epoch": 100,
   "learner": "adam",
   "learning_rate": 0.001,
@@ -15,13 +25,5 @@
   "lr_decay": false,
   "clip_grad_norm": false,
   "use_early_stop": true,
-  "patience": 50,
-  "line_order": 2,
-  "line_negsamplesize": 5,
-  "line_dimension": 32,
-  "line_batchsize": 5,
-  "line_epochs": 2,
-  "line_learning_rate": 0.025,
-  "line_negativepower": 0.75,
-  "semantic_dim": 6
+  "patience": 50
 }

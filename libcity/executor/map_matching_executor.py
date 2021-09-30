@@ -24,3 +24,12 @@ class MapMatchingExecutor(AbstractTraditionExecutor):
         self.evaluator.collect(batch)
         self.evaluator.save_result(self.evaluate_res_dir)
 
+    def train(self, train_dataloader, eval_dataloader):
+        """
+        对于传统模型，不需要训练
+
+        Args:
+            train_dataloader(torch.Dataloader): Dataloader
+            eval_dataloader(torch.Dataloader): Dataloader
+        """
+        assert True  # do nothing

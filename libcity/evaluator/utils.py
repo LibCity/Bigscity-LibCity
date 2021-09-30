@@ -1,5 +1,7 @@
 import json
 from heapq import nlargest
+import pandas as pd
+from libcity.model.loss import *
 
 
 def output(method, value, field):
@@ -74,3 +76,82 @@ def sort_confidence_ids(confidence_list, threshold):
     max_score_with_id = nlargest(
         threshold, enumerate(confidence_list), lambda x: x[1])
     return list(map(lambda x: x[0], max_score_with_id))
+
+
+def evaluate_model(y_pred, y_true, metrics, mode='single', path='metrics.csv'):
+    """
+    交通状态预测评估函数
+    :param y_pred: (num_samples/batch_size, timeslots, ..., feature_dim)
+    :param y_true: (num_samples/batch_size, timeslots, ..., feature_dim)
+    :param metrics: 评估指标
+    :param mode: 单步or多步平均
+    :param path: 保存结果
+    :return:
+    """
+    if y_true.shape != y_pred.shape:
+        raise ValueError("y_true.shape is not equal to y_pred.shape")
+    len_timeslots = y_true.shape[1]
+    if isinstance(y_pred, np.ndarray):
+        y_pred = torch.FloatTensor(y_pred)
+    if isinstance(y_true, np.ndarray):
+        y_true = torch.FloatTensor(y_true)
+    assert isinstance(y_pred, torch.Tensor)
+    assert isinstance(y_true, torch.Tensor)
+
+    df = []
+    for i in range(1, len_timeslots + 1):
+        line = {}
+        for metric in metrics:
+            if mode.lower() == 'single':
+                if metric == 'masked_MAE':
+                    line[metric] = masked_mae_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
+                elif metric == 'masked_MSE':
+                    line[metric] = masked_mse_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
+                elif metric == 'masked_RMSE':
+                    line[metric] = masked_rmse_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
+                elif metric == 'masked_MAPE':
+                    line[metric] = masked_mape_torch(y_pred[:, i - 1], y_true[:, i - 1], 0).item()
+                elif metric == 'MAE':
+                    line[metric] = masked_mae_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                elif metric == 'MSE':
+                    line[metric] = masked_mse_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                elif metric == 'RMSE':
+                    line[metric] = masked_rmse_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                elif metric == 'MAPE':
+                    line[metric] = masked_mape_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                elif metric == 'R2':
+                    line[metric] = r2_score_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                elif metric == 'EVAR':
+                    line[metric] = explained_variance_score_torch(y_pred[:, i - 1], y_true[:, i - 1]).item()
+                else:
+                    raise ValueError('Error parameter mode={}, please set `single` or `average`.'.format(mode))
+            elif mode.lower() == 'average':
+                if metric == 'masked_MAE':
+                    line[metric] = masked_mae_torch(y_pred[:, :i], y_true[:, :i], 0).item()
+                elif metric == 'masked_MSE':
+                    line[metric] = masked_mse_torch(y_pred[:, :i], y_true[:, :i], 0).item()
+                elif metric == 'masked_RMSE':
+                    line[metric] = masked_rmse_torch(y_pred[:, :i], y_true[:, :i], 0).item()
+                elif metric == 'masked_MAPE':
+                    line[metric] = masked_mape_torch(y_pred[:, :i], y_true[:, :i], 0).item()
+                elif metric == 'MAE':
+                    line[metric] = masked_mae_torch(y_pred[:, :i], y_true[:, :i]).item()
+                elif metric == 'MSE':
+                    line[metric] = masked_mse_torch(y_pred[:, :i], y_true[:, :i]).item()
+                elif metric == 'RMSE':
+                    line[metric] = masked_rmse_torch(y_pred[:, :i], y_true[:, :i]).item()
+                elif metric == 'MAPE':
+                    line[metric] = masked_mape_torch(y_pred[:, :i], y_true[:, :i]).item()
+                elif metric == 'R2':
+                    line[metric] = r2_score_torch(y_pred[:, :i], y_true[:, :i]).item()
+                elif metric == 'EVAR':
+                    line[metric] = explained_variance_score_torch(y_pred[:, :i], y_true[:, :i]).item()
+                else:
+                    raise ValueError('Error parameter metric={}!'.format(metric))
+            else:
+                raise ValueError('Error parameter evaluator_mode={}, please set `single` or `average`.'.format(mode))
+        df.append(line)
+    df = pd.DataFrame(df, columns=metrics)
+    print(df)
+    df.to_csv(path)
+    return df

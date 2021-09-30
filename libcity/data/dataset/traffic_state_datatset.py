@@ -116,7 +116,6 @@ class TrafficStateDataset(AbstractDataset):
         """
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)],
         生成N*N的矩阵，其中权重所在的列名用全局参数`weight_col`来指定,
-        .rel文件中缺少的位置的权重填充为np.inf,
         全局参数`calculate_weight_adj`表示是否需要对加载的.rel的默认权重进行进一步计算,
         如果需要，则调用函数self._calculate_adjacency_matrix()进行计算
 
