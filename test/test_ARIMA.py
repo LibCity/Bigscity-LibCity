@@ -1,11 +1,9 @@
 import json
 import os
 import sys
-import warnings
 
 import numpy as np
 import pandas as pd
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.model import ARIMA
 
 from libcity.model.loss import masked_mae_np, masked_mape_np, masked_mse_np, masked_rmse_np, r2_score_np, \
@@ -158,6 +156,7 @@ def order_select_pred(data):
                     if cur_res.bic < bic:
                         bic = cur_res.bic
                         res = cur_res
+
     return res  # (T, F)
 
 
