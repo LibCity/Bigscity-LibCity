@@ -9,7 +9,7 @@ from libcity.model import utils
 
 class ChebConvModule(nn.Module):
     """
-    路网表征模型的基类并不同意
+    路网表征模型的基类并不统一
     图卷积，将N*C的输入矩阵映射成N*F的输出矩阵，其中邻接矩阵形状N*N。
     """
     def __init__(self, num_nodes, max_diffusion_step, adj_mx,
@@ -107,8 +107,13 @@ class ChebConv(AbstractTrafficStateModel):
     def forward(self, batch):
         """
         自回归任务
-        :param batch: N, feature_dim
-        :return: N, feature_dim
+
+        Args:
+            batch: dict, need key 'node_features' contains tensor shape=(N, feature_dim)
+
+        Returns:
+            torch.tensor: N, feature_dim
+
         """
         inputs = batch['node_features']
         encoder_state = self.encoder(inputs)  # N, output_dim
@@ -119,6 +124,14 @@ class ChebConv(AbstractTrafficStateModel):
         return output
 
     def calculate_loss(self, batch):
+        """
+
+        Args:
+            batch: dict, need key 'node_features', 'node_labels', 'mask'
+
+        Returns:
+
+        """
         y_true = batch['node_labels']  # N, feature_dim
         y_predicted = self.predict(batch)  # N, feature_dim
         y_true = self._scaler.inverse_transform(y_true)
@@ -127,4 +140,13 @@ class ChebConv(AbstractTrafficStateModel):
         return loss.masked_mse_torch(y_predicted[mask], y_true[mask])
 
     def predict(self, batch):
+        """
+
+        Args:
+            batch: dict, need key 'node_features'
+
+        Returns:
+            torch.tensor
+
+        """
         return self.forward(batch)

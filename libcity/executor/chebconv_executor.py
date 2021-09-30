@@ -17,7 +17,6 @@ class ChebConvExecutor(TrafficStateExecutor):
 
         Args:
         """
-        # test_dataloader.to_tensor(self.device)
         self.evaluator.evaluate()
 
         node_features = torch.FloatTensor(test_dataloader['node_features']).to(self.device)
@@ -114,7 +113,6 @@ class ChebConvExecutor(TrafficStateExecutor):
         Returns:
             list: 每个batch的损失的数组
         """
-        # train_dataloader.to_tensor(self.device)
         node_features = torch.FloatTensor(train_dataloader['node_features']).to(self.device)
         node_labels = node_features.clone()
         train_mask = train_dataloader['mask']
@@ -141,7 +139,6 @@ class ChebConvExecutor(TrafficStateExecutor):
         Returns:
             float: 评估数据的平均损失值
         """
-        # eval_dataloader.to_tensor(self.device)
         node_features = torch.FloatTensor(eval_dataloader['node_features']).to(self.device)
         node_labels = node_features.clone()
         valid_mask = eval_dataloader['mask']

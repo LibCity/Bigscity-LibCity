@@ -4,7 +4,6 @@ import numpy as np
 import scipy.sparse as sp
 from logging import getLogger
 
-from libcity.data.batch import Batch
 from libcity.utils import StandardScaler, NormalScaler, NoneScaler, \
     MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
 from libcity.data.dataset import AbstractDataset
@@ -34,9 +33,6 @@ class ChebConvDataset(AbstractDataset):
         self.geo_file = self.config.get('geo_file', self.dataset)
         self.rel_file = self.config.get('rel_file', self.dataset)
         # 初始化
-        # self.feature_name = {'node_features': 'float', 'train_mask': 'no_tensor',
-        #                      'valid_mask': 'no_tensor', 'test_mask': 'no_tensor'}
-        self.feature_name = {'node_features': 'float', 'mask': 'no_tensor'}
         self.adj_mx = None
         self.scaler = None
         self.feature_dim = 0
@@ -219,13 +215,6 @@ class ChebConvDataset(AbstractDataset):
         self.train_dataloader = {'node_features': node_features, 'mask': train_mask}
         self.eval_dataloader = {'node_features': node_features, 'mask': valid_mask}
         self.test_dataloader = {'node_features': node_features, 'mask': test_mask}
-        # TODO: 这里用Batch不是很方便
-        # self.train_dataloader = Batch(self.feature_name)
-        # self.train_dataloader.append([node_features, train_mask])
-        # self.eval_dataloader = Batch(self.feature_name)
-        # self.eval_dataloader.append([node_features, valid_mask])
-        # self.test_dataloader = Batch(self.feature_name)
-        # self.test_dataloader.append([node_features, test_mask])
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
 
     def get_data_feature(self):
