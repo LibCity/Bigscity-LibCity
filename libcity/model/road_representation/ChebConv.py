@@ -7,7 +7,6 @@ from libcity.model import loss
 from libcity.model import utils
 
 
-# TODO: GPU测试
 class ChebConvModule(nn.Module):
     """
     路网表征模型的基类并不同意
