@@ -4,23 +4,27 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://lib-city.com/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
 
 LibCity is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 
 LibCity currently supports the following tasks:
 
+* Time Series Prediction
 * Traffic State Prediction
   * Traffic Flow Prediction
   * Traffic Speed Prediction
   * On-Demand Service Prediction
+  * OD Matrix Prediction
 * Trajectory Next-Location Prediction
+* Map Matching
+* Road Network Representation Learning
 
 ## Features
 
 * **Unified**: LibCity builds a systematic pipeline to implement, use and evaluate traffic prediction models in a unified platform. We design basic spatial-temporal data storage, unified model instantiation interfaces, and standardized evaluation procedure.
 
-* **Comprehensive**: 42 models covering four traffic prediction tasks have been reproduced to form a comprehensive model warehouse. Meanwhile, LibCity collects 29 commonly used datasets of different sources and implements a series of commonly used evaluation metrics and strategies for performance evaluation. 
+* **Comprehensive**: 54 models covering 8 traffic prediction tasks have been reproduced to form a comprehensive model warehouse. Meanwhile, LibCity collects 29 commonly used datasets of different sources and implements a series of commonly used evaluation metrics and strategies for performance evaluation. 
 
 * **Extensible**: LibCity enables a modular design of different components, allowing users to flexibly insert customized components into the library. Therefore, new researchers can easily develop new models with the support of LibCity.
 
@@ -59,7 +63,7 @@ For example:
 python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 ```
 
-This script will run the GRU model on the METR_LA dataset for traffic state prediction task under the default configuration. 
+This script will run the GRU model on the METR_LA dataset for traffic state prediction task under the default configuration.  We have released the correspondence between datasets, models, and tasks at [here](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/data/dataset_for_task.html).
 
 More details is represented in [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/get_started/quick_start.html).
 
