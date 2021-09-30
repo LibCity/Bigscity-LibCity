@@ -345,5 +345,18 @@
             "executor": "MapMatchingExecutor",
             "evaluator": "MapMatchingEvaluator"
         }
+    },
+    "road_representation": {
+        "allowed_model": [
+            "ChebConv"
+        ],
+        "allowed_dataset": [
+            "BJ_roadmap"
+        ],
+        "ChebConv": {
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        }
     }
 }
