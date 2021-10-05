@@ -18,5 +18,4 @@ networkx==2.5.1
 gensim==4.0.1
 torchtext==0.6.0
 nltk==3.2.4
-torch_scatter==2.0.7
 statsmodels==0.11.0
