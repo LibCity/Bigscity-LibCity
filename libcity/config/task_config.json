@@ -330,7 +330,7 @@
     },
     "map_matching": {
         "allowed_model": [
-            "STMatching", "IVMM"
+            "STMatching", "IVMM", "HMMM"
         ],
         "allowed_dataset": [
             "global", "Seattle"
@@ -341,6 +341,11 @@
             "evaluator": "MapMatchingEvaluator"
         },
         "IVMM": {
+            "dataset_class": "MapMatchingDataset",
+            "executor": "MapMatchingExecutor",
+            "evaluator": "MapMatchingEvaluator"
+        },
+        "HMMM": {
             "dataset_class": "MapMatchingDataset",
             "executor": "MapMatchingExecutor",
             "evaluator": "MapMatchingEvaluator"
