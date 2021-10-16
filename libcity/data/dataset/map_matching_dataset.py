@@ -178,7 +178,6 @@ class MapMatchingDataset(AbstractDataset):
             np.ndarray: 数据数组
         """
         dynafile = pd.read_csv(self.data_path + self.dyna_file + '.dyna')
-
         if not ['trajectory'] == self.config['dyna']['including_types']:
             raise ValueError('.dyna file should include trajectory type in Map Matching task!')
         if not self.config['dyna']['trajectory']["entity_id"] == "usr_id":
@@ -187,22 +186,34 @@ class MapMatchingDataset(AbstractDataset):
             raise ValueError('location should be geo_id in Map Matching task!')
 
         self.trajectory = {}
+        self.multi_traj = 'traj_id' in dynafile.keys()
         for index, row in dynafile.iterrows():
-            if row[3] not in self.usr_lst:
-                raise ValueError('entity_id %d should be in usr_ids in Map Matching task!' % row[3])
-            if row[4] not in self.geo_data.keys():
-                raise ValueError('location %d should be in geo_ids in Map Matching task!' % row[4])
+            if row['entity_id'] not in self.usr_lst:
+                raise ValueError('entity_id %d should be in usr_ids in Map Matching task!' % row['entity_id'])
+            if row['location'] not in self.geo_data.keys():
+                raise ValueError('location %d should be in geo_ids in Map Matching task!' % row['location'])
+            traj_id = row['traj_id'] if self.multi_traj else 0
             if self.with_time:
-                if row[3] in self.trajectory.keys():
-                    self.trajectory[row[3]].append([row[0]] + self.geo_data[row[4]] + [parse_time(row[2])])
+                if row['entity_id'] in self.trajectory.keys():
+                    if traj_id in self.trajectory[row['entity_id']].keys():
+                        self.trajectory[row['entity_id']][traj_id].append(
+                            [row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])])
+                    else:
+                        self.trajectory[row['entity_id']][traj_id] = \
+                            [[row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])]]
                 else:
-                    self.trajectory[row[3]] = [[row[0]] + self.geo_data[row[4]] + [parse_time(row[2])]]
-            else:
-                if row[3] in self.trajectory.keys():
-                    self.trajectory[row[3]].append([row[0]] + self.geo_data[row[4]])
-                else:
-                    self.trajectory[row[3]] = [[row[0]] + self.geo_data[row[4]]]
+                    self.trajectory[row['entity_id']] = \
+                        {traj_id: [[row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])]]}
 
+            else:
+                if row['entity_id'] in self.trajectory.keys():
+                    if traj_id in self.trajectory[row['entity_id']].keys():
+                        self.trajectory[row['entity_id']][traj_id].append(
+                            [row['dyna_id']] + self.geo_data[row['location']])
+                    else:
+                        self.trajectory[row['entity_id']][traj_id] = [[row['dyna_id']] + self.geo_data[row['location']]]
+                else:
+                    self.trajectory[row['entity_id']] = {traj_id: [[row['dyna_id']] + self.geo_data[row['location']]]}
         if self.delta_time and self.with_time:
             for usr_id, trajectory in self.trajectory.items():
                 t0 = trajectory[0][3]
@@ -211,7 +222,8 @@ class MapMatchingDataset(AbstractDataset):
                     trajectory[i][3] = (trajectory[i][3] - t0).seconds
 
         for key, value in self.trajectory.items():
-            self.trajectory[key] = np.array(value)
+            for key_i, value_i in value.items():
+                self.trajectory[key][key_i] = np.array(value_i)
 
         self._logger.info("Loaded file " + self.dyna_file + '.dyna, num of GPS samples=' + str(dynafile.shape[0]))
 
@@ -222,12 +234,27 @@ class MapMatchingDataset(AbstractDataset):
 
         """
         routefile = pd.read_csv(self.data_path + self.route_file + '.route')
-        lst = routefile.values.tolist()
-        if type(lst[0][0]) is int:
-            array = np.array(list(map(lambda x: x[0], lst)))
-        else:
-            array = np.array(list(map(lambda x: eval(x[0]), lst)))
-        self.route = array
+        self.route = {}
+        multi_traj = 'traj_id' in routefile.keys()
+        if multi_traj != self.multi_traj:
+            raise ValueError('cannot match traj_id in route file and dyna file')
+        for index, row in routefile.iterrows():
+            usr_id = int(row['usr_id'])
+            if usr_id not in self.usr_lst:
+                raise ValueError('usr_id %d should be in usr_ids in Map Matching task!' % usr_id)
+            traj_id = row['traj_id'] if multi_traj else 0
+
+            if usr_id in self.route.keys():
+                if traj_id in self.route[usr_id].keys():
+                    self.route[usr_id][traj_id].append([row['route_id'], row['rel_id']])
+                else:
+                    self.route[usr_id][traj_id] = [[row['route_id'], row['rel_id']]]
+            else:
+                self.route[usr_id] = {traj_id: [[row['route_id'], row['rel_id']]]}
+
+        for key, value in self.route.items():
+            for key_i, value_i in value.items():
+                self.route[key][key_i] = np.array(value_i)
 
         self._logger.info("Loaded file " + self.route_file + '.route, route length=' + str(routefile.shape[0]))
 
@@ -247,11 +274,13 @@ class MapMatchingDataset(AbstractDataset):
             self._logger.info('Loading ' + self.cache_file_name)
             with open(self.cache_file_name, 'rb') as f:
                 res = pickle.load(f)
+                self.multi_traj = res['multi_traj']
             return None, None, res
         res = dict()
         res['trajectory'] = self.trajectory
         res['rd_nwk'] = self.rd_nwk
         res['route'] = self.route
+        res['multi_traj'] = self.multi_traj
         with open(self.cache_file_name, 'wb') as f:
             pickle.dump(res, f)
         self._logger.info('Saved at ' + self.cache_file_name)
@@ -268,4 +297,5 @@ class MapMatchingDataset(AbstractDataset):
         res['with_time'] = self.with_time
         res['with_rd_speed'] = self.with_rd_speed
         res['delta_time'] = self.delta_time
+        res['multi_traj'] = self.multi_traj
         return res
