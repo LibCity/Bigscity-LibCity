@@ -1,12 +1,10 @@
 import datetime
-import pickle
-
 
 import numpy as np
 import pandas as pd
 
 
-from libcity.data.dataset import TrafficStateGridDataset, TrafficStateCPTDataset
+from libcity.data.dataset import TrafficStateCPTDataset
 
 
 class GSNetDataset(TrafficStateCPTDataset):
@@ -35,7 +33,7 @@ class GSNetDataset(TrafficStateCPTDataset):
         self.data_col_risk_mask = self.config.get('data_col_risk_mask', 'risk_mask')
         self.data_col_grid_node_map = self.config.get('data_col_grid_node_map', 'grid_node_map')
 
-        self._load_dyna2(self.dataset)
+        self._load_risk_mask(self.dataset)
 
     def _load_rel(self):
         try:
@@ -81,27 +79,30 @@ class GSNetDataset(TrafficStateCPTDataset):
         return result
 
     # for grid-based auxillary matrices
-    def _load_dyna2(self, filename):
+    def _load_risk_mask(self, filename):
         self._logger.info("Loading file " + filename + ".geo")
         df = pd.read_csv(self.data_path + filename + '.geo')
-        self._logger.info("Loading file " + filename + ".grid")
-        df2 = pd.read_csv(self.data_path + filename + '.grid')
         # column first, reflecting the model's preference
-        num_columns, num_rows = df2['column_id'].max() + 1, df2['row_id'].max() + 1
+        len_row, len_column = self.len_row, self.len_column
         num_graph_nodes = len(df)
         risk_mask_values = []
-        for i in range(len(df2)):
-            if i % (len(df2) / num_rows / num_columns) == 0:
-                risk_mask_values.append(df2['risk_mask'][i])
+        k = 0
+        for i in range(len_row):
+            for j in range(len_column):
+                if k < num_graph_nodes and i == df['row_id'][k] and j == df['column_id'][k]:
+                    risk_mask_values.append(df['risk_mask'][k])
+                    k += 1
+                else:
+                    risk_mask_values.append(0.0)
         grid_node_map_values = []
-        for i in range(num_rows * num_columns):
+        for i in range(len_row * len_column):
             grid_node_map_values.append([0.0] * num_graph_nodes)
         for i in range(num_graph_nodes):
-            index = df['row_id'][i] * num_columns + df['column_id'][i]
+            index = df['row_id'][i] * len_column + df['column_id'][i]
             grid_node_map_values[index][df['geo_id'][i]] = 1.0
 
-        self.risk_mask = np.array(risk_mask_values, dtype=np.float32).reshape(num_columns, num_rows)
-        self.grid_node_map = np.array(grid_node_map_values, dtype=np.float32).reshape(num_columns * num_rows,
+        self.risk_mask = np.array(risk_mask_values, dtype=np.float32).reshape(len_column, len_row)
+        self.grid_node_map = np.array(grid_node_map_values, dtype=np.float32).reshape(len_column * len_row,
                                                                                       num_graph_nodes)
 
     def _get_external_array(self, ts, ext_data=None, previous_ext=False):
@@ -145,10 +146,10 @@ class GSNetDataset(TrafficStateCPTDataset):
         d = {
                 "scaler": self.scaler,
                 "num_batches": self.num_batches,
-                "feature_dim": self.feature_dim, 
+                "feature_dim": self.feature_dim,
                 "ext_dim": self.ext_dim,
                 "output_dim": self.output_dim,
-                "len_row": self.len_row, 
+                "len_row": self.len_row,
                 "len_column": self.len_column
         }
 

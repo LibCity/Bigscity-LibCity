@@ -40,13 +40,13 @@ class GCNLayer(nn.Module):
 
 class STGeoModule(nn.Module):
     def __init__(self, grid_in_channel, num_of_gru_layers,
-                 seq_len,
+                 input_window,
                  gru_hidden_size, num_of_target_time_feature):
         """
         Arguments:
             grid_in_channel {int} -- the number of grid data feature (batch_size,T,D,W,H),grid_in_channel=D
             num_of_gru_layers {int} -- the number of GRU layers
-            seq_len {int} -- the time length of input
+            input_window {int} -- the time length of input
             gru_hidden_size {int} -- the hidden size of GRU
             num_of_target_time_feature {int} -- the number of target time feature, 24(hour)+7(week)+1(holiday)=32
         """
@@ -61,14 +61,14 @@ class STGeoModule(nn.Module):
         self.grid_gru = nn.GRU(grid_in_channel, gru_hidden_size, num_of_gru_layers, batch_first=True)
 
         self.grid_att_fc1 = nn.Linear(in_features=gru_hidden_size, out_features=1)
-        self.grid_att_fc2 = nn.Linear(in_features=num_of_target_time_feature, out_features=seq_len)
+        self.grid_att_fc2 = nn.Linear(in_features=num_of_target_time_feature, out_features=input_window)
         self.grid_att_bias = nn.Parameter(torch.zeros(1))
         self.grid_att_softmax = nn.Softmax(dim=-1)
 
     def forward(self, grid_input, target_time_feature):
         """
         Arguments:
-            grid_input {Tensor} -- grid input，shape：(batch_size,seq_len,D,W,H)
+            grid_input {Tensor} -- grid input，shape：(batch_size,input_window,D,W,H)
             target_time_feature {Tensor} -- the feature of target time，shape：(batch_size,num_target_time_feature)
         Returns:
             {Tensor} -- shape：(batch_size,hidden_size,W,H)
@@ -98,15 +98,15 @@ class STGeoModule(nn.Module):
 
 class STSemModule(nn.Module):
     def __init__(self, num_of_graph_feature, nums_of_graph_filters,
-                 seq_len,
+                 input_window,
                  num_of_gru_layers, gru_hidden_size,
                  num_of_target_time_feature, north_south_map, west_east_map):
         """
         Arguments:
             num_of_graph_feature {int} -- the number of graph node feature,
-                                          (batch_size,seq_len,D,N),num_of_graph_feature=D
+                                          (batch_size,input_window,D,N),num_of_graph_feature=D
             nums_of_graph_filters {list} -- the number of GCN output feature
-            seq_len {int} -- the time length of input
+            input_window {int} -- the time length of input
             num_of_gru_layers {int} -- the number of GRU layers
             gru_hidden_size {int} -- the hidden size of GRU
             num_of_target_time_feature {int} -- the number of target time feature, 24(hour)+7(week)+1(holiday)=32
@@ -141,7 +141,7 @@ class STSemModule(nn.Module):
         self.graph_gru = nn.GRU(num_of_filter, gru_hidden_size, num_of_gru_layers, batch_first=True)
 
         self.graph_att_fc1 = nn.Linear(in_features=gru_hidden_size, out_features=1)
-        self.graph_att_fc2 = nn.Linear(in_features=num_of_target_time_feature, out_features=seq_len)
+        self.graph_att_fc2 = nn.Linear(in_features=num_of_target_time_feature, out_features=input_window)
         self.graph_att_bias = nn.Parameter(torch.zeros(1))
         self.graph_att_softmax = nn.Softmax(dim=-1)
 
@@ -157,7 +157,7 @@ class STSemModule(nn.Module):
             target_time_feature {Tensor} -- the feature of target time，shape：(batch_size,num_target_time_feature)
             grid_node_map {np.array} -- map graph data to grid data,shape (W*H,N)
         Returns:
-            {Tensor} -- shape：(batch_size,pre_len,north_south_map,west_east_map)
+            {Tensor} -- shape：(batch_size,output_window,north_south_map,west_east_map)
         """
         batch_size, T, D1, N = graph_feature.shape
 
@@ -203,7 +203,7 @@ class STSemModule(nn.Module):
 class _GSNet(nn.Module):
     def __init__(self,
                  grid_in_channel, num_of_gru_layers,
-                 seq_len, pre_len,
+                 input_window, output_window,
                  gru_hidden_size,
                  num_of_target_time_feature, num_of_graph_feature, nums_of_graph_filters,
                  north_south_map, west_east_map):
@@ -213,11 +213,11 @@ class _GSNet(nn.Module):
         Arguments:
             grid_in_channel {int} -- the number of grid data feature (batch_size,T,D,W,H),grid_in_channel=D
             num_of_gru_layers {int} -- the number of GRU layers
-            seq_len {int} -- the time length of input
-            pre_len {int} -- the time length of prediction
+            input_window {int} -- the time length of input
+            output_window {int} -- the time length of prediction
             gru_hidden_size {int} -- the hidden size of GRU
             num_of_target_time_feature {int} -- the number of target time feature，为24(hour)+7(week)+1(holiday)=32
-            num_of_graph_feature {int} -- the number of graph node feature，(batch_size,seq_len,D,N),
+            num_of_graph_feature {int} -- the number of graph node feature，(batch_size,input_window,D,N),
                                           num_of_graph_feature=D
             nums_of_graph_filters {list} -- the number of GCN output feature
             north_south_map {int} -- the weight of grid data
@@ -229,11 +229,11 @@ class _GSNet(nn.Module):
         self.west_east_map = west_east_map
 
         self.st_geo_module = STGeoModule(grid_in_channel, num_of_gru_layers,
-                                         seq_len,
+                                         input_window,
                                          gru_hidden_size, num_of_target_time_feature)
 
         self.st_sem_module = STSemModule(num_of_graph_feature, nums_of_graph_filters,
-                                         seq_len,
+                                         input_window,
                                          num_of_gru_layers, gru_hidden_size,
                                          num_of_target_time_feature,
                                          north_south_map, west_east_map)
@@ -242,7 +242,7 @@ class _GSNet(nn.Module):
         self.grid_weight = nn.Conv2d(in_channels=gru_hidden_size, out_channels=fusion_channel, kernel_size=1)
         self.graph_weight = nn.Conv2d(in_channels=gru_hidden_size, out_channels=fusion_channel, kernel_size=1)
         self.output_layer = nn.Linear(fusion_channel*north_south_map*west_east_map,
-                                      pre_len*north_south_map*west_east_map)
+                                      output_window*north_south_map*west_east_map)
 
     def forward(self,
                 grid_input,
@@ -260,7 +260,7 @@ class _GSNet(nn.Module):
             grid_node_map {np.array} -- map graph data to grid data,shape (W*H,N)
 
         Returns:
-            {Tensor} -- shape：(batch_size,pre_len,north_south_map,west_east_map)
+            {Tensor} -- shape：(batch_size,output_window,north_south_map,west_east_map)
         """
         batch_size, _, _, _, _ = grid_input.shape
 
@@ -299,13 +299,13 @@ class GSNet(AbstractTrafficStateModel):
             self.grid_in_channel += 7
 
         self.num_of_gru_layers = config.get('num_of_gru_layers', 5)
-        self.seq_len = config.get(
-                'seq_len',
+        self.input_window = config.get(
+                'input_window',
                 data_feature.get('len_closeness', 0) +
                 data_feature.get('len_period', 0) +
                 data_feature.get('len_trend', 0)
         )
-        self.pre_len = config.get('pred_len', 1)
+        self.output_window = config.get('output_window', 1)
         self.gru_hidden_size = config.get('gru_hidden_size', 256)
         self.num_of_target_time_feature = data_feature.get('num_of_target_time_feature', 0)
         self.num_of_graph_feature = len(self.graph_input_indices)
@@ -338,7 +338,7 @@ class GSNet(AbstractTrafficStateModel):
 
         self.gsnet = _GSNet(
                 grid_in_channel=self.grid_in_channel,
-                seq_len=self.seq_len, pre_len=self.pre_len,
+                input_window=self.input_window, output_window=self.output_window,
                 num_of_gru_layers=self.num_of_gru_layers, gru_hidden_size=self.gru_hidden_size,
                 nums_of_graph_filters=self.nums_of_graph_filters, num_of_graph_feature=self.num_of_graph_feature,
                 num_of_target_time_feature=self.num_of_target_time_feature,
@@ -347,23 +347,23 @@ class GSNet(AbstractTrafficStateModel):
     def forward(self, batch):
         batch_size = batch['X'].shape[0]
 
-        # [batch_size, seq_len, input_dim, num_cols, num_rows]
+        # [batch_size, input_window, input_dim, num_cols, num_rows]
         grid_input = torch.cat([
-            # [batch_size, seq_len, num_rols, num_cols, ...] ->
-            # [batch_size, seq_len, ..., num_cols, num_rows]
+            # [batch_size, input_window, num_rols, num_cols, ...] ->
+            # [batch_size, input_window, ..., num_cols, num_rows]
             batch['X'].permute(0, 1, 4, 3, 2),
-            # [batch_size, seq_len, ext_dim] ->
-            # [batch_size, seq_len, ext_dim, num_cols, num_rows]
+            # [batch_size, input_window, ext_dim] ->
+            # [batch_size, input_window, ext_dim, num_cols, num_rows]
             batch['X_ext'].unsqueeze(-1).unsqueeze(-1) \
                           .repeat(1, 1, 1, self.west_east_map, self.north_south_map)
                      ], dim=2)
 
-        # [batch_size, seq_len, input_dim, num_cols, num_rows] ->
-        # [batch_size, seq_len, len(graph_input_indices), num_cols*num_rows] ->
-        # [batch_size, seq_len, len(graph_input_indices), num_graph_nodes]
+        # [batch_size, input_window, input_dim, num_cols, num_rows] ->
+        # [batch_size, input_window, len(graph_input_indices), num_cols*num_rows] ->
+        # [batch_size, input_window, len(graph_input_indices), num_graph_nodes]
         graph_input = grid_input[:, :, self.graph_input_indices, :, :] \
             .reshape(batch_size,
-                     self.seq_len,
+                     self.input_window,
                      len(self.graph_input_indices),
                      self.west_east_map*self.north_south_map) \
             .matmul(self.grid_node_map)
@@ -372,7 +372,7 @@ class GSNet(AbstractTrafficStateModel):
         # [batch_size, len(target_time_indices)]
         target_time_feature = grid_input[:, 0, self.target_time_indices, 0, 0]
 
-        # [batch_size, pred_len, num_cols, num_rows]
+        # [batch_size, output_window, num_cols, num_rows]
         result = self.gsnet.forward(
                  grid_input=grid_input,
                  target_time_feature=target_time_feature,
@@ -383,21 +383,21 @@ class GSNet(AbstractTrafficStateModel):
                  grid_node_map=self.grid_node_map
         )
 
-        # [batch_size, pred_len, num_cols, num_rows] ->
-        # [batch_size, num_rows, num_cols, pred_len] ->
-        # [batch_size, output_dim, num_rows, num_cols, pred_len]
+        # [batch_size, output_window, num_cols, num_rows] ->
+        # [batch_size, num_rows, num_cols, output_window] ->
+        # [batch_size, output_dim, num_rows, num_cols, output_window]
         return result.permute(0, 3, 2, 1).unsqueeze(1).contiguous()
 
     def calculate_loss(self, batch):
-        # [batch_size, output_dim, num_cols, num_rows, pred_len]
+        # [batch_size, output_dim, num_cols, num_rows, output_window]
         y_pred = self.forward(batch)
-        # [batch_size, pred_len, num_rows, num_cols, feature_dim] ->
-        # [batch_size, pred_len, num_rows, num_cols, output_dim] ->
-        # [batch_size, output_dim, num_rows, num_cols, pred_len]
+        # [batch_size, output_window, num_rows, num_cols, feature_dim] ->
+        # [batch_size, output_window, num_rows, num_cols, output_dim] ->
+        # [batch_size, output_dim, num_rows, num_cols, output_window]
         y_true = batch['y'][..., :1].permute(0, 4, 2, 3, 1)
 
         risk_mask = self.risk_mask / self.risk_mask.mean()
-        # [batch_size, output_dim, num_cols, num_rows, pred_len]
+        # [batch_size, output_dim, num_cols, num_rows, output_window]
         loss = (y_true - y_pred).mul(risk_mask).pow(2)
         weight = torch.zeros(y_true.shape).to(self.device)
         for i in range(len(self.risk_thresholds) + 1):
