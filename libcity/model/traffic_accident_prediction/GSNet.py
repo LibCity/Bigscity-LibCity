@@ -324,13 +324,15 @@ class GSNet(AbstractTrafficStateModel):
         self.risk_mask = torch.from_numpy(self.risk_mask).to(device=self.device, dtype=self.dtype)
         self.road_adj = torch.from_numpy(self.road_adj).to(device=self.device, dtype=self.dtype)
         self.risk_adj = torch.from_numpy(self.risk_adj).to(device=self.device, dtype=self.dtype)
-        self.poi_adj = torch.from_numpy(self.poi_adj).to(device=self.device, dtype=self.dtype)
+        if self.poi_adj is not None:
+            self.poi_adj = torch.from_numpy(self.poi_adj).to(device=self.device, dtype=self.dtype)
         self.grid_node_map = torch.from_numpy(self.grid_node_map).to(device=self.device, dtype=self.dtype)
 
         self.risk_mask.requires_grad = False
         self.road_adj.requires_grad = False
         self.risk_adj.requires_grad = False
-        self.poi_adj.requires_grad = False
+        if self.poi_adj is not None:
+            self.poi_adj.requires_grad = False
         self.grid_node_map.requires_grad = False
 
         self.risk_thresholds = data_feature.get('risk_thresholds', [])

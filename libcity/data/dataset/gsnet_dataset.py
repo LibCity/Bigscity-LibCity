@@ -10,9 +10,7 @@ from libcity.data.dataset import TrafficStateCPTDataset
 class GSNetDataset(TrafficStateCPTDataset):
     def __init__(self, config):
         # initialize here for calling self._load_rel() properly
-        self.weight_col_road_adj = config.get('weight_col_road_adj', 'road_adj')
-        self.weight_col_risk_adj = config.get('weight_col_risk_adj', 'risk_adj')
-        self.weight_col_poi_adj = config.get('weight_col_poi_adj', 'poi_adj')
+        self.weight_col_list = config.get('weight_col', [])
 
         super(GSNetDataset, self).__init__(config)
 
@@ -51,17 +49,18 @@ class GSNetDataset(TrafficStateCPTDataset):
 
         # code reuse
         try:
-            self.weight_col = self.weight_col_road_adj
+            self.weight_col = self.weight_col_list[0]
             super(GSNetDataset, self)._load_rel()
             self.road_adj = self.adj_mx
 
-            self.weight_col = self.weight_col_risk_adj
+            self.weight_col = self.weight_col_list[1]
             super(GSNetDataset, self)._load_rel()
             self.risk_adj = self.adj_mx
 
-            self.weight_col = self.weight_col_poi_adj
-            super(GSNetDataset, self)._load_rel()
-            self.poi_adj = self.adj_mx
+            if len(self.weight_col_list) > 2:
+                self.weight_col = self.weight_col_list[2]
+                super(GSNetDataset, self)._load_rel()
+                self.poi_adj = self.adj_mx
         finally:
             self.weight_col = orig_weight_col
             self.adj_mx = orig_adj_mx
@@ -156,7 +155,10 @@ class GSNetDataset(TrafficStateCPTDataset):
         d['risk_mask'] = self.risk_mask
         d['road_adj'] = self.road_adj
         d['risk_adj'] = self.risk_adj
-        d['poi_adj'] = self.poi_adj
+        if hasattr(self, 'poi_adj'):
+            d['poi_adj'] = self.poi_adj
+        else:
+            d['poi_adj'] = None
         d['grid_node_map'] = self.grid_node_map
 
         d['num_of_target_time_feature'] = self.num_of_target_time_feature
