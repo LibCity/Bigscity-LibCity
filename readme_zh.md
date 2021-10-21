@@ -75,7 +75,7 @@ LibCity 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigcity.
 
 ## Cite
 
-该工作已被ACM SIGSPATIAL 2021接收。如果您认为LibCity对您的科研工作有帮助，请引用我们的论文。
+该工作已被ACM SIGSPATIAL 2021接收。如果您认为LibCity对您的科研工作有帮助，请引用我们的[论文](https://libcity.ai/#/paper)。
 
 ```
 @proceedings{libcity,
