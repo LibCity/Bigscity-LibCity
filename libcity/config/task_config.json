@@ -328,6 +328,20 @@
             "evaluator": "TrafficStateEvaluator"
         }
     },
+    "eta": {
+        "allowed_model": [
+            "DeepTTE"
+        ],
+        "allowed_dataset": [
+            "Chengdu_Taxi_Sample1"
+        ],
+        "DeepTTE": {
+            "dataset_class": "ETADataset",
+            "executor": "ETAExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "DeeptteEncoder"
+        }
+    },
     "map_matching": {
         "allowed_model": [
             "STMatching", "IVMM"
