@@ -174,8 +174,10 @@ class MapMatchingEvaluator(AbstractEvaluator):
         config['usr'] = dict()
         config['usr']['properties'] = dict()
         config['info'] = dict()
-        config['info']['geo_file'] = filename
-        config['info']['rel_file'] = filename
+        config['info']['geo_file'] = self.config.get('geo_file')
+        config['info']['rel_file'] = self.config.get('rel_file')
+        config['info']['dyna_file'] = self.config.get('dyna_file')
+        config['info']['usr_file'] = self.config.get('usr_file')
         json.dump(config, open(os.path.join(save_path, 'config.json'), 'w', encoding='utf-8'),
                   ensure_ascii=False, indent=4)
 
