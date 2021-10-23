@@ -1,8 +1,10 @@
 import json
+import warnings
 import os
 import sys
 import numpy as np
 import pandas as pd
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from tqdm import tqdm
 from statsmodels.tsa.arima.model import ARIMA
 root_path = os.path.abspath(__file__)
@@ -82,16 +84,19 @@ def order_select_pred(data):
     p_range = config.get('p_range', [0, 4])
     d_range = config.get('d_range', [0, 3])
     q_range = config.get('q_range', [0, 4])
-    for p in range(p_range[0], p_range[1]):
-        for d in range(d_range[0], d_range[1]):
-            for q in range(q_range[0], q_range[1]):
-                try:
-                    cur_res = ARIMA(data, order=(p, d, q)).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", category=ConvergenceWarning)
+        warnings.simplefilter("error", category=RuntimeWarning)
+        for p in range(p_range[0], p_range[1]):
+            for d in range(d_range[0], d_range[1]):
+                for q in range(q_range[0], q_range[1]):
+                    try:
+                        cur_res = ARIMA(data, order=(p, d, q)).fit()
+                    except:
+                        continue
                     if cur_res.bic < bic:
                         bic = cur_res.bic
                         res = cur_res
-                except:
-                    pass
     return res
 
 

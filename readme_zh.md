@@ -4,23 +4,27 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.github.io/Bigscity-LibCity-Website)|[Docs](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper) |[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
+[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
 
 LibCity 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
 LibCity 目前支持以下任务：
 
+* 时间序列预测
 * 交通状态预测
   * 交通流量预测
   * 交通速度预测
   * 交通需求预测
+  * OD矩阵预测
 * 轨迹下一跳预测
+* 路网匹配
+* 路网表征学习
 
 ## Features
 
 * **统一性**：LibCity 构建了一个系统的流水线以在一个统一的平台上实现、使用和评估交通预测模型。 我们设计了统一的时空数据存储格式、统一的模型实例化接口和标准的模型评估程序。
 
-* **全面性**：复现覆盖4个交通预测任务的42个模型，形成了全面的模型库。 同时，LibCity 收集了 29 个不同来源的常用数据集，并实现了一系列常用的性能评估指标和策略。
+* **全面性**：复现覆盖 8 个交通预测任务的 54 个模型，形成了全面的模型库。 同时，LibCity 收集了 32 个不同来源的常用数据集，并实现了一系列常用的性能评估指标和策略。
 
 * **可扩展性**：LibCity 实现了不同组件的模块化设计，允许用户灵活地加入自定义组件。 因此，新的研究人员可以在 LibCity 的支持下轻松开发新模型。
 
@@ -57,7 +61,7 @@ cd Bigscity-LibCity
 python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 ```
 
-该脚本将在默认配置下，在 METR_LA 数据集上运行 GRU 模型，以进行交通状态预测任务。
+该脚本将在默认配置下，在 METR_LA 数据集上运行 GRU 模型，以进行交通状态预测任务。目前我们已经在 [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/data/dataset_for_task.html) 发布了数据集、模型和任务之间的对应关系表格供用户参考。
 
 更多细节请访问 [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/get_started/quick_start.html) 。
 
@@ -68,6 +72,24 @@ LibCity 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigcity.
 若干共同开发者也参与了模型的复现，其贡献列表在 [贡献者列表](./contribution_list.md) 。
 
 如果您遇到错误或有任何建议，请通过以下方式与我们联系： [提交issue](https://github.com/LibCity/Bigscity-LibCity/issues)。
+
+## Cite
+
+该工作已被ACM SIGSPATIAL 2021接收。如果您认为LibCity对您的科研工作有帮助，请引用我们的[论文](https://libcity.ai/#/paper)。
+
+```
+@proceedings{libcity,
+  editor={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chao Li and Wayne Xin Zhao},
+  title={LibCity: An Open Library for Traffic Prediction},
+  booktitle={{SIGSPATIAL} '21: 29th International Conference on Advances in Geographic Information Systems, Beijing, China, November 2-5, 2021 },
+  publisher={{ACM}},
+  year={2021}
+}
+```
+
+```
+Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th ACM SIGSPATIAL International Conference on Advances in Geographic Information Systems. 
+```
 
 ## License
 
