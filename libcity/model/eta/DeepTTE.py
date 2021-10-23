@@ -14,7 +14,7 @@ def get_local_seq(full_seq, kernel_size, mean, std, device=torch.device('cpu')):
 
     torch.arange(0, seq_len, out=indices)
 
-    indices = Variable(indices, requires_grad = False)
+    indices = Variable(indices, requires_grad=False)
 
     first_seq = torch.index_select(full_seq, dim=1, index=indices[kernel_size - 1:])
     second_seq = torch.index_select(full_seq, dim=1, index=indices[:-kernel_size + 1])
@@ -24,6 +24,7 @@ def get_local_seq(full_seq, kernel_size, mean, std, device=torch.device('cpu')):
     local_seq = (local_seq - mean) / std
 
     return local_seq
+
 
 class Attr(nn.Module):
     def __init__(self, embed_dims, data_feature):
@@ -41,12 +42,12 @@ class Attr(nn.Module):
             sz += dim_out
         # append total distance
         return sz + 1
-    
+
     def forward(self, batch):
         em_list = []
         for name, _, _ in self.embed_dims:
             embed = getattr(self, name + '_em')
-            attr_t = batch[name].view(-1, 1)
+            attr_t = batch[name]
 
             attr_t = torch.squeeze(embed(attr_t))
 
@@ -56,9 +57,10 @@ class Attr(nn.Module):
         dist_std = self.data_feature.get("dist_std", 3.9656010701306283)
         dist = (batch["dist"] - dist_mean) / dist_std
         dist = (dist - dist_mean) / dist_std
-        em_list.append(dist.view(-1, 1))
+        em_list.append(dist)
 
-        return torch.cat(em_list, dim = 1)
+        return torch.cat(em_list, dim=1)
+
 
 class GeoConv(nn.Module):
     def __init__(self, kernel_size, num_filter, data_feature={}, device=torch.device('cpu')):
@@ -72,7 +74,7 @@ class GeoConv(nn.Module):
         self.state_em = nn.Embedding(2, 2)
         self.process_coords = nn.Linear(4, 16)
         self.conv = nn.Conv1d(16, self.num_filter, self.kernel_size)
-    
+
     def forward(self, batch):
         longi_mean = self.data_feature.get("longi_mean", 104.05810954320589)
         longi_std = self.data_feature.get("longi_std", 0.04988770679679998)
@@ -85,7 +87,7 @@ class GeoConv(nn.Module):
 
         states = self.state_em(batch['current_state'].long())
 
-        locs = torch.cat((lngs, lats, states), dim = 2)
+        locs = torch.cat((lngs, lats, states), dim=2)
 
         # map the coords into 16-dim vector
         locs = torch.tanh(self.process_coords(locs))
@@ -104,6 +106,7 @@ class GeoConv(nn.Module):
         conv_locs = torch.cat((conv_locs, local_dist), dim=2)
 
         return conv_locs
+
 
 class SpatioTemporal(nn.Module):
     '''
@@ -164,31 +167,31 @@ class SpatioTemporal(nn.Module):
         hiddens = hiddens / lens
 
         return hiddens
-    
+
     def atten_pooling(self, hiddens, attr_t):
         atten = torch.tanh(self.attr2atten(attr_t)).permute(0, 2, 1)
 
-	    #hidden b*s*f atten b*f*1 alpha b*s*1 (s is length of sequence)
+        # hidden b*s*f atten b*f*1 alpha b*s*1 (s is length of sequence)
         alpha = torch.bmm(hiddens, atten)
         alpha = torch.exp(-alpha)
 
         # The padded hidden is 0 (in pytorch), so we do not need to calculate the mask
-        alpha = alpha / torch.sum(alpha, dim = 1, keepdim = True)
+        alpha = alpha / torch.sum(alpha, dim=1, keepdim=True)
 
         hiddens = hiddens.permute(0, 2, 1)
         hiddens = torch.bmm(hiddens, alpha)
         hiddens = torch.squeeze(hiddens)
 
         return hiddens
-    
+
     def forward(self, batch, attr_t):
         conv_locs = self.geo_conv(batch)
 
-        attr_t = torch.unsqueeze(attr_t, dim = 1)
+        attr_t = torch.unsqueeze(attr_t, dim=1)
         expand_attr_t = attr_t.expand(conv_locs.size()[:2] + (attr_t.size()[-1], ))
 
         # concat the loc_conv and the attributes
-        conv_locs = torch.cat((conv_locs, expand_attr_t), dim = 2)
+        conv_locs = torch.cat((conv_locs, expand_attr_t), dim=2)
 
         lens = [batch["current_dis"].shape[1]] * batch["current_dis"].shape[0]
         lens = list(map(lambda x: x - self.kernel_size + 1, lens))
@@ -204,6 +207,7 @@ class SpatioTemporal(nn.Module):
             # self.pooling_method == 'attention'
             return packed_hiddens, lens, self.atten_pooling(hiddens, attr_t)
 
+
 class EntireEstimator(nn.Module):
     def __init__(self, input_size, num_final_fcs, hidden_size=128):
         super(EntireEstimator, self).__init__()
@@ -217,7 +221,7 @@ class EntireEstimator(nn.Module):
         self.hid2out = nn.Linear(hidden_size, 1)
 
     def forward(self, attr_t, sptm_t):
-        inputs = torch.cat((attr_t, sptm_t), dim = 1)
+        inputs = torch.cat((attr_t, sptm_t), dim=1)
 
         hidden = F.leaky_relu(self.input2hid(inputs))
 
@@ -230,13 +234,13 @@ class EntireEstimator(nn.Module):
         return out
 
     def eval_on_batch(self, pred, label, mean, std):
-    # def eval_on_batch(self, pred, label):
-        label = label.view(-1, 1)
+        label = label
 
         label = label * std + mean
         pred = pred * std + mean
 
         return loss.masked_mape_torch(pred, label)
+
 
 class LocalEstimator(nn.Module):
     def __init__(self, input_size, eps=10):
@@ -258,13 +262,14 @@ class LocalEstimator(nn.Module):
         return out
 
     def eval_on_batch(self, pred, lens, label, mean, std):
-        label = nn.utils.rnn.pack_padded_sequence(label, lens, batch_first = True)[0]
-        label = label.view(-1, 1)
+        label = nn.utils.rnn.pack_padded_sequence(label, lens, batch_first=True)[0]
+        label = label
 
         label = label * std + mean
         pred = pred * std + mean
 
         return loss.masked_mape_torch(pred, label, eps=self.eps)
+
 
 class DeepTTE(AbstractModel):
     def __init__(self, config, data_feature):
@@ -334,11 +339,12 @@ class DeepTTE(AbstractModel):
                 param.data.fill_(0)
             elif name.find('.weight') != -1:
                 nn.init.xavier_uniform_(param.data)
-    
+
     def forward(self, batch):
         attr_t = self.attr_net(batch)
 
-        # sptm_s: hidden sequence (B * T * F); sptm_l: lens (list of int); sptm_t: merged tensor after attention/mean pooling
+        # sptm_s: hidden sequence (B * T * F); sptm_l: lens (list of int);
+        # sptm_t: merged tensor after attention/mean pooling
         sptm_s, sptm_l, sptm_t = self.spatio_temporal(batch, attr_t)
 
         entire_out = self.entire_estimate(attr_t, sptm_t)
@@ -349,13 +355,13 @@ class DeepTTE(AbstractModel):
             return entire_out, (local_out, sptm_l)
         else:
             return entire_out
-    
+
     def calculate_loss(self, batch):
         if self.training:
             entire_out, (local_out, local_length) = self.predict(batch)
         else:
             entire_out = self.predict(batch)
-        
+
         time_mean = self.data_feature.get("time_mean", 1555.75269436)
         time_std = self.data_feature.get("time_std", 646.373021152)
         entire_out = (entire_out - time_mean) / time_std

@@ -1,5 +1,6 @@
 from logging import getLogger
 
+
 class AbstractETAEncoder(object):
     """ETA Encoder
 
@@ -15,9 +16,6 @@ class AbstractETAEncoder(object):
         pad_item (dict): The key is a feature's name and the value should be corresponding
             padding value. If a feature dose not need to be padded, don't insert it into
             this dict. In other word, libcity.dataset.Batch will pad all features in pad_item.keys().
-        feature_max_len (dict): The key is a feature's name and the value should be corresponding
-            max length. When libcity.dataset.Batch pads features, it will intercept the excessively
-            long sequence feature according to this attribute.
         feature_dict (dict): The key is a feature's name and the value should be the data type of
             the corresponding feature. When libcity.dataset.Batch converts the encoded trajectory tuple
             to tensor, It will refer to this attribute to know the feature name and data type corresponding
@@ -36,7 +34,6 @@ class AbstractETAEncoder(object):
         self.config = config
         self._logger = getLogger()
         self.pad_item = {}
-        self.feature_max_len = {}
         self.feature_dict = {}
         self.data_feature = {}
         self.cache_file_name = ''
@@ -48,10 +45,10 @@ class AbstractETAEncoder(object):
             uid (int): The uid of user. If there is no need to encode uid, just keep it.
             trajectories (list of trajectory): The trajectories of user. Each trajectory is
             a sequence of spatiotemporal point. The spatiotemporal point is represented by
-            a tuple. Thus, a trajectory is represented by a list of tuples. For example:
+            a list. Thus, a trajectory is represented by a list of lists. For example:
                 trajectory1 = [
-                    dyna_id,
-                    dyna_id,
+                    dyna_list,
+                    dyna_list,
                     .....
                 ]
             Every spatiotemporal tuple contains all useful information in a record of the Raw
@@ -59,13 +56,15 @@ class AbstractETAEncoder(object):
             are represented as:
                 [
                     [ # trajectory1
-                        dyna_id,
-                        dyna_id,
+                        dyna_list,
+                        dyna_list,
                         ...
                     ],
                     trajectory2,
                     ...
                 ]
+            dyna_feature_column (dict): The key is a feature's name and the value should be corresponding
+                column id in .dyna file.
 
         Returns:
             list: The return value of this function is the list of encoded trajectories.

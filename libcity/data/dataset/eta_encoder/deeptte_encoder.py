@@ -11,6 +11,7 @@ parameter_list = [
     'eta_encoder'
 ]
 
+
 def geo_distance(lon1, lat1, lon2, lat2):
     """
     Calculate the great circle distance between two points
@@ -24,8 +25,9 @@ def geo_distance(lon1, lat1, lon2, lat2):
     r = 6371
     return c * r
 
+
 class DeeptteEncoder(AbstractETAEncoder):
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.feature_dict = {
@@ -90,8 +92,7 @@ class DeeptteEncoder(AbstractETAEncoder):
             for point in traj:
                 # loc = point[dyna_feature_column["location"]]
                 # longi, lati = self.geo_coord[loc][0], self.geo_coord[loc][1]
-                coordinate = point[dyna_feature_column["coordinates"]]
-                coordinate = coordinate.strip().replace("\"", "").replace("[", "").replace("]", "").split(',')
+                coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
 
                 current_longi.append(longi)
@@ -123,11 +124,11 @@ class DeeptteEncoder(AbstractETAEncoder):
                 current_longi, current_lati,
                 current_tim, current_dis,
                 current_state,
-                uid,
-                weekid,
-                timeid,
-                dist,
-                time,
+                [uid],
+                [weekid],
+                [timeid],
+                [dist],
+                [time],
             ])
         return encoded_trajectories
 

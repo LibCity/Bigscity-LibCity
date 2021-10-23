@@ -32,7 +32,7 @@ class ETADataset(AbstractDataset):
 
     def _load_dyna(self):
         """
-        切割后的轨迹存储格式: (dict)
+        轨迹存储格式: (dict)
             {
                 uid: [
                     [
@@ -165,7 +165,6 @@ class ETADataset(AbstractDataset):
             self.encoder.feature_dict,
             self.config['batch_size'],
             self.config['num_workers'], self.pad_item,
-            self.encoder.feature_max_len
         )
 
     def get_data_feature(self):
