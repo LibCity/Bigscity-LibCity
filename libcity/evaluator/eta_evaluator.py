@@ -49,34 +49,34 @@ class ETAEvaluator(AbstractEvaluator):
         for metric in self.metrics:
             if metric == 'masked_MAE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mae_torch(y_pred[:, 0], y_true[:, 0], 0).item())
+                    loss.masked_mae_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_MSE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mse_torch(y_pred[:, 0], y_true[:, 0], 0).item())
+                    loss.masked_mse_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_RMSE':
                 self.intermediate_result[metric].append(
-                    loss.masked_rmse_torch(y_pred[:, 0], y_true[:, 0], 0).item())
+                    loss.masked_rmse_torch(y_pred, y_true, 0).item())
             elif metric == 'masked_MAPE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mape_torch(y_pred[:, 0], y_true[:, 0], 0).item())
+                    loss.masked_mape_torch(y_pred, y_true, 0).item())
             elif metric == 'MAE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mae_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.masked_mae_torch(y_pred, y_true).item())
             elif metric == 'MSE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mse_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.masked_mse_torch(y_pred, y_true).item())
             elif metric == 'RMSE':
                 self.intermediate_result[metric].append(
-                    loss.masked_rmse_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.masked_rmse_torch(y_pred, y_true).item())
             elif metric == 'MAPE':
                 self.intermediate_result[metric].append(
-                    loss.masked_mape_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.masked_mape_torch(y_pred, y_true).item())
             elif metric == 'R2':
                 self.intermediate_result[metric].append(
-                    loss.r2_score_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.r2_score_torch(y_pred, y_true).item())
             elif metric == 'EVAR':
                 self.intermediate_result[metric].append(
-                    loss.explained_variance_score_torch(y_pred[:, 0], y_true[:, 0]).item())
+                    loss.explained_variance_score_torch(y_pred, y_true).item())
 
     def evaluate(self):
         """

@@ -47,8 +47,8 @@ class AbstractETAEncoder(object):
             a sequence of spatiotemporal point. The spatiotemporal point is represented by
             a list. Thus, a trajectory is represented by a list of lists. For example:
                 trajectory1 = [
-                    dyna_list,
-                    dyna_list,
+                    [dyna_id, type, time, entity_id, traj_id, coordinates/location, properties],
+                    [dyna_id, type, time, entity_id, traj_id, coordinates/location, properties],
                     .....
                 ]
             Every spatiotemporal tuple contains all useful information in a record of the Raw
@@ -56,8 +56,8 @@ class AbstractETAEncoder(object):
             are represented as:
                 [
                     [ # trajectory1
-                        dyna_list,
-                        dyna_list,
+                        [dyna_id, type, time, entity_id, traj_id, coordinates/location, properties],
+                        [dyna_id, type, time, entity_id, traj_id, coordinates/location, properties],
                         ...
                     ],
                     trajectory2,

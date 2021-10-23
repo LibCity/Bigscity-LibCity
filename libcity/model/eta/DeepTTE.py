@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from libcity.model import loss
-from libcity.model.abstract_model import AbstractModel
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 def get_local_seq(full_seq, kernel_size, mean, std, device=torch.device('cpu')):
@@ -271,7 +271,7 @@ class LocalEstimator(nn.Module):
         return loss.masked_mape_torch(pred, label, eps=self.eps)
 
 
-class DeepTTE(AbstractModel):
+class DeepTTE(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super(DeepTTE, self).__init__(config, data_feature)
         self.config = config
