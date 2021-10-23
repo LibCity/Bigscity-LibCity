@@ -195,7 +195,7 @@ class MapMatchingDataset(AbstractDataset):
             usr_id = row['entity_id']
             traj_id = row['traj_id'] if self.multi_traj else 0
             time = row['time']
-            coordinate = eval(row[4])
+            coordinate = eval(row['coordinates'])
 
             if usr_id not in self.usr_lst:
                 raise ValueError('entity_id %d should be in usr_ids in Map Matching task!' % usr_id)
