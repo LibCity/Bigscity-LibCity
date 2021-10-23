@@ -377,8 +377,8 @@ class STMatching(AbstractTraditionModel):
 
         res_lst.reverse()
 
-        # to rel_id
-        res_lst_rel = np.array(list(map(lambda x: self.rd_nwk.edges[x]['rel_id'] if x is not None else None, res_lst)))
+        # to geo_id
+        res_lst_rel = np.array(list(map(lambda x: self.rd_nwk.edges[x]['geo_id'] if x is not None else None, res_lst)))
         dyna_id_lst = self.trajectory[:, 0].astype(int)
         if self.with_time:
             time_lst = self.trajectory[:, 3]

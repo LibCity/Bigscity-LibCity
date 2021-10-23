@@ -11,6 +11,23 @@ from libcity.utils.utils import ensure_dir
 import networkx as nx
 
 
+class UnionSet:
+    def __init__(self, n):
+        self.n = n
+        self.lst = list(range(n))
+
+    def find(self, index):
+        if index != self.lst[index]:
+            self.lst[index] = self.find(self.lst[index])
+        return self.lst[index]
+
+    def union(self, index1, index2):
+        self.lst[self.find(index1)] = self.find(index2)
+
+    def print(self):
+        print(self.lst)
+
+
 class MapMatchingDataset(AbstractDataset):
     """
     路网匹配数据集的基类。
@@ -50,7 +67,7 @@ class MapMatchingDataset(AbstractDataset):
         self.rel_file = self.config.get('rel_file', self.dataset)
         self.dyna_file = self.config.get('dyna_file', self.dataset)
         self.usr_file = self.config.get('usr_file', self.dataset)
-        self.route_file = self.config.get('usr_file', self.dataset)
+        self.truth_file = self.config.get('truth_file', self.dataset + '_truth')
 
         # result
         self.trajectory = None
@@ -59,13 +76,12 @@ class MapMatchingDataset(AbstractDataset):
 
         # load 5 files
         if not self.cache_dataset or not os.path.exists(self.cache_file_name):
-            if os.path.exists(self.data_path + self.geo_file + '.geo'):
-                self._load_geo()
-            else:
-                raise ValueError('Not found .geo file!')
 
             if os.path.exists(self.data_path + self.rel_file + '.rel'):
-                self._load_rel()
+                if os.path.exists(self.data_path + self.geo_file + '.geo'):
+                    self._load_geo_and_rel()
+                else:
+                    raise ValueError('Not found .geo file!')
             else:
                 raise ValueError('Not found .rel file!')
 
@@ -78,83 +94,72 @@ class MapMatchingDataset(AbstractDataset):
                 self._load_dyna()
             else:
                 raise ValueError('Not found .dyna file!')
-            if os.path.exists(self.data_path + self.route_file + '.route'):
-                self._load_route()
+            if os.path.exists(self.data_path + self.truth_file + '.dyna'):
+                self._load_truth_dyna()
 
-    def _load_geo(self):
+    def _load_geo_and_rel(self):
         """
         加载.geo文件，格式[geo_id, type, coordinates, properties(若干列)]
-        Returns:
-                self.geo_data: a dictionary, key: geo_id, value: [lon, lat]
-        """
-        geofile = pd.read_csv(self.data_path + self.geo_file + '.geo')
-        if not ['Point'] == self.config['geo']['including_types']:
-            raise ValueError('.geo file should include Point type in Map Matching task!')
-
-        self.geo_data = dict()
-        for index, row in geofile.iterrows():
-            self.geo_data[row[0]] = eval(row[2])
-        self._logger.info("Loaded file " + self.geo_file + '.geo' + ', num_nodes=' + str(len(self.geo_data)))
-
-    def _load_rel(self):
-        """
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)],
         .rel文件用来表示路网数据
 
         Returns:
             self.rd_nwk: networkx.MultiDiGraph
         """
+        # init road network, which is the result of this function
+        self.rd_nwk = nx.DiGraph(name="road network")
 
-        # load rel file
+        # load geo and rel file
+        geofile = pd.read_csv(self.data_path + self.geo_file + '.geo')
         relfile = pd.read_csv(self.data_path + self.rel_file + '.rel')
+        geo_num = geofile.shape[0]
 
-        # check type geo
+        # check type geo in rel file and LineString in geo file
         if not ['geo'] == self.config['rel']['including_types']:
             raise ValueError('.rel file should include geo type in Map Matching task!')
+        if not ['LineString'] == self.config['geo']['including_types']:
+            raise ValueError('.geo file should include LineString type in Map Matching task!')
 
         # get properties
         columns = relfile.columns.tolist()[4:]
 
-        # init road network
-        self.rd_nwk = nx.DiGraph(name="road network")
+        # use UnionSet to get nodes
+        node_set = UnionSet(2 * geo_num)
+        for index, row in relfile.iterrows():
+            # origin and destination
+            from_id = int(row[2])
+            to_id = int(row[3])
+            node_set.union(from_id, to_id + geo_num)
 
         # generate MultiDigraph
-        for index, row in relfile.iterrows():
+        for index, row in geofile.iterrows():
 
-            # origin and destination
-            rel_id = int(row[0])
-            origin_id = int(row[2])
-            destination_id = int(row[3])
-
-            # is valid origin/destination
-            if origin_id not in self.geo_data.keys():
-                raise ValueError('origin_id %d should be in geo_ids in Map Matching task!' % origin_id)
-            if destination_id not in self.geo_data.keys():
-                raise ValueError('destination_id %d should be in geo_ids in Map Matching task!' % destination_id)
-
-            # add node
-            if origin_id not in self.rd_nwk.nodes:
-                self.rd_nwk.add_node(origin_id, lon=self.geo_data[origin_id][0], lat=self.geo_data[origin_id][1])
-            if destination_id not in self.rd_nwk.nodes:
-                self.rd_nwk.add_node(destination_id, lon=self.geo_data[destination_id][0],
-                                     lat=self.geo_data[destination_id][1])
+            geo_id = int(row['geo_id'])
+            coordinate = eval(row['coordinates'])
+            origin_node = node_set.find(geo_id + geo_num)
+            dest_node = node_set.find(geo_id)
+            if origin_node not in self.rd_nwk.nodes:
+                self.rd_nwk.add_node(origin_node, lon=coordinate[0][0], lat=coordinate[0][1])
+            if dest_node not in self.rd_nwk.nodes:
+                self.rd_nwk.add_node(dest_node, lon=coordinate[1][0], lat=coordinate[1][1])
 
             # add edge
-            self.rd_nwk.add_edge(origin_id, destination_id)
-            dct = dict()
+            self.rd_nwk.add_edge(origin_node, dest_node)
+            feature_dct = dict()
             for i, column in enumerate(columns):
-                dct[column] = row[i + 4]
-            if 'distance' not in dct.keys():
-                dct['distance'] = dist(
-                    angle2radian(self.rd_nwk.nodes[origin_id]['lat']),
-                    angle2radian(self.rd_nwk.nodes[origin_id]['lon']),
-                    angle2radian(self.rd_nwk.nodes[destination_id]['lat']),
-                    angle2radian(self.rd_nwk.nodes[destination_id]['lon'])
+                feature_dct[column] = row[i + 4]
+            if 'distance' not in feature_dct.keys():
+                feature_dct['distance'] = dist(
+                    angle2radian(self.rd_nwk.nodes[origin_node]['lat']),
+                    angle2radian(self.rd_nwk.nodes[origin_node]['lon']),
+                    angle2radian(self.rd_nwk.nodes[dest_node]['lat']),
+                    angle2radian(self.rd_nwk.nodes[dest_node]['lon'])
                 )
-            dct['rel_id'] = rel_id
-            self.rd_nwk.edges[origin_id, destination_id].update(dct)
+            feature_dct['geo_id'] = geo_id
+            self.rd_nwk.edges[origin_node, dest_node].update(feature_dct)
 
         # logger
+        self._logger.info("Loaded file " + self.geo_file + '.geo' + ', num_nodes=' + str(geo_num))
         self._logger.info("Loaded file " + self.rel_file + '.rel, num_roads=' + str(len(self.rd_nwk)))
 
     def _load_usr(self):
@@ -182,44 +187,45 @@ class MapMatchingDataset(AbstractDataset):
             raise ValueError('.dyna file should include trajectory type in Map Matching task!')
         if not self.config['dyna']['trajectory']["entity_id"] == "usr_id":
             raise ValueError('entity_id should be usr_id in Map Matching task!')
-        if not self.config['dyna']['trajectory']["location"] == "geo_id":
-            raise ValueError('location should be geo_id in Map Matching task!')
 
         self.trajectory = {}
         self.multi_traj = 'traj_id' in dynafile.keys()
         for index, row in dynafile.iterrows():
-            if row['entity_id'] not in self.usr_lst:
-                raise ValueError('entity_id %d should be in usr_ids in Map Matching task!' % row['entity_id'])
-            if row['location'] not in self.geo_data.keys():
-                raise ValueError('location %d should be in geo_ids in Map Matching task!' % row['location'])
+            dyna_id = row['dyna_id']
+            usr_id = row['entity_id']
             traj_id = row['traj_id'] if self.multi_traj else 0
+            time = row['time']
+            coordinate = eval(row['coordinates'])
+
+            if usr_id not in self.usr_lst:
+                raise ValueError('entity_id %d should be in usr_ids in Map Matching task!' % usr_id)
+            # if row['location'] not in self.geo_data.keys():
+            #     raise ValueError('location %d should be in geo_ids in Map Matching task!' % row['location'])
+
             if self.with_time:
-                if row['entity_id'] in self.trajectory.keys():
-                    if traj_id in self.trajectory[row['entity_id']].keys():
-                        self.trajectory[row['entity_id']][traj_id].append(
-                            [row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])])
+                if usr_id in self.trajectory.keys():
+                    if traj_id in self.trajectory[usr_id].keys():
+                        self.trajectory[usr_id][traj_id].append([dyna_id] + coordinate + [parse_time(time)])
                     else:
-                        self.trajectory[row['entity_id']][traj_id] = \
-                            [[row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])]]
+                        self.trajectory[usr_id][traj_id] = [[dyna_id] + coordinate + [parse_time(time)]]
                 else:
-                    self.trajectory[row['entity_id']] = \
-                        {traj_id: [[row['dyna_id']] + self.geo_data[row['location']] + [parse_time(row['time'])]]}
+                    self.trajectory[usr_id] = {traj_id: [[dyna_id] + coordinate + [parse_time(row['time'])]]}
 
             else:
-                if row['entity_id'] in self.trajectory.keys():
-                    if traj_id in self.trajectory[row['entity_id']].keys():
-                        self.trajectory[row['entity_id']][traj_id].append(
-                            [row['dyna_id']] + self.geo_data[row['location']])
+                if usr_id in self.trajectory.keys():
+                    if traj_id in self.trajectory[usr_id].keys():
+                        self.trajectory[usr_id][traj_id].append([dyna_id] + coordinate)
                     else:
-                        self.trajectory[row['entity_id']][traj_id] = [[row['dyna_id']] + self.geo_data[row['location']]]
+                        self.trajectory[usr_id][traj_id] = [[dyna_id] + coordinate]
                 else:
-                    self.trajectory[row['entity_id']] = {traj_id: [[row['dyna_id']] + self.geo_data[row['location']]]}
+                    self.trajectory[usr_id] = {traj_id: [[dyna_id] + coordinate]}
         if self.delta_time and self.with_time:
-            for usr_id, trajectory in self.trajectory.items():
-                t0 = trajectory[0][3]
-                trajectory[0][3] = 0
-                for i in range(1, len(trajectory)):
-                    trajectory[i][3] = (trajectory[i][3] - t0).seconds
+            for usr_id, usr_value in self.trajectory.items():
+                for traj_id, trajectory in usr_value.items():
+                    t0 = trajectory[0][3]
+                    trajectory[0][3] = 0
+                    for i in range(1, len(trajectory)):
+                        trajectory[i][3] = (trajectory[i][3] - t0).seconds
 
         for key, value in self.trajectory.items():
             for key_i, value_i in value.items():
@@ -227,36 +233,47 @@ class MapMatchingDataset(AbstractDataset):
 
         self._logger.info("Loaded file " + self.dyna_file + '.dyna, num of GPS samples=' + str(dynafile.shape[0]))
 
-    def _load_route(self):
+    def _load_truth_dyna(self):
         """
         加载.dyna文件，格式: 每行一个 rel_id 或一组 rel_id
         Returns:
 
         """
-        routefile = pd.read_csv(self.data_path + self.route_file + '.route')
+        # open file
+        truth_dyna = pd.read_csv(self.data_path + self.truth_file + '.dyna')
+
+        # result of the function
         self.route = {}
-        multi_traj = 'traj_id' in routefile.keys()
+
+        # multi_traj
+        multi_traj = 'traj_id' in truth_dyna.keys()
         if multi_traj != self.multi_traj:
             raise ValueError('cannot match traj_id in route file and dyna file')
-        for index, row in routefile.iterrows():
-            usr_id = int(row['usr_id'])
+
+        # set route
+        for index, row in truth_dyna.iterrows():
+            dyna_id = row['dyna_id']
+            usr_id = row['entity_id']
+            traj_id = row['traj_id'] if multi_traj else 0
+            location = row['location']
+
+            # check usr
             if usr_id not in self.usr_lst:
                 raise ValueError('usr_id %d should be in usr_ids in Map Matching task!' % usr_id)
-            traj_id = row['traj_id'] if multi_traj else 0
 
             if usr_id in self.route.keys():
                 if traj_id in self.route[usr_id].keys():
-                    self.route[usr_id][traj_id].append([row['route_id'], row['rel_id']])
+                    self.route[usr_id][traj_id].append([dyna_id, location])
                 else:
-                    self.route[usr_id][traj_id] = [[row['route_id'], row['rel_id']]]
+                    self.route[usr_id][traj_id] = [[dyna_id, location]]
             else:
-                self.route[usr_id] = {traj_id: [[row['route_id'], row['rel_id']]]}
+                self.route[usr_id] = {traj_id: [[dyna_id, location]]}
 
         for key, value in self.route.items():
             for key_i, value_i in value.items():
                 self.route[key][key_i] = np.array(value_i)
 
-        self._logger.info("Loaded file " + self.route_file + '.route, route length=' + str(routefile.shape[0]))
+        self._logger.info("Loaded file " + self.truth_file + '.dyna, route length=' + str(truth_dyna.shape[0]))
 
     def get_data(self):
         """

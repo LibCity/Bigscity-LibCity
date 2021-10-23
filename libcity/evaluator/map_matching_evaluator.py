@@ -57,11 +57,11 @@ class MapMatchingEvaluator(AbstractEvaluator):
         # self.rel_info
         for point1 in self.rd_nwk.adj:
             for point2 in self.rd_nwk.adj[point1]:
-                rel = self.rd_nwk.adj[point1][point2]
-                self.rel_info[rel['rel_id']] = {}
-                self.rel_info[rel['rel_id']]["distance"] = rel['distance']
-                self.rel_info[rel['rel_id']]['point1'] = point1
-                self.rel_info[rel['rel_id']]['point2'] = point2
+                geo = self.rd_nwk.adj[point1][point2]
+                self.rel_info[geo['geo_id']] = {}
+                self.rel_info[geo['geo_id']]["distance"] = geo['distance']
+                self.rel_info[geo['geo_id']]['point1'] = point1
+                self.rel_info[geo['geo_id']]['point2'] = point2
 
         # self.merged_result
         self.merge_result()
@@ -130,48 +130,21 @@ class MapMatchingEvaluator(AbstractEvaluator):
 
     def _save_atom(self, save_path, filename):
         """
-        generate geo rel dyna
+        generate dyna
         """
 
         # path
         save_path = os.path.join(save_path, filename)
         ensure_dir(save_path)
 
-        # open files
-        geo_file = open(os.path.join(save_path, filename + '.geo'), 'w')
-        rel_file = open(os.path.join(save_path, filename + '.rel'), 'w')
+        # open dyna
         dyna_file = open(os.path.join(save_path, filename + '.dyna'), 'w')
-        usr_file = open(os.path.join(save_path, filename + '.usr'), 'w')
 
         # title
-        geo_file.write('geo_id, type, coordinate\n')
-        rel_file.write('rel_id,type,origin_id,destination_id\n')
         if self.multi_traj:
             dyna_file.write('dyna_id,type,time,entity_id,location,traj_id\n')
         else:
             dyna_file.write('dyna_id,type,time,entity_id,location\n')
-        usr_file.write('usr_id\n')
-
-        # geo: edges
-        geo_type = 'LineString'
-        for edge in list(self.rd_nwk.edges):
-            dct = self.rd_nwk[edge[0]][edge[1]]
-            line_string = str([
-                [self.rd_nwk.nodes[edge[0]]['lon'], self.rd_nwk.nodes[edge[0]]['lat']],
-                [self.rd_nwk.nodes[edge[1]]['lon'], self.rd_nwk.nodes[edge[1]]['lat']]
-            ])
-            geo_file.write(str(dct['rel_id']) + ',' + geo_type + ',"' + line_string + '"\n')
-
-        # rel: for every edge, get next edge
-        rel_type = 'geo'
-        rel_id = 0
-        for edge1 in list(self.rd_nwk.edges):
-            node_dct = self.rd_nwk[edge1[1]]
-            edge_id1 = self.rd_nwk[edge1[0]][edge1[1]]['rel_id']
-            for node in node_dct.keys():
-                edge_id2 = self.rd_nwk[edge1[1]][node]['rel_id']
-                rel_file.write(str(rel_id) + ',' + rel_type + ',' + str(edge_id1) + ',' + str(edge_id2) + '\n')
-                rel_id += 1
 
         # dyna
         dyna_type = 'trajectory'
@@ -187,15 +160,8 @@ class MapMatchingEvaluator(AbstractEvaluator):
                                         + str(usr_id) + ',' + str(rel_id) + '\n')
                     dyna_id += 1
 
-        # usr
-        for usr_id in self.merged_result.keys():
-            usr_file.write(str(usr_id) + '\n')
-
         # close
-        geo_file.close()
-        rel_file.close()
         dyna_file.close()
-        usr_file.close()
 
         # config
         config = dict()
