@@ -1,0 +1,6 @@
+{
+  "cache_dataset": true,
+  "train_rate": 0.7,
+  "eval_rate": 0.1,
+  "scaler": "none"
+}

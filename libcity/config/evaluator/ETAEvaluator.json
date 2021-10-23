@@ -1,0 +1,5 @@
+{
+  "metrics": ["MAE", "MAPE", "MSE", "RMSE", "masked_MAE", "masked_MAPE", "masked_MSE", "masked_RMSE", "R2", "EVAR"],
+  "mode": "single",
+  "save_modes": ["csv"]
+}
