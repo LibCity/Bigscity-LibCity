@@ -138,7 +138,7 @@ class MapMatchingEvaluator(AbstractEvaluator):
         ensure_dir(save_path)
 
         # open dyna
-        dyna_file = open(os.path.join(save_path, filename + '.dyna'), 'w')
+        dyna_file = open(os.path.join(save_path, filename + '_reult.dyna'), 'w')
 
         # title
         if self.multi_traj:
