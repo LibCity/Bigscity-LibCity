@@ -75,6 +75,12 @@ def get_model(config, data_feature):
                            config['model'])(config, data_feature)
         except AttributeError:
             raise AttributeError('model is not found')
+    elif config['task'] == 'eta':
+        try:
+            return getattr(importlib.import_module('libcity.model.eta'),
+                           config['model'])(config, data_feature)
+        except AttributeError:
+            raise AttributeError('model is not found')
     else:
         raise AttributeError('task is not found')
 
