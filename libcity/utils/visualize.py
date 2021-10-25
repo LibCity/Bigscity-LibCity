@@ -1,21 +1,16 @@
 import pandas as pd
 import json
-from utils import ensure_dir
+from libcity.utils.utils import ensure_dir
 import os
-
-config = {
-    "dataset_name": "00000000_30s",
-    "save_path": "../../visualized_data/"
-}
 
 
 class VisHelper:
     def __init__(self, _config):
         self.config = _config
-        self.raw_path = '../../raw_data/'
-        self.dataset_name = config.get("dataset_name", "")
-        self.save_path = config.get("save_path", "../../visualized_data/")
-        all_files = os.listdir(self.raw_path + self.dataset_name)
+        self.raw_path = './raw_data/'
+        self.dataset = _config.get("dataset", "")
+        self.save_path = _config.get("save_path", "../../visualized_data/")
+        all_files = os.listdir(self.raw_path + self.dataset)
         self.geo_file = []
         self.geo_path = None
         self.dyna_file = []
@@ -30,10 +25,10 @@ class VisHelper:
 
     def visualize(self):
         # geo
-        self.geo_path = self.raw_path + self.dataset_name + '/' + self.geo_file[0]
+        self.geo_path = self.raw_path + self.dataset + '/' + self.geo_file[0]
         self._visualize_geo()
         for dyna_file in self.dyna_file:
-            self.dyna_path = self.raw_path + self.dataset_name + '/' + dyna_file
+            self.dyna_path = self.raw_path + self.dataset + '/' + dyna_file
             self._visualize_dyna()
 
     def _visualize_geo(self):
@@ -112,8 +107,3 @@ class VisHelper:
         json.dump(geojson_obj, open(self.save_path + '/' + save_name, 'w',
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
-
-
-if __name__ == '__main__':
-    vis_helper = VisHelper(config)
-    vis_helper.visualize()
