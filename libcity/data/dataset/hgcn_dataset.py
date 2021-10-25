@@ -30,6 +30,7 @@ class HGCNDataset(TrafficStatePointDataset):
         '''
         :return: 聚类后的中心向量矩阵，区域[节点]
         '''
+        self._logger.info("Start Calculate the adj_max_cluster!")
         sc = SpectralClustering(n_clusters=self.cluster_nodes,
                                 affinity="precomputed",
                                 assign_labels="discretize")
@@ -46,8 +47,6 @@ class HGCNDataset(TrafficStatePointDataset):
         '''
         :return: #聚类结果[cluster_num][]   聚类标识[cluster_num][]
         '''
-        self._logger.info("Start Calculate the adj_max_cluster!")
-
         self.adj_mx_cluster = np.zeros((self.cluster_nodes, self.cluster_nodes), dtype=np.float32)
         if self.init_weight_inf_or_zero.lower() == 'inf':
             self.adj_mx_cluster[:] = np.inf
