@@ -110,6 +110,7 @@ class STMGAT(AbstractTrafficStateModel):
         g.add_nodes(self.num_nodes)
         g.add_edges(src, dst)
         g.edges[src, dst].data['w'] = torch.Tensor(cost)
+        g = dgl.add_self_loop(g)
         g = g.to(self.device)
         return g
 
