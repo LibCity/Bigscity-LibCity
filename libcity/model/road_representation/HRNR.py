@@ -9,6 +9,7 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 class HRNR(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
+        super().__init__(config, data_feature)
         self.special_spmm = SpecialSpmm()
 
         self.struct_assign = data_feature.get("struct_assign")
@@ -261,10 +262,6 @@ class SPGAT(Module):
         edge_value_a = self.leakyrelu(values)
 
         # softmax
-        print(edge_value_a.shape)
-        print(edge_value_a != 0)
-        print(edge_value_a - torch.max(edge_value_a))
-
         edge_value = torch.exp(edge_value_a - torch.max(edge_value_a))  # E
         # assert not torch.isnan(edge_value).any()
 

@@ -40,6 +40,8 @@ class HRNRDataset(TrafficStateDataset):
         self.node_features = os.path.join(self.cache_file_folder, self.config.get("node_features"))
         self.label_train_set = os.path.join(self.cache_file_folder, self.config.get("label_train_set"))
         self.adj = os.path.join(self.cache_file_folder, self.config.get("adj"))
+        self.tsr = os.path.join(self.cache_file_folder, self.config.get("struct_assign", "struct_assign"))
+        self.trz = os.path.join(self.cache_file_folder, self.config.get("fnc_assign", "fnc_assign"))
 
         self.device = self.config.get('device', torch.device('cpu'))
 
@@ -48,7 +50,10 @@ class HRNRDataset(TrafficStateDataset):
         self.adj_matrix = None
 
         self._transfer_files()
-        self._calc_transfer_matrix()
+        # self._calc_transfer_matrix()
+        self.struct_assign = pickle.load(open(self.tsr, "rb"))
+        self.fnc_assign = pickle.load(open(self.trz, "rb"))
+        self._logger.info("Dataset initialization Done.")
 
     def _transfer_files(self):
         """
@@ -74,12 +79,17 @@ class HRNRDataset(TrafficStateDataset):
             self.node_feature_list.append(node_features[3:6] + [geo_id])
         pickle.dump(self.node_feature_list, open(self.node_features, "wb"))
         self.node_feature_list = np.array(self.node_feature_list)
+        self.lane_feature = torch.tensor(self.node_feature_list[:, 0], dtype=torch.long, device=self.device)
+        self.type_feature = torch.tensor(self.node_feature_list[:, 1], dtype=torch.long, device=self.device)
+        self.length_feature = torch.tensor(self.node_feature_list[:, 2], dtype=torch.long, device=self.device)
+        self.node_feature = torch.tensor(self.node_feature_list[:, 3], dtype=torch.long, device=self.device)
 
         # label_pred_train_set [id]
         is_bridge_ids = []
         for geo_id in geo_ids:
             if str(feature_dict[geo_id][6]) == 1:
                 is_bridge_ids.append(geo_id)
+        pickle.dump(is_bridge_ids, open(self.label_train_set, "wb"))
 
         # CompleteAllGraph [[0,1,...,0]]
         self.adj_matrix = [[0 for i in range(0, self.num_nodes)] for j in range(0, self.num_nodes)]
@@ -92,10 +102,6 @@ class HRNRDataset(TrafficStateDataset):
     def _calc_transfer_matrix(self):
         # calculate T^SR T^RZ with 2 loss functions
         self._logger.info("calculating transfer matrix...")
-        self.lane_feature = torch.tensor(self.node_feature_list[:, 0], dtype=torch.long, device=self.device)
-        self.type_feature = torch.tensor(self.node_feature_list[:, 1], dtype=torch.long, device=self.device)
-        self.length_feature = torch.tensor(self.node_feature_list[:, 2], dtype=torch.long, device=self.device)
-        self.node_feature = torch.tensor(self.node_feature_list[:, 3], dtype=torch.long, device=self.device)
 
         self.node_emb_layer = nn.Embedding(self.config.get("node_num"), self.config.get("node_dims")).to(self.device)
         self.type_emb_layer = nn.Embedding(self.config.get("type_num"), self.config.get("type_dims")).to(self.device)
@@ -131,24 +137,26 @@ class HRNRDataset(TrafficStateDataset):
         self.dropout = self.config.get("dropout")
         self.alpha = self.config.get("alpha")
 
-        TSR = self.calc_tsr(NS, AS)
-        AR = TSR.t().mm(AS).mm(TSR)
-        print(torch.max(AR))
-        NR = TSR.t().mm(NS)
+        # 从计算图中分离出来
+        TSR = self.calc_tsr(NS, AS).detach()
+        AR = TSR.t().mm(AS).mm(TSR).detach()
+        NR = TSR.t().mm(NS).detach()
         TRZ = self.calc_trz(NR, AR, TSR)
 
         struct_assign = self.config.get("struct_assign", "struct_assign")
         fnc_assign = self.config.get("fnc_assign", "fnc_assign")
-        self.struct_assign = torch.tensor(TSR, dtype=torch.float, device=self.device)
-        self.fnc_assign = torch.tensor(TRZ, dtype=torch.float, device=self.device)
-        pickle.dump(TSR, open(os.path.join(self.cache_file_folder, struct_assign), "wb"))
-        pickle.dump(TRZ, open(os.path.join(self.cache_file_folder, fnc_assign), "wb"))
+        self.struct_assign = TSR.clone().detach()
+        self.fnc_assign = TRZ.clone().detach()
+        pickle.dump(self.struct_assign, open(os.path.join(self.cache_file_folder, struct_assign), "wb"))
+        pickle.dump(self.fnc_assign, open(os.path.join(self.cache_file_folder, fnc_assign), "wb"))
 
     def calc_tsr(self, NS, AS):
         TSR = None
         sparse_AS = sparse.coo_matrix(AS)
         SR_GAT = GAT(in_features=self.hidden_dims, out_features=self.k2,
                      alpha=self.alpha, dropout=self.dropout).to(self.device)
+        self._logger.info("SR_GAT: " + str((self.k1, self.hidden_dims))
+                          + " -> " + str((self.k1, self.k2)))
         loss1 = torch.nn.BCELoss()
         optimizer1 = optim.Adam(SR_GAT.parameters(), lr=5e-2)  # TODO: lr
         optimizer1.zero_grad()
@@ -171,9 +179,6 @@ class HRNRDataset(TrafficStateDataset):
 
     def calc_trz(self, NR, AR, TSR):
         TRZ = None
-        print("NR: " + str(NR))
-        print("AR: " + str(AR))
-        print("TSR: " + str(TSR))
         # sparse_AR = [[0 for i in range(self.k2)] for i in range(self.k2)]
         # for i in range(self.k2):
         #     for j in range(self.k2):
