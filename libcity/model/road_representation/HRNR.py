@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+from scipy import sparse
 from torch.nn import Module
 from torch.nn.parameter import Parameter
 
@@ -14,7 +16,15 @@ class HRNR(AbstractTrafficStateModel):
 
         self.struct_assign = data_feature.get("struct_assign")
         self.fnc_assign = data_feature.get("fnc_assign")
-        self.adj = data_feature.get("adj_mx")
+        adj = data_feature.get("adj_mx")
+        self_loop = np.eye(len(adj))
+        adj = np.array(adj) + self_loop
+        adj = sparse.coo_matrix(adj)
+        adj_indices = torch.tensor(np.concatenate([adj.row[:, np.newaxis], adj.col[:, np.newaxis]], 1),
+                                   dtype=torch.long).t()
+        adj_values = torch.tensor(adj.data, dtype=torch.float)
+        adj_shape = adj.shape
+        self.adj = torch.sparse.FloatTensor(adj_indices, adj_values, adj_shape)
         self.device = config.get('device', torch.device('cpu'))
 
         edge = get_indices(self.adj).to(self.device)

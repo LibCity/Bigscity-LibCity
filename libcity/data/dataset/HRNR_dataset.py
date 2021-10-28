@@ -143,12 +143,10 @@ class HRNRDataset(TrafficStateDataset):
         NR = TSR.t().mm(NS).detach()
         TRZ = self.calc_trz(NR, AR, TSR)
 
-        struct_assign = self.config.get("struct_assign", "struct_assign")
-        fnc_assign = self.config.get("fnc_assign", "fnc_assign")
         self.struct_assign = TSR.clone().detach()
         self.fnc_assign = TRZ.clone().detach()
-        pickle.dump(self.struct_assign, open(os.path.join(self.cache_file_folder, struct_assign), "wb"))
-        pickle.dump(self.fnc_assign, open(os.path.join(self.cache_file_folder, fnc_assign), "wb"))
+        pickle.dump(self.struct_assign, open(self.tsr, "wb"))
+        pickle.dump(self.fnc_assign, open(self.trz, "wb"))
 
     def calc_tsr(self, NS, AS):
         TSR = None
