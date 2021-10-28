@@ -372,14 +372,19 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv"
+            "ChebConv", "HRNR"
         ],
         "allowed_dataset": [
-            "BJ_roadmap"
+            "BJ_roadmap", "HRNR"
         ],
         "ChebConv": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "HRNR": {
+            "dataset_class": "HRNRDataset",
+            "executor": "HRNRExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         }
     }
