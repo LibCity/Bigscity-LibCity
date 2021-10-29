@@ -14,8 +14,8 @@ class HRNRExecutor(TrafficStateExecutor):
         self.loss_func = None
 
     def train(self, train_dataloader, eval_dataloader: DataLoader):
-        self._logger.log("Starting training...")
-        hparams = dict_to_object(self.config)
+        self._logger.info("Starting training...")
+        hparams = dict_to_object(self.config.config)
         ce_criterion = torch.nn.CrossEntropyLoss()
         max_f1 = 0
         max_auc = 0
@@ -23,11 +23,13 @@ class HRNRExecutor(TrafficStateExecutor):
         model_optimizer = torch.optim.Adam(self.model.parameters(), lr=hparams.lp_learning_rate)
         eval_dataloader_iter = eval_dataloader.__iter__()
         for i in range(hparams.label_epoch):
-            self._logger.log("epoch", i)
+            # self._logger.info("epoch " + str(i))
             for step, (train_set, train_label) in enumerate(train_dataloader):
+                # self._logger.info("train_set: " + str(train_set))
+                # self._logger.info("train_label: " + str(train_label))
                 model_optimizer.zero_grad()
-                train_set = torch.tensor(train_set, dtype=torch.long, device=self.device)
-                train_label = torch.tensor(train_label, dtype=torch.long, device=self.device)
+                train_set = train_set.clone().detach()
+                train_label = train_label.clone().detach()
                 pred = self.model(train_set)
                 loss = ce_criterion(pred, train_label)
                 loss.backward(retain_graph=True)
@@ -40,10 +42,10 @@ class HRNRExecutor(TrafficStateExecutor):
                         max_auc = auc
                     if f1 > max_f1:
                         max_f1 = f1
-                    self._logger.log("max_auc:", max_auc)
-                    self._logger.log("max_f1:", max_f1)
-                    self._logger.log("step ", str(count))
-                    self._logger.log(loss.item())
+                    self._logger.info("max_auc:" + str(max_auc))
+                    self._logger.info("max_f1:" + str(max_f1))
+                    self._logger.info("step " + str(count))
+                    self._logger.info(loss.item())
                 count += 1
 
     def evaluate(self, test_dataloader):
@@ -58,7 +60,7 @@ class HRNRExecutor(TrafficStateExecutor):
         pred_prob = F.softmax(pred, -1)
         pred_scores = pred_prob[:, 1]
         auc = roc_auc_score(np.array(test_label), np.array(pred_scores.tolist()))
-        self._logger.log("auc:", auc)
+        self._logger.info("auc:", auc)
 
         pred_loc = torch.argmax(pred, 1).tolist()
         right_pos = 0
@@ -87,9 +89,9 @@ class HRNRExecutor(TrafficStateExecutor):
         recall = float(right_pos) / recall_sum
         precision = float(right_pos) / precision_sum
         if recall == 0 or precision == 0:
-            self._logger.log("p/r/f:0/0/0")
+            self._logger.info("p/r/f:0/0/0")
             return 0.0, 0.0, 0.0, 0.0
         f1 = 2 * recall * precision / (precision + recall)
-        self._logger.log("label prediction @acc @p/r/f:", float(right) / sum_num, precision, recall, f1)
+        self._logger.info("label prediction @acc @p/r/f:", float(right) / sum_num, precision, recall, f1)
         return precision, recall, f1, auc
 

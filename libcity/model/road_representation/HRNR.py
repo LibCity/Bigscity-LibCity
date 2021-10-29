@@ -12,6 +12,7 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 class HRNR(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
+        self.device = config.get("device", torch.device("cpu"))
         self.special_spmm = SpecialSpmm()
 
         self.struct_assign = data_feature.get("struct_assign")
@@ -21,19 +22,19 @@ class HRNR(AbstractTrafficStateModel):
         adj = np.array(adj) + self_loop
         adj = sparse.coo_matrix(adj)
         adj_indices = torch.tensor(np.concatenate([adj.row[:, np.newaxis], adj.col[:, np.newaxis]], 1),
-                                   dtype=torch.long).t()
-        adj_values = torch.tensor(adj.data, dtype=torch.float)
+                                   dtype=torch.long, device=self.device).t()
+        adj_values = torch.tensor(adj.data, dtype=torch.float, device=self.device)
         adj_shape = adj.shape
-        self.adj = torch.sparse.FloatTensor(adj_indices, adj_values, adj_shape)
-        self.device = config.get('device', torch.device('cpu'))
+        self.adj = torch.sparse.FloatTensor(adj_indices, adj_values, adj_shape).to(self.device)
+        self.adj = self.adj.coalesce()
 
-        edge = get_indices(self.adj).to(self.device)
+        edge = self.adj.indices()
         edge_e = torch.ones(edge.shape[1], dtype=torch.float).to(self.device)
         struct_inter = self.special_spmm(edge, edge_e, torch.Size([self.adj.shape[0], self.adj.shape[1]]),
                                          self.struct_assign)  # N*N   N*C
         struct_adj = torch.mm(self.struct_assign.t(), struct_inter)  # get struct_adj
 
-        hparams = dict_to_object(config)
+        hparams = dict_to_object(config.config)
         self.graph_enc = GraphEncoderTL(hparams, self.struct_assign, self.fnc_assign, struct_adj, self.device)
         self.node_feature = data_feature.get("node_feature")
         self.type_feature = data_feature.get("type_feature")

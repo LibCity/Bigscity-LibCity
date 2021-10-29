@@ -87,7 +87,7 @@ class HRNRDataset(TrafficStateDataset):
         # label_pred_train_set [id]
         is_bridge_ids = []
         for geo_id in geo_ids:
-            if str(feature_dict[geo_id][6]) == 1:
+            if int(feature_dict[geo_id][6]) == 1:
                 is_bridge_ids.append(geo_id)
         pickle.dump(is_bridge_ids, open(self.label_train_set, "wb"))
 
