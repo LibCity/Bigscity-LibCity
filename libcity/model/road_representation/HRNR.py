@@ -1,7 +1,7 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 from scipy import sparse
 from torch.nn import Module
 from torch.nn.parameter import Parameter
@@ -297,4 +297,3 @@ def dict_to_object(dictObj):
     for k, v in dictObj.items():
         inst[k] = dict_to_object(v)
     return inst
-

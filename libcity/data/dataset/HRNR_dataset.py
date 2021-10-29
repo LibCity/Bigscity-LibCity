@@ -8,12 +8,12 @@ import torch
 from scipy import sparse
 from sklearn.cluster import SpectralClustering
 from torch import nn, optim
-from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import TensorDataset
+from torch.utils.data.dataloader import DataLoader
 
 from libcity.data.dataset import TrafficStateDataset
-from libcity.model.road_representation.HRNR import SPGAT as GAT
 from libcity.model.road_representation.HRNR import GraphConvolution as GCN
+from libcity.model.road_representation.HRNR import SPGAT as GAT
 from libcity.utils import ensure_dir
 
 
@@ -50,9 +50,7 @@ class HRNRDataset(TrafficStateDataset):
         self.adj_matrix = None
 
         self._transfer_files()
-        # self._calc_transfer_matrix()
-        self.struct_assign = pickle.load(open(self.tsr, "rb"))
-        self.fnc_assign = pickle.load(open(self.trz, "rb"))
+        self._calc_transfer_matrix()
         self._logger.info("Dataset initialization Done.")
 
     def _transfer_files(self):
@@ -123,16 +121,6 @@ class HRNRDataset(TrafficStateDataset):
         NS = torch.cat([lane_emb, type_emb, length_emb, node_emb], 1)
         AS = torch.tensor(self.adj_matrix + np.array(np.eye(self.num_nodes)), dtype=torch.float)
 
-        # 谱聚类 求出M1
-        self._logger.info("calculating TSR...")
-        # sc = SpectralClustering(k2, affinity="precomputed",
-        #                         n_init=1, assign_labels="discretize")
-        # sc.fit(self.adj_matrix)
-        # labels = sc.labels_
-        # M1 = [[0 for i in range(k2)] for j in range(k1)]
-        # for i in range(k1):
-        #     M1[i][labels[i]] = 1
-        # M1 = torch.tensor(M1, dtype=torch.long, device=self.device)
         self.hidden_dims = self.config.get("hidden_dims")
         self.dropout = self.config.get("dropout")
         self.alpha = self.config.get("alpha")
@@ -150,6 +138,18 @@ class HRNRDataset(TrafficStateDataset):
 
     def calc_tsr(self, NS, AS):
         TSR = None
+        self._logger.info("calculating TSR...")
+
+        # 谱聚类 求出M1
+        sc = SpectralClustering(self.k2, affinity="precomputed",
+                                n_init=1, assign_labels="discretize")
+        sc.fit(self.adj_matrix)
+        labels = sc.labels_
+        M1 = [[0 for i in range(self.k2)] for j in range(self.k1)]
+        for i in range(self.k1):
+            M1[i][labels[i]] = 1
+        M1 = torch.tensor(M1, dtype=torch.long, device=self.device)
+
         sparse_AS = sparse.coo_matrix(AS)
         SR_GAT = GAT(in_features=self.hidden_dims, out_features=self.k2,
                      alpha=self.alpha, dropout=self.dropout).to(self.device)
@@ -158,11 +158,11 @@ class HRNRDataset(TrafficStateDataset):
         loss1 = torch.nn.BCELoss()
         optimizer1 = optim.Adam(SR_GAT.parameters(), lr=5e-2)  # TODO: lr
         optimizer1.zero_grad()
-        for i in range(2):  # TODO: 迭代次数
+        for i in range(10):  # TODO: 迭代次数
             self._logger.info("epoch " + str(i))
             W1 = SR_GAT(NS, sparse_AS)
-            # TSR = W1 * M1
-            TSR = W1
+            TSR = W1 * M1
+            # TSR = W1
             TSR = torch.softmax(TSR, dim=0)
 
             NR = TSR.t().mm(NS)
@@ -177,14 +177,6 @@ class HRNRDataset(TrafficStateDataset):
 
     def calc_trz(self, NR, AR, TSR):
         TRZ = None
-        # sparse_AR = [[0 for i in range(self.k2)] for i in range(self.k2)]
-        # for i in range(self.k2):
-        #     for j in range(self.k2):
-        #         if AR[i][j] > 0.2:
-        #             sparse_AR[i][j] = 1
-        #             print((i, j), end=" ")
-        # sparse_AR = sparse.coo_matrix(sparse_AR)
-
         RZ_GCN = GCN(in_features=self.hidden_dims, out_features=self.k3,
                      device=self.device).to(self.device)
         self._logger.info("RZ_GCN: " + str((self.k2, self.hidden_dims))
@@ -195,7 +187,7 @@ class HRNRDataset(TrafficStateDataset):
         optimizer2.zero_grad()
         C = torch.tensor(Utils(self.num_nodes, self.adj_matrix).get_reachable_matrix(), dtype=torch.float)
         self._logger.info("calculating TRZ...")
-        for i in range(2):  # TODO: 迭代次数
+        for i in range(10):  # TODO: 迭代次数
             self._logger.info("epoch " + str(i))
             TRZ = RZ_GCN(NR.unsqueeze(0), AR.unsqueeze(0)).squeeze()
             TRZ = torch.softmax(TRZ, dim=0)
@@ -276,7 +268,7 @@ class Utils:
         Returns:
             列表形式的矩阵
         """
-        lam = 3  # lambda in eq.17
+        lam = 5  # lambda in eq.17
         for i in range(0, self.n):
             self.temp = []
             self.dfs(i, i, lam)

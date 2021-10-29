@@ -1,10 +1,11 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
-from torch.utils.data.dataloader import DataLoader
 from sklearn.metrics import roc_auc_score
-from libcity.model.road_representation.HRNR import dict_to_object
+from torch.utils.data.dataloader import DataLoader
+
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
+from libcity.model.road_representation.HRNR import dict_to_object
 
 
 class HRNRExecutor(TrafficStateExecutor):
@@ -23,6 +24,7 @@ class HRNRExecutor(TrafficStateExecutor):
         model_optimizer = torch.optim.Adam(self.model.parameters(), lr=hparams.lp_learning_rate)
         eval_dataloader_iter = eval_dataloader.__iter__()
         for i in range(hparams.label_epoch):
+            self._logger.info("epoch " + str(i) + ", processed " + str(count))
             for step, (train_set, train_label) in enumerate(train_dataloader):
                 model_optimizer.zero_grad()
                 train_set = train_set.clone().detach()
@@ -92,4 +94,3 @@ class HRNRExecutor(TrafficStateExecutor):
         self._logger.info("label prediction @acc @p/r/f:" + str(float(right) / sum_num) + str(precision) +
                           str(recall) + str(f1))
         return precision, recall, f1, auc
-
