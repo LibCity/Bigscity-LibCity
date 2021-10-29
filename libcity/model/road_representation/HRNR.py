@@ -18,15 +18,7 @@ class HRNR(AbstractTrafficStateModel):
         self.struct_assign = data_feature.get("struct_assign")
         self.fnc_assign = data_feature.get("fnc_assign")
         adj = data_feature.get("adj_mx")
-        self_loop = np.eye(len(adj))
-        adj = np.array(adj) + self_loop
-        adj = sparse.coo_matrix(adj)
-        adj_indices = torch.tensor(np.concatenate([adj.row[:, np.newaxis], adj.col[:, np.newaxis]], 1),
-                                   dtype=torch.long, device=self.device).t()
-        adj_values = torch.tensor(adj.data, dtype=torch.float, device=self.device)
-        adj_shape = adj.shape
-        self.adj = torch.sparse.FloatTensor(adj_indices, adj_values, adj_shape).to(self.device)
-        self.adj = self.adj.coalesce()
+        self.adj = get_sparse_adj(adj, self.device)
 
         edge = self.adj.indices()
         edge_e = torch.ones(edge.shape[1], dtype=torch.float).to(self.device)
@@ -87,6 +79,19 @@ class GraphEncoderTL(Module):
         raw_feat = self.tl_layer_1(self.struct_adj, raw_feat, adj)
         raw_feat = self.tl_layer_2(self.struct_adj, raw_feat, adj)
         return raw_feat
+
+
+def get_sparse_adj(adj, device):
+    self_loop = np.eye(len(adj))
+    adj = np.array(adj) + self_loop
+    adj = sparse.coo_matrix(adj)
+
+    adj_indices = torch.tensor(np.concatenate([adj.row[:, np.newaxis], adj.col[:, np.newaxis]], 1),
+                               dtype=torch.long, device=device).t()
+    adj_values = torch.tensor(adj.data, dtype=torch.float, device=device)
+    adj_shape = adj.shape
+    adj = torch.sparse.FloatTensor(adj_indices, adj_values, adj_shape).to(device)
+    return adj.coalesce()
 
 
 class GraphEncoderTLCore(Module):
