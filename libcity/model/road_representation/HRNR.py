@@ -83,37 +83,33 @@ class GraphEncoderTL(Module):
         lane_emb = self.lane_emb_layer(lane_feature)
         raw_feat = torch.cat([lane_emb, type_emb, length_emb, node_emb], 1)
         self.init_feat = raw_feat
-        #    for i in range(self.hparams.label_pred_gnn_layer):
-        #      raw_feat = self.tl_layer_1(self.struct_adj, raw_feat, adj)
+
         raw_feat = self.tl_layer_1(self.struct_adj, raw_feat, adj)
         raw_feat = self.tl_layer_2(self.struct_adj, raw_feat, adj)
-        #    raw_feat = self.tl_layer_3(self.struct_adj, raw_feat, adj)
-
         return raw_feat
 
 
 class GraphEncoderTLCore(Module):
     def __init__(self, hparams, struct_assign, fnc_assign, device):
         super(GraphEncoderTLCore, self).__init__()
-        self.hparams = hparams
         self.device = device
         self.struct_assign = struct_assign
         self.fnc_assign = fnc_assign
 
         self.fnc_gcn = GraphConvolution(
-            in_features=self.hparams.hidden_dims,
-            out_features=self.hparams.hidden_dims,
-            device=self.device).to(self.device)
+            in_features=hparams.hidden_dims,
+            out_features=hparams.hidden_dims,
+            device=device).to(self.device)
 
         self.struct_gcn = GraphConvolution(
-            in_features=self.hparams.hidden_dims,
-            out_features=self.hparams.hidden_dims,
+            in_features=hparams.hidden_dims,
+            out_features=hparams.hidden_dims,
             device=self.device).to(self.device)
 
-        self.node_gat = SPGCN(
-            in_features=self.hparams.hidden_dims,
-            out_features=self.hparams.hidden_dims,
-            device=self.device).to(self.device)
+        self.node_gat = SPGAT(
+            in_features=hparams.hidden_dims,
+            out_features=hparams.hidden_dims,
+            alpha=hparams.alpha, dropout=hparams.dropout).to(self.device)
 
         self.l_c = torch.nn.Linear(hparams.hidden_dims * 2, 1).to(self.device)
 
@@ -134,7 +130,7 @@ class GraphEncoderTLCore(Module):
 
         # backward
         ## F2F
-        self.fnc_adj = F.sigmoid(torch.mm(self.fnc_emb, self.fnc_emb.t()))  # n_f * n_f
+        self.fnc_adj = torch.sigmoid(torch.mm(self.fnc_emb, self.fnc_emb.t()))  # n_f * n_f
         self.fnc_adj = self.fnc_adj + torch.eye(self.fnc_adj.shape[0]).to(self.device) * 1.0
         self.fnc_emb = self.fnc_gcn(self.fnc_emb.unsqueeze(0), self.fnc_adj.unsqueeze(0)).squeeze()
 
@@ -159,8 +155,6 @@ class GraphEncoderTLCore(Module):
         raw_feat = self.node_gat(raw_feat, raw_adj)
         return raw_feat
 
-
-# gcn_layers
 
 class SpecialSpmmFunction(torch.autograd.Function):
     """Special function for only sparse region backpropataion layer."""
@@ -192,57 +186,6 @@ class SpecialSpmm(nn.Module):
         return SpecialSpmmFunction.apply(indices, values, shape, b)
 
 
-class SPGCN(Module):
-    def __init__(self, in_features, out_features, device, concat=True):
-        super(SPGCN, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.concat = concat
-        self.device = device
-
-        self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
-        nn.init.xavier_normal_(self.W.data, gain=1.414)
-        self.a = nn.Parameter(torch.zeros(size=(1, 2 * out_features)))
-        nn.init.xavier_normal_(self.a.data, gain=1.414)
-        #    self.leakyrelu = nn.LeakyReLU(self.alpha)
-        self.special_spmm = SpecialSpmm()
-        pass
-
-    def forward(self, inputs, adj):
-        inputs = inputs.squeeze()
-        #    adj = adj.squeeze()
-        #    self_loop = torch.eye(adj.shape[0]).to(self.device)
-        #    adj = adj + self_loop
-        N = inputs.size()[0]
-        #    edge = adj.nonzero().t()
-        edge = get_indices(adj)
-        #    edge = edge[1:, :]
-        h = torch.mm(inputs, self.W)
-        # h: N x out
-        assert not torch.isnan(h).any()
-        #    edge_h = torch.cat((h[edge[0, :], :], h[edge[1, :], :]), dim=1).t()
-        # edge: 2*D x E
-        #    edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
-        edge_e = torch.ones(edge.shape[1], dtype=torch.float).to(self.device)
-        assert not torch.isnan(edge_e).any()
-        # edge_e: E
-        e_rowsum = self.special_spmm(edge, edge_e, torch.Size([N, N]), torch.ones(size=(N, 1), device=self.device))
-        # e_rowsum: N x 1
-        #    edge_e = self.dropout(edge_e)
-        # edge_e: E
-
-        h_prime = self.special_spmm(edge, edge_e, torch.Size([N, N]), h)
-        assert not torch.isnan(h_prime).any()
-        # h_prime: N x out
-        h_prime = h_prime.div(e_rowsum)
-        # h_prime: N x out
-        assert not torch.isnan(h_prime).any()
-        if self.concat:  # if this layer is not last layer,
-            return F.elu(h_prime)
-        else:  # if this layer is last layer
-            return h_prime
-
-
 class SPGAT(Module):
     def __init__(self, in_features, out_features, dropout, alpha, concat=True):
         super(SPGAT, self).__init__()
@@ -263,90 +206,29 @@ class SPGAT(Module):
         inputs = inputs.squeeze()
         dv = 'cuda' if inputs.is_cuda else 'cpu'
         N = inputs.size()[0]
-        edge_index = get_indices(adj)
+        edge_index = adj.indices()
 
         h = torch.mm(inputs, self.W)
         # h: N x out
-        # assert not torch.isnan(h).any()
         edge_h = torch.cat((h[edge_index[0, :], :], h[edge_index[1, :], :]), dim=1).t()  # 2*D x E
         values = self.a.mm(edge_h).squeeze()
         edge_value_a = self.leakyrelu(values)
 
         # softmax
         edge_value = torch.exp(edge_value_a - torch.max(edge_value_a))  # E
-        # assert not torch.isnan(edge_value).any()
-
         e_rowsum = self.special_spmm(edge_index, edge_value, torch.Size([N, N]), torch.ones(size=(N, 1), device=dv))
         # e_rowsum: N x 1
         edge_value = self.dropout(edge_value)
         # edge_value: E
         h_prime = self.special_spmm(edge_index, edge_value, torch.Size([N, N]), h)
-        # assert not torch.isnan(h_prime).any()
         # h_prime: N x out
         epsilon = 1e-15
         h_prime = h_prime.div(e_rowsum + torch.tensor([epsilon], device=dv))
         # h_prime: N x out
-        # assert not torch.isnan(h_prime).any()
         if self.concat:  # if this layer is not last layer,
             return F.elu(h_prime)
         else:  # if this layer is last layer
             return h_prime
-
-
-class GAT_layer(Module):
-    def __init__(self, in_features, out_features, dropout, alpha, concat=True):
-        super(GAT_layer, self).__init__()
-        self.dropout = dropout
-        self.in_features = in_features
-        self.out_features = out_features
-        self.alpha = alpha
-        self.concat = concat
-
-        self.W = nn.Parameter(torch.zeros(size=(in_features, out_features)))
-        nn.init.xavier_uniform_(self.W.data, gain=1.414)
-        self.a = nn.Parameter(torch.zeros(size=(2 * out_features, 1)))
-        nn.init.xavier_uniform_(self.a.data, gain=1.414)
-
-        self.leakyrelu = nn.LeakyReLU(self.alpha)
-
-    def forward(self, inputs, adj):
-        h = torch.mm(inputs, self.W)  # shape [N, out_features]
-        N = h.size()[0]
-
-        a_input = torch.cat([h.repeat(1, N).view(N * N, -1), h.repeat(N, 1)], dim=1)\
-            .view(N, -1, 2 * self.out_features)  # shape[N, N, 2*out_features]
-        e = self.leakyrelu(torch.matmul(a_input, self.a).squeeze(2))  # [N,N,1] -> [N,N]
-
-        zero_vec = -9e15 * torch.ones_like(e)
-        attention = torch.where(adj > 0, e, zero_vec)
-        attention = F.softmax(attention, dim=1)
-        attention = F.dropout(attention, self.dropout, training=self.training)
-        h_prime = torch.matmul(attention, h)  # [N,N], [N, out_features] --> [N, out_features]
-
-        if self.concat:
-            return F.elu(h_prime)
-        else:
-            return h_prime
-
-
-class MyGAT(Module):
-    def __init__(self, in_features, out_features, dropout, alpha, nheads=2):
-        super(MyGAT, self).__init__()
-        self.dropout = dropout
-
-        self.attentions = [GAT_layer(in_features, in_features, dropout=dropout, alpha=alpha, concat=True)
-                           for _ in range(nheads)]
-        for i, attention in enumerate(self.attentions):
-            self.add_module('attention_{}'.format(i), attention)
-
-        self.out_att = GAT_layer(in_features * nheads, out_features, dropout=dropout, alpha=alpha, concat=False)
-
-    def forward(self, x, adj):
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = torch.cat([att(x, adj) for att in self.attentions], dim=1)
-        x = F.dropout(x, self.dropout, training=self.training)
-        x = F.elu(self.out_att(x, adj))
-        return F.log_softmax(x, dim=1)
 
 
 class GraphConvolution(Module):
@@ -416,8 +298,3 @@ def dict_to_object(dictObj):
         inst[k] = dict_to_object(v)
     return inst
 
-
-def get_indices(obj: torch.tensor):
-    nonzero = obj.nonzero()
-    indices = torch.tensor([nonzero[0], nonzero[1]], dtype=torch.long)
-    return indices
