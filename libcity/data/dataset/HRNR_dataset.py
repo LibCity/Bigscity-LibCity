@@ -142,14 +142,14 @@ class HRNRDataset(TrafficStateDataset):
         self._logger.info("calculating TSR...")
 
         # 谱聚类 求出M1
-        # sc = SpectralClustering(self.k2, affinity="precomputed",
-        #                         n_init=1, assign_labels="discretize")
-        # sc.fit(self.adj_matrix)
-        # labels = sc.labels_
-        # M1 = [[0 for i in range(self.k2)] for j in range(self.k1)]
-        # for i in range(self.k1):
-        #     M1[i][labels[i]] = 1
-        # M1 = torch.tensor(M1, dtype=torch.long, device=self.device)
+        sc = SpectralClustering(self.k2, affinity="precomputed",
+                                n_init=1, assign_labels="discretize")
+        sc.fit(self.adj_matrix)
+        labels = sc.labels_
+        M1 = [[0 for i in range(self.k2)] for j in range(self.k1)]
+        for i in range(self.k1):
+            M1[i][labels[i]] = 1
+        M1 = torch.tensor(M1, dtype=torch.long, device=self.device)
 
         sparse_AS = get_sparse_adj(AS, self.device)
         SR_GAT = GAT(in_features=self.hidden_dims, out_features=self.k2,
@@ -162,8 +162,8 @@ class HRNRDataset(TrafficStateDataset):
         for i in range(10):  # TODO: 迭代次数
             self._logger.info("epoch " + str(i))
             W1 = SR_GAT(NS, sparse_AS)
-            # TSR = W1 * M1
-            TSR = W1
+            TSR = W1 * M1
+            # TSR = W1
             TSR = torch.softmax(TSR, dim=0)
 
             NR = TSR.t().mm(NS)
