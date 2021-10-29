@@ -54,7 +54,7 @@ class HRNRExecutor(TrafficStateExecutor):
     def test_label_pred(self, model, test_set, test_label, device):
         right = 0
         sum_num = 0
-        test_set = torch.tensor(test_set, dtype=torch.long, device=device)
+        test_set = test_set.clone().detach()
         pred = model(test_set)
         pred_prob = F.softmax(pred, -1)
         pred_scores = pred_prob[:, 1]
