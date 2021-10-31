@@ -4,6 +4,7 @@ import numpy as np
 
 from libcity.data.dataset import TrafficStateGridOdDataset
 from libcity.data.utils import generate_dataloader
+from libcity.utils import ensure_dir
 
 
 class CSTNDataset(TrafficStateGridOdDataset):
@@ -94,20 +95,39 @@ class CSTNDataset(TrafficStateGridOdDataset):
             "train\tX: {}, W: {}, y: {}".format(str(x_train.shape), str(w_train.shape), str(y_train.shape)))
         self._logger.info("eval\tX: {}, W: {}, y: {}".format(str(x_eval.shape), str(w_eval.shape), str(y_eval.shape)))
         self._logger.info("test\tX: {}, W: {}, y: {}".format(str(x_test.shape), str(w_test.shape), str(y_test.shape)))
+
         return x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test
 
     def _generate_train_val_test(self):
         X, W, y = self._generate_data()
-        return self._split_train_val_test(X, W, y)
+        x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test = self._split_train_val_test(X, W, y)
+
+        if self.cache_dataset:
+            ensure_dir(self.cache_file_folder)
+            np.savez_compressed(
+                self.cache_file_name,
+                x_train=x_train,
+                w_train=w_train,
+                y_train=y_train,
+                x_test=x_test,
+                w_test=w_test,
+                y_test=y_test,
+                x_eval=x_eval,
+                w_eval=w_eval,
+                y_eval=y_eval,
+            )
+            self._logger.info('Saved at ' + self.cache_file_name)
+
+        return x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test
 
     def get_data(self):
         # 加载数据集
         x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test = [], [], [], [], [], [], [], [], []
         if self.data is None:
             if self.cache_dataset and os.path.exists(self.cache_file_name):
-                x_train, w_train, y_train, x_val, w_val, y_val, x_test, w_text, y_test = self._load_cache_train_val_test()
+                x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test = self._load_cache_train_val_test()
             else:
-                x_train, w_train, y_train, x_val, w_val, y_val, x_test, w_text, y_test = self._generate_train_val_test()
+                x_train, w_train, y_train, x_eval, w_eval, y_eval, x_test, w_test, y_test = self._generate_train_val_test()
 
         # 数据归一化
         self.feature_dim = x_train.shape[-1]

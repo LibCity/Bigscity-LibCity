@@ -269,9 +269,9 @@ class TEC(nn.Module):
         )
 
     def forward(self, x):
-        # (B, T, 32, H, W)
-        (x, _) = self.ConvLSTM(x)[1]
-        # (B, 32, H, W)
+        # (B, T, 40, H, W)
+        (x, _) = self.ConvLSTM(x)[1][0]
+        # (B, 40, H, W)
         x = self.conv(x)
         # (B, c_lt, H, W)
         return x
@@ -280,11 +280,12 @@ class TEC(nn.Module):
 class GCC(nn.Module):
     def __init__(self):
         super(GCC, self).__init__()
-        self.Softmax = nn.Softmax()
+        self.Softmax = nn.Softmax(dim=0)
 
     def forward(self, x: torch.Tensor):
         # x: (B, c_lt, H, W)
         _x = x
+        x = x.reshape((x.shape[0], x.shape[1], x.shape[2] * x.shape[3]))
         s = torch.bmm(x.transpose(1, 2), x)
         s = self.Softmax(s)
         # s: (B, H * W, H * W)
@@ -299,14 +300,20 @@ class GCC(nn.Module):
 class CSTN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
-        self.height = data_feature.get('len_row', 15)
-        self.width = data_feature.get('len_column', 5)
+
         self.device = config.get('device', torch.device('cpu'))
+        self.batch_size = config.get('batch_size')
+        self.output_dim = config.get('output_dim')
+
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.batch_size = config.get('batch_size')
+        self._scaler = self.data_feature.get('scaler')
+        self.height = data_feature.get('len_row', 15)
+        self.width = data_feature.get('len_column', 5)
+
         self.n_layers = config.get('n_layers', 3)
         self.c_lt = config.get('c_lt', 75)
+
         self.LSC = LSC(self.height, self.width, self.n_layers)
         self.MLP = MLP()
         self.TEC = TEC(self.c_lt)
@@ -325,15 +332,15 @@ class CSTN(AbstractTrafficStateModel):
         # x : (B, T, H, W, H, W)
         x = self.LSC(x)
         # x : (B * T, 32, H, W)
-        x = x.reshape((self.batch_size, self.input_window, 32, self.heigth, self.width))
+        x = x.reshape((self.batch_size, self.input_window, 32, self.height, self.width))
         # x : (B, T, 32, H, W)
 
         w = batch['W']
         # w : (B, T, F)
         w = self.MLP(w)
         # w : (B, T, 8)
-        w = w.repeat(1, 1, self.heigth * self.width)
-        w = w.reshape((self.batch_size, self.input_window, 8, self.heigth, self.width))
+        w = w.repeat(1, 1, self.height * self.width)
+        w = w.reshape((self.batch_size, self.input_window, 8, self.height, self.width))
         # w : (B, T, 8, H, W)
         x = torch.cat([x, w], dim=2)
         x = self.TEC(x)
@@ -342,7 +349,7 @@ class CSTN(AbstractTrafficStateModel):
         # x : (B, 2 * c_lt, H, W)
         x = self.OUT(x)
         # x : (B, H * W, H, W)
-        x = x.reshape((self.batch_size, 1, self.heigth, self.width, self.heigth, self.width, 1))
+        x = x.reshape((self.batch_size, 1, self.height, self.width, self.height, self.width, 1))
         # x : (B, 1, H, W, H, W, 1)
         return x
 
@@ -364,7 +371,7 @@ class CSTN(AbstractTrafficStateModel):
         y_preds = []
         x_ = x.clone()
         for i in range(self.output_window):
-            batch_tmp = {'X': x_, 'W': w[i:(i + self.input_window), ...]}
+            batch_tmp = {'X': x_, 'W': w[:, i:(i + self.input_window), ...]}
             y_ = self.forward(batch_tmp)  # (batch_size, 1, len_row, len_column, output_dim)
             y_preds.append(y_.clone())
             if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
