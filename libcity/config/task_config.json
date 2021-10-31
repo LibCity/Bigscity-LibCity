@@ -381,6 +381,11 @@
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
+        },
+        "LINE": {
+            "dataset_class": "LINEDataset",
+            "executor": "LINEExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
         }
     }
 }
