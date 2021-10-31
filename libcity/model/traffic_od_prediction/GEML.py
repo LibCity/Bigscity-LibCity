@@ -5,7 +5,7 @@ import torch.nn as nn
 from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
-# TODO Adjust parameters to make the model converge, or denormalization the loss
+
 class SLSTM(nn.Module):
     def __init__(self, feature_dim, hidden_dim, device, p_interval):
         super(SLSTM, self).__init__()
@@ -176,11 +176,13 @@ class GEML(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.num_nodes = self.data_feature.get('num_nodes')
+        self._scaler = self.data_feature.get('scaler')
+        self.output_dim = config.get('output_dim')
         self.device = config.get('device', torch.device('cpu'))
         self.input_window = config.get('input_window', 1)
         self.output_window = config.get('output_window', 1)
-        self.p_interval = config.get('p_interval', 1)
 
+        self.p_interval = config.get('p_interval', 1)
         self.embed_dim = config.get('embed_dim')
         self.batch_size = config.get('batch_size')
         self.loss_p0 = config.get('loss_p0', 0.5)
@@ -230,6 +232,15 @@ class GEML(AbstractTrafficStateModel):
         y_in_true = torch.sum(y_true, dim=-2, keepdim=True)  # (B, TO, N, 1)
         y_out_true = torch.sum(y_true.permute(0, 1, 3, 2, 4), dim=-2, keepdim=True)  # (B, TO, N, 1)
         y_pred, y_in, y_out = self.predict(batch)
+
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_in_true = self._scaler.inverse_transform(y_in_true[..., :self.output_dim])
+        y_out_true = self._scaler.inverse_transform(y_out_true[..., :self.output_dim])
+
+        y_pred = self._scaler.inverse_transform(y_pred[..., :self.output_dim])
+        y_in = self._scaler.inverse_transform(y_in[..., :self.output_dim])
+        y_out = self._scaler.inverse_transform(y_out[..., :self.output_dim])
+
         loss_pred = loss.masked_mse_torch(y_pred, y_true)
         loss_in = loss.masked_mse_torch(y_in, y_in_true)
         loss_out = loss.masked_mse_torch(y_out, y_out_true)
