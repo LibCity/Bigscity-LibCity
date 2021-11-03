@@ -30,7 +30,7 @@ from libcity.data.dataset.crann_dataset import CRANNDataset
 from libcity.data.dataset.ccrnn_dataset import CCRNNDataset
 from libcity.data.dataset.geosan_dataset import GeoSANDataset
 from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
-from libcity.data.dataset.chebconv_dataset import ChebConvDataset
+from libcity.data.dataset.road_representation_dataset import RoadRepresentationDataset
 from libcity.data.dataset.gsnet_dataset import GSNetDataset
 from libcity.data.dataset.HRNR_dataset import HRNRDataset
 
@@ -63,7 +63,7 @@ __all__ = [
     "GeoSANDataset",
     "DMVSTNetDataset",
     "MapMatchingDataset",
-    'ChebConvDataset',
+    'RoadRepresentationDataset',
     "GSNetDataset",
     "HRNRDataset"
 ]

@@ -52,7 +52,7 @@ class HRNRExecutor(TrafficStateExecutor):
                 count += 1
 
     def evaluate(self, test_dataloader):
-        for _, (test_set, test_label) in test_dataloader:
+        for _, (test_set, test_label) in enumerate(test_dataloader):
             precision, recall, f1, auc = self.test_label_pred(self.model, test_set, test_label, self.device)
 
     def test_label_pred(self, model, test_set, test_label, device):

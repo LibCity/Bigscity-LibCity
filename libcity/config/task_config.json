@@ -378,7 +378,7 @@
             "BJ_roadmap", "HRNR"
         ],
         "ChebConv": {
-            "dataset_class": "ChebConvDataset",
+            "dataset_class": "RoadRepresentationDataset",
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         },

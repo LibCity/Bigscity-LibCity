@@ -9,7 +9,7 @@ from libcity.utils import StandardScaler, NormalScaler, NoneScaler, \
 from libcity.data.dataset import AbstractDataset
 
 
-class ChebConvDataset(AbstractDataset):
+class RoadRepresentationDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         self.dataset = self.config.get('dataset', '')
@@ -86,6 +86,13 @@ class ChebConvDataset(AbstractDataset):
         self._logger.info('Adj_mx is saved at {}'.format(save_path))
 
     def _split_train_val_test(self):
+        """
+        获取路网原子文件中的节点属性信息，并返回
+        Returns:
+            node_features: N \times F 特征矩阵
+            node_labels: N \times (highway classes) 的 01 矩阵，路段分类
+            train_mask, valid_mask, test_mask: 下标的 list，分别表示选中训练、验证、测试的节点下标
+        """
         # TODO: 这里进行规范化，相关内容抽象成函数，通过外部设置参数确定对哪些列进行数据预处理，即可统一
         # node_features = self.road_info[['highway', 'length', 'lanes', 'tunnel', 'bridge',
         #                                 'maxspeed', 'width', 'service', 'junction', 'key']].values
@@ -93,6 +100,7 @@ class ChebConvDataset(AbstractDataset):
         # 'lanes', 'highway'是类别 47+6
         # 'length', 'maxspeed', 'width'是浮点 1+1+1 共61
         node_features = self.road_info[self.road_info.columns[3:]]
+        node_labels = None
 
         # 对部分列进行归一化
         norm_dict = {
@@ -100,6 +108,7 @@ class ChebConvDataset(AbstractDataset):
             'maxspeed': 5,
             'width': 6
         }
+
         for k, v in norm_dict.items():
             d = node_features[k]
             min_ = d.min()
@@ -114,6 +123,8 @@ class ChebConvDataset(AbstractDataset):
             dum_col = pd.get_dummies(node_features[col], col)
             node_features = node_features.drop(col, axis=1)
             node_features = pd.concat([node_features, dum_col], axis=1)
+            if col == "highway":
+                node_labels = dum_col.values
 
         node_features = node_features.values
         np.save(self.cache_file_folder + '{}_node_features.npy'.format(self.dataset), node_features)
@@ -137,6 +148,7 @@ class ChebConvDataset(AbstractDataset):
             np.savez_compressed(
                 self.cache_file_name,
                 node_features=node_features,
+                node_labels=node_labels,
                 train_mask=train_mask,
                 valid_mask=valid_mask,
                 test_mask=test_mask
@@ -145,7 +157,7 @@ class ChebConvDataset(AbstractDataset):
         self._logger.info("len train feature\t" + str(len(train_mask)))
         self._logger.info("len eval feature\t" + str(len(valid_mask)))
         self._logger.info("len test feature\t" + str(len(test_mask)))
-        return node_features, train_mask, valid_mask, test_mask
+        return node_features, node_labels, train_mask, valid_mask, test_mask
 
     def _load_cache_train_val_test(self):
         """
@@ -154,13 +166,14 @@ class ChebConvDataset(AbstractDataset):
         self._logger.info('Loading ' + self.cache_file_name)
         cat_data = np.load(self.cache_file_name, allow_pickle=True)
         node_features = cat_data['node_features']
+        node_labels = cat_data['node_labels']
         train_mask = cat_data['train_mask']
         valid_mask = cat_data['valid_mask']
         test_mask = cat_data['test_mask']
         self._logger.info("len train feature\t" + str(len(train_mask)))
         self._logger.info("len eval feature\t" + str(len(valid_mask)))
         self._logger.info("len test feature\t" + str(len(test_mask)))
-        return node_features, train_mask, valid_mask, test_mask
+        return node_features, node_labels, train_mask, valid_mask, test_mask
 
     def _get_scalar(self, scaler_type, data):
         """
@@ -205,17 +218,17 @@ class ChebConvDataset(AbstractDataset):
         """
         # 加载数据集
         if self.cache_dataset and os.path.exists(self.cache_file_name):
-            node_features, train_mask, valid_mask, test_mask = self._load_cache_train_val_test()
+            node_features, node_labels, train_mask, valid_mask, test_mask = self._load_cache_train_val_test()
         else:
-            node_features, train_mask, valid_mask, test_mask = self._split_train_val_test()
+            node_features, node_labels, train_mask, valid_mask, test_mask = self._split_train_val_test()
         # 数据归一化
         self.feature_dim = node_features.shape[-1]
         self.scaler = self._get_scalar(self.scaler_type, node_features)
         node_features = self.scaler.transform(node_features)
-        self.train_dataloader = {'node_features': node_features, 'mask': train_mask}
-        self.eval_dataloader = {'node_features': node_features, 'mask': valid_mask}
-        self.test_dataloader = {'node_features': node_features, 'mask': test_mask}
-        return self.train_dataloader, self.eval_dataloader, self.test_dataloader
+        train_dataloader = {'node_features': node_features, 'node_labels': node_labels, 'mask': train_mask}
+        eval_dataloader = {'node_features': node_features, 'node_labels': node_labels, 'mask': valid_mask}
+        test_dataloader = {'node_features': node_features, 'node_labels': node_labels, 'mask': test_mask}
+        return train_dataloader, eval_dataloader, test_dataloader
 
     def get_data_feature(self):
         """

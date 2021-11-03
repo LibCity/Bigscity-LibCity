@@ -101,7 +101,7 @@ class ChebConvExecutor(TrafficStateExecutor):
             save_list = os.listdir(self.cache_dir)
             for save_file in save_list:
                 if '.tar' in save_file:
-                    os.remove(self.cache_dir + '/' + save_file)
+                    os.remove(os.path.join(self.cache_dir, save_file))
         return min_val_loss
 
     def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
