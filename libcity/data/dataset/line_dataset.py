@@ -114,7 +114,7 @@ class LINEDataset(AbstractDataset):
             self._geo_to_ind[idx] = index
         self._logger.info("Loaded file " + self.geo_file + '.geo' + ', num_nodes=' + str(self.num_nodes))
 
-    def _load_rel(self, POW=0.75):
+    def _load_rel(self):
         """
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)],
         生成N*N的矩阵，默认.rel存在的边表示为1，不存在的边表示为0
@@ -185,20 +185,21 @@ class LINEDataset(AbstractDataset):
         num_test = round(self.num_samples * test_rate)
         num_train = round(self.num_samples * self.train_rate)
         num_eval = self.num_samples - num_test - num_train
+
         # train
         I_train, J_train, Neg_train = I[:num_train], J[:num_train], Neg[:num_train]
         # eval
-        I_eval, J_eval, Neg_eval = I[num_train:num_train + num_eval], \
-                                   J[num_train:num_train + num_eval], Neg[num_train:num_train + eval()]
+        I_eval, J_eval, Neg_eval = I[num_train:num_train + num_eval], J[num_train:num_train + num_eval], \
+                                   Neg[num_train:num_train + num_eval]
         # test
         I_test, J_test, Neg_test = I[-num_test:], J[-num_test:], Neg[-num_test:]
 
         self._logger.info(
-            "train\tI: {}, J: {}, Neg: {}".format(str(I_train.shape), str(J_train.shape), str(Neg_train.shape)))
+            "train\tI: {}, J: {}, Neg: {}".format(str(len(I_train)), str(len(J_train)), str(len(Neg_train))))
         self._logger.info(
-            "eval\tI: {}, J: {}, Neg: {}".format(str(I_eval.shape), str(J_eval.shape), str(Neg_eval.shape)))
+            "eval\tI: {}, J: {}, Neg: {}".format(str(len(I_eval)), str(len(J_eval)), str(len(Neg_eval))))
         self._logger.info(
-            "test\tI: {}, J: {}, Neg: {}".format(str(I_test.shape), str(J_test.shape), str(Neg_test.shape)))
+            "test\tI: {}, J: {}, Neg: {}".format(str(len(I_test)), str(len(J_test)), str(len(Neg_test))))
 
         if self.cache_dataset:
             ensure_dir(self.cache_file_folder)
@@ -234,11 +235,11 @@ class LINEDataset(AbstractDataset):
         J_eval = cat_data['J_eval'],
         Neg_eval = cat_data['Neg_eva']
         self._logger.info(
-            "train\tI: {}, J: {}, Neg: {}".format(str(I_train.shape), str(J_train.shape), str(Neg_train.shape)))
+            "train\tI: {}, J: {}, Neg: {}".format(str(len(I_train)), str(len(J_train)), str(len(Neg_train))))
         self._logger.info(
-            "eval\tI: {}, J: {}, Neg: {}".format(str(I_eval.shape), str(J_eval.shape), str(Neg_eval.shape)))
+            "eval\tI: {}, J: {}, Neg: {}".format(str(len(I_eval)), str(len(J_eval)), str(len(Neg_eval))))
         self._logger.info(
-            "test\tI: {}, J: {}, Neg: {}".format(str(I_test.shape), str(J_test.shape), str(Neg_test.shape)))
+            "test\tI: {}, J: {}, Neg: {}".format(str(len(I_test)), str(len(J_test)), str(len(Neg_test))))
 
         return I_train, J_train, Neg_train, I_eval, J_eval, Neg_eval, I_test, J_test, Neg_test
 
