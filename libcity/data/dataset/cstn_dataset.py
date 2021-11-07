@@ -27,13 +27,13 @@ class CSTNDataset(TrafficStateGridOdDataset):
 
     def _generate_data(self):
         """
-                加载数据文件(.gridod)和外部数据(.ext)，以X, W, y的形式返回
+        加载数据文件(.gridod)和外部数据(.ext)，以X, W, y的形式返回
 
-                Returns:
-                    tuple: tuple contains:
-                        X(np.ndarray): 模型输入数据，(num_samples, input_length, ..., feature_dim) \n
-                        W(np.ndarray): 模型外部数据，(num_samples, input_length, ext_dim)
-                        y(np.ndarray): 模型输出数据，(num_samples, output_length, ..., feature_dim)
+        Returns:
+            tuple: tuple contains:
+                X(np.ndarray): 模型输入数据，(num_samples, input_length, ..., feature_dim) \n
+                W(np.ndarray): 模型外部数据，(num_samples, input_length, ext_dim)
+                y(np.ndarray): 模型输出数据，(num_samples, output_length, ..., feature_dim)
         """
         # 处理多数据文件问题
         if isinstance(self.data_files, list):
