@@ -330,7 +330,7 @@
         "GSNet": {
             "dataset_class": "GSNetDataset",
             "executor": "TrafficStateExecutor",
-            "evaluator": "TrafficStateEvaluator"
+            "evaluator": "TrafficAccidentEvaluator"
         }
     },
     "eta": {
