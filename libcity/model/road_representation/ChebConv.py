@@ -1,12 +1,10 @@
-from logging import getLogger
-
-import numpy as np
 import torch
 import torch.nn as nn
-
+import numpy as np
+from logging import getLogger
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
 from libcity.model import utils
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class ChebConvModule(nn.Module):
@@ -14,7 +12,6 @@ class ChebConvModule(nn.Module):
     路网表征模型的基类并不统一
     图卷积，将N*C的输入矩阵映射成N*F的输出矩阵，其中邻接矩阵形状N*N。
     """
-
     def __init__(self, num_nodes, max_diffusion_step, adj_mx,
                  device, input_dim, output_dim, filter_type):
         """
