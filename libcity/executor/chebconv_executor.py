@@ -1,8 +1,9 @@
 import os
 import time
+
 import torch
 from ray import tune
-from libcity.model import loss
+
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 
 
@@ -17,21 +18,6 @@ class ChebConvExecutor(TrafficStateExecutor):
         """
         self.evaluator.evaluate()
 
-        node_features = torch.FloatTensor(test_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
-        test_mask = test_dataloader['mask']
-
-        self._logger.info('Start evaluating ...')
-        with torch.no_grad():
-            self.model.eval()
-            output = self.model.predict({'node_features': node_features})
-            output = self._scaler.inverse_transform(output)
-            node_labels = self._scaler.inverse_transform(node_labels)
-            rmse = loss.masked_rmse_torch(output[test_mask], node_labels[test_mask])
-            mae = loss.masked_mae_torch(output[test_mask], node_labels[test_mask])
-            mape = loss.masked_mape_torch(output[test_mask], node_labels[test_mask])
-            self._logger.info('mae={}, map={}, rmse={}'.format(mae.item(), mape.item(), rmse.item()))
-            return mae.item(), mape.item(), rmse.item()
 
     def train(self, train_dataloader, eval_dataloader):
         """
@@ -66,7 +52,7 @@ class ChebConvExecutor(TrafficStateExecutor):
 
             if (epoch_idx % self.log_every) == 0:
                 log_lr = self.optimizer.param_groups[0]['lr']
-                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'\
+                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s' \
                     .format(epoch_idx, self.epochs, train_loss, val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 

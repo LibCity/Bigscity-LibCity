@@ -1,6 +1,6 @@
 {
     "traj_loc_pred": {
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM","HSTLSTM", "STAN", "CARA", "GeoSAN"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "HSTLSTM", "STAN", "CARA", "GeoSAN"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla", "foursquare_serm"],
         "GeoSAN": {
             "dataset_class": "GeoSANDataset",
@@ -82,13 +82,16 @@
         }
     },
     "traffic_state_pred": {
-        "allowed_model": ["DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
+        "allowed_model": [
+            "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
-            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon","ToGCN", "CONVGCN", "STG2Seq",
+            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
-            "GEML", "FNN", "GSNet"],
-        "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
+            "GEML", "FNN", "GSNet"
+        ],
+        "allowed_dataset": [
+            "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
             "LOOP_SEATTLE", "LOS_LOOP", "LOS_LOOP_SMALL", "Q_TRAFFIC", "SZ_TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi20140112",
             "NYCTaxi20150103", "NYCTaxi20160102", "TAXIBJ", "T_DRIVE20150206",
@@ -162,12 +165,12 @@
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"LSTM": {
+        "LSTM": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"GRU": {
+        "GRU": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
@@ -227,7 +230,7 @@
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"GMAN": {
+        "GMAN": {
             "dataset_class": "GMANDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
@@ -248,9 +251,9 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "STSGCN": {
-          "dataset_class": "TrafficStatePointDataset",
-          "executor": "TrafficStateExecutor",
-          "evaluator": "TrafficStateEvaluator"
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
         },
         "STAGGCN": {
             "dataset_class": "STAGGCNDataset",

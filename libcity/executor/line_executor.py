@@ -1,8 +1,10 @@
 import os
 import time
+
+import numpy as np
 import torch
 from ray import tune
-from libcity.model import loss
+
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 
 
@@ -17,21 +19,18 @@ class LINEExecutor(TrafficStateExecutor):
         """
         self.evaluator.evaluate()
 
-        node_features = torch.FloatTensor(test_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
-        test_mask = test_dataloader['mask']
-
-        self._logger.info('Start evaluating ...')
         with torch.no_grad():
             self.model.eval()
-            output = self.model.predict({'node_features': node_features})
-            output = self._scaler.inverse_transform(output)
-            node_labels = self._scaler.inverse_transform(node_labels)
-            rmse = loss.masked_rmse_torch(output[test_mask], node_labels[test_mask])
-            mae = loss.masked_mae_torch(output[test_mask], node_labels[test_mask])
-            mape = loss.masked_mape_torch(output[test_mask], node_labels[test_mask])
-            self._logger.info('mae={}, map={}, rmse={}'.format(mae.item(), mape.item(), rmse.item()))
-            return mae.item(), mape.item(), rmse.item()
+            # TODO 处理自定义 lossfunc
+            loss_func = self.model.calculate_loss
+            losses = []
+            for batch in test_dataloader:
+                batch.to_tensor(self.device)
+                loss = loss_func(batch)
+                self._logger.debug(loss.item())
+                losses.append(loss.item())
+            mean_loss = np.mean(losses)
+            return mean_loss
 
     def train(self, train_dataloader, eval_dataloader):
         """
@@ -66,7 +65,7 @@ class LINEExecutor(TrafficStateExecutor):
 
             if (epoch_idx % self.log_every) == 0:
                 log_lr = self.optimizer.param_groups[0]['lr']
-                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'\
+                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s' \
                     .format(epoch_idx, self.epochs, train_loss, val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 
@@ -108,22 +107,28 @@ class LINEExecutor(TrafficStateExecutor):
         """
         完成模型一个轮次的训练
 
+        Args:
+            train_dataloader: 训练数据
+            epoch_idx: 轮次数
+            loss_func: 损失函数
+
         Returns:
             float: 训练集的损失值
         """
-        node_features = torch.FloatTensor(train_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
-        train_mask = train_dataloader['mask']
-
         self.model.train()
-        self.optimizer.zero_grad()
         loss_func = loss_func if loss_func is not None else self.model.calculate_loss
-        loss = loss_func({'node_features': node_features, 'node_labels': node_labels, 'mask': train_mask})
-        loss.backward()
-        if self.clip_grad_norm:
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
-        self.optimizer.step()
-        return loss.item()
+        losses = []
+        for batch in train_dataloader:
+            self.optimizer.zero_grad()
+            batch.to_tensor(self.device)
+            loss = loss_func(batch)
+            self._logger.debug(loss.item())
+            losses.append(loss.item())
+            loss.backward()
+            if self.clip_grad_norm:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+            self.optimizer.step()
+        return losses
 
     def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
         """
@@ -137,13 +142,15 @@ class LINEExecutor(TrafficStateExecutor):
         Returns:
             float: 验证集的损失值
         """
-        node_features = torch.FloatTensor(eval_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
-        valid_mask = eval_dataloader['mask']
-
         with torch.no_grad():
             self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
-            loss = loss_func({'node_features': node_features, 'node_labels': node_labels, 'mask': valid_mask})
-            self._writer.add_scalar('eval loss', loss, epoch_idx)
-            return loss.item()
+            losses = []
+            for batch in eval_dataloader:
+                batch.to_tensor(self.device)
+                loss = loss_func(batch)
+                self._logger.debug(loss.item())
+                losses.append(loss.item())
+            mean_loss = np.mean(losses)
+            self._writer.add_scalar('eval loss', mean_loss, epoch_idx)
+            return mean_loss

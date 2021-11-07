@@ -1,3 +1,4 @@
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -23,6 +24,9 @@ class LINE_FIRST(nn.Module):
         vj = self.node_emb(j)
         return (vi * vj).sum(dim=-1)
 
+    def get_embeddings(self):
+        return self.node_emb.weight.data
+
 
 class LINE_SECOND(nn.Module):
     def __init__(self, num_nodes, embedding_size):
@@ -44,6 +48,9 @@ class LINE_SECOND(nn.Module):
         vj = self.context_emb(J)
         return (vi * vj).sum(dim=-1)
 
+    def get_embeddings(self):
+        return self.node_emb.weight.data
+
 
 class LINE(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
@@ -62,6 +69,9 @@ class LINE(AbstractTrafficStateModel):
         else:
             raise ValueError("order mode must be first or second")
 
+        self.model = config.get('model', '')
+        self.dataset = config.get('dataset', '')
+
     def calculate_loss(self, batch):
         I, J, is_neg = batch['I'], batch['J'], batch['Neg']
         dot_product = self.forward(I, J)
@@ -78,4 +88,7 @@ class LINE(AbstractTrafficStateModel):
             elif order == 'second':
                 [u'_j^T * v_i for (i,j) in zip(I, J)]; (B,)
         """
+        np.save('./libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'
+                .format(self.model, self.dataset, self.embedding_size),
+                self.embed.get_embeddings())
         return self.embed(I, J)

@@ -150,9 +150,9 @@ class LINEDataset(AbstractDataset):
 
         # 生成采样数据
         self._gen_sampling_table()
-        I = []
-        J = []
-        Neg = []
+        I = []  # 起始点
+        J = []  # 终止点
+        Neg = []  # 是否为负采样
 
         pad_sample = self.num_samples % (1 + self.negative_ratio)
 
@@ -234,6 +234,7 @@ class LINEDataset(AbstractDataset):
         I_eval = cat_data['I_eval'],
         J_eval = cat_data['J_eval'],
         Neg_eval = cat_data['Neg_eva']
+        
         self._logger.info(
             "train\tI: {}, J: {}, Neg: {}".format(str(len(I_train)), str(len(J_train)), str(len(Neg_train))))
         self._logger.info(
