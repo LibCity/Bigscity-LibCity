@@ -95,7 +95,7 @@
             "BEIJING_SUBWAY_10MIN", "BEIJING_SUBWAY_15MIN", "BEIJING_SUBWAY_30MIN",
             "ROTTERDAM", "HZMETRO", "SHMETRO", "M_DENSE", "PORTO", "NYCTAXI_DYNA",
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
-            "BIKEDC", "BIKECHI"
+            "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
         "DCRNN": {
             "dataset_class": "TrafficStatePointDataset",

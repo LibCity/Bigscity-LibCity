@@ -81,6 +81,8 @@ class ConfigParser(object):
                 self.config['dataset_class'] = task_config[model]['dataset_class']
             if self.config['task'] == 'traj_loc_pred' and 'traj_encoder' not in self.config:
                 self.config['traj_encoder'] = task_config[model]['traj_encoder']
+            if self.config['task'] == 'eta' and 'eta_encoder' not in self.config:
+                self.config['eta_encoder'] = task_config[model]['eta_encoder']
             if 'executor' not in self.config:
                 self.config['executor'] = task_config[model]['executor']
             if 'evaluator' not in self.config:
