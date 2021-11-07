@@ -72,7 +72,7 @@ class LINEDataset(AbstractDataset):
         self.dataset = config.get('dataset')
         self.negative_ratio = config.get('negative_ratio', 5)  # 负采样数，对于大数据集，适合 2-5
         self.batch_size = config.get('batch_size', 32)
-        self.num_samples = config.get('num_samples')
+        self.times = config.get('times')
         self.scaler = None
         # 数据集比例
         self.train_rate = config.get('train_rate', 0.7)
@@ -99,6 +99,12 @@ class LINEDataset(AbstractDataset):
         self._logger = getLogger()
         self.feature_name = {'I': 'int', 'J': 'int', 'Neg': 'int'}
         self.num_workers = config.get('num_workers', 0)
+
+        self._load_geo()
+        self._load_rel()
+
+        # 采样条数
+        self.num_samples = self.num_edges * (1 + self.negative_ratio) * self.times
 
     def _load_geo(self):
         """
@@ -226,9 +232,6 @@ class LINEDataset(AbstractDataset):
         """
         加载之前缓存好的训练集、测试集、验证集
         """
-        # TODO 缓存里载文件 emmmm
-        self._load_geo()
-        self._load_rel()
 
         self._logger.info('Loading ' + self.cache_file_name)
         cat_data = np.load(self.cache_file_name)
