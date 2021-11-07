@@ -375,7 +375,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv"
+            "ChebConv", "LINE"
         ],
         "allowed_dataset": [
             "BJ_roadmap"

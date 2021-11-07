@@ -128,7 +128,7 @@ class LINEExecutor(TrafficStateExecutor):
             if self.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
             self.optimizer.step()
-        return losses
+        return np.mean(losses)
 
     def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
         """

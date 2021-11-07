@@ -1,6 +1,5 @@
 import os
 import random
-from functools import reduce
 from logging import getLogger
 
 import numpy as np
@@ -50,7 +49,7 @@ class Alias:
         self.alias = alias
 
     def sample(self):
-        idx = random.randint(0, self.length)
+        idx = random.randint(0, self.length - 1)
         if random.random() >= self.accept[idx]:
             return self.alias[idx]
         else:
@@ -70,7 +69,6 @@ class LINEDataset(AbstractDataset):
 
     def __init__(self, config):
         # 数据集参数
-        super().__init__(config)
         self.dataset = config.get('dataset')
         self.negative_ratio = config.get('negative_ratio', 5)  # 负采样数，对于大数据集，适合 2-5
         self.batch_size = config.get('batch_size', 32)
@@ -124,9 +122,11 @@ class LINEDataset(AbstractDataset):
         """
         map_info = pd.read_csv(self.data_path + self.rel_file + '.rel')
         if 'weight' in map_info.columns:
-            self.edges = [(e[0], e[1], e[2]) for e in map_info[['origin_id', 'destination_id', 'weight']].values]
+            self.edges = [(self._geo_to_ind[e[0]], self._geo_to_ind[e[1]], e[2]) for e in
+                          map_info[['origin_id', 'destination_id', 'weight']].values]
         else:
-            self.edges = [(e[0], e[1], 1) for e in map_info[['origin_id', 'destination_id']].values]
+            self.edges = [(self._geo_to_ind[e[0]], self._geo_to_ind[e[1]], 1) for e in
+                          map_info[['origin_id', 'destination_id']].values]
         self.num_edges = len(self.edges)
         self._logger.info("Loaded file " + self.rel_file + '.rel' + ', num_edges=' + str(self.num_edges))
 
@@ -139,7 +139,10 @@ class LINEDataset(AbstractDataset):
         norm_prob = node_degree / norm_prob.sum()
         self.node_alias = Alias(norm_prob)
         # 边采样所需 Alias 表
-        norm_prob = reduce(lambda x, y: x[2] + y[2], self.edges)
+
+        norm_prob = 0
+        for edge in self.edges:
+            norm_prob += edge[2]
         norm_prob = [p[2] / norm_prob for p in self.edges]
         self.edge_alias = Alias(norm_prob)
 
@@ -223,18 +226,22 @@ class LINEDataset(AbstractDataset):
         """
         加载之前缓存好的训练集、测试集、验证集
         """
+        # TODO 缓存里载文件 emmmm
+        self._load_geo()
+        self._load_rel()
+
         self._logger.info('Loading ' + self.cache_file_name)
-        cat_data = np.load(self.cache_file_name, allow_pickle=True)
-        I_train = cat_data['I_train'],
-        J_train = cat_data['J_train'],
-        Neg_train = cat_data['Neg_train'],
-        I_test = cat_data['I_test'],
-        J_test = cat_data['J_test'],
-        Neg_test = cat_data['Neg_test'],
-        I_eval = cat_data['I_eval'],
-        J_eval = cat_data['J_eval'],
-        Neg_eval = cat_data['Neg_eva']
-        
+        cat_data = np.load(self.cache_file_name)
+        I_train = cat_data['I_train']
+        J_train = cat_data['J_train']
+        Neg_train = cat_data['Neg_train']
+        I_test = cat_data['I_test']
+        J_test = cat_data['J_test']
+        Neg_test = cat_data['Neg_test']
+        I_eval = cat_data['I_eval']
+        J_eval = cat_data['J_eval']
+        Neg_eval = cat_data['Neg_eval']
+
         self._logger.info(
             "train\tI: {}, J: {}, Neg: {}".format(str(len(I_train)), str(len(J_train)), str(len(Neg_train))))
         self._logger.info(
@@ -263,3 +270,5 @@ class LINEDataset(AbstractDataset):
 
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name, self.batch_size, self.num_workers)
+
+        return self.train_dataloader, self.eval_dataloader, self.test_dataloader

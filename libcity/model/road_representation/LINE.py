@@ -6,11 +6,11 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class LINE_FIRST(nn.Module):
-    def __init__(self, num_nodes, embedding_size):
+    def __init__(self, num_nodes, output_dim):
         super().__init__()
         self.num_nodes = num_nodes
-        self.embedding_size = embedding_size
-        self.node_emb = nn.Embedding(self.num_nodes, self.embedding_size)
+        self.output_dim = output_dim
+        self.node_emb = nn.Embedding(self.num_nodes, self.output_dim)
 
     def forward(self, i, j):
         """
@@ -29,12 +29,12 @@ class LINE_FIRST(nn.Module):
 
 
 class LINE_SECOND(nn.Module):
-    def __init__(self, num_nodes, embedding_size):
+    def __init__(self, num_nodes, output_dim):
         super().__init__()
         self.num_nodes = num_nodes
-        self.embedding_size = embedding_size
-        self.node_emb = nn.Embedding(self.num_nodes, self.embedding_size)
-        self.context_emb = nn.Embedding(self.num_nodes, self.embedding_size)
+        self.output_dim = output_dim
+        self.node_emb = nn.Embedding(self.num_nodes, self.output_dim)
+        self.context_emb = nn.Embedding(self.num_nodes, self.output_dim)
 
     def forward(self, I, J):
         """
@@ -58,14 +58,14 @@ class LINE(AbstractTrafficStateModel):
         self.device = config.get('device')
 
         self.order = config.get('order')
-        self.embedding_size = config.get('embedding_size')
+        self.output_dim = config.get('output_dim')
         self.num_nodes = data_feature.get("num_nodes")
         self.num_edges = data_feature.get("num_edges")
 
         if self.order == 'first':
-            self.embed = LINE_FIRST(self.num_nodes, self.embedding_size)
+            self.embed = LINE_FIRST(self.num_nodes, self.output_dim)
         elif self.order == 'second':
-            self.embed = LINE_SECOND(self.num_nodes, self.embedding_size)
+            self.embed = LINE_SECOND(self.num_nodes, self.output_dim)
         else:
             raise ValueError("order mode must be first or second")
 
@@ -89,6 +89,6 @@ class LINE(AbstractTrafficStateModel):
                 [u'_j^T * v_i for (i,j) in zip(I, J)]; (B,)
         """
         np.save('./libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'
-                .format(self.model, self.dataset, self.embedding_size),
+                .format(self.model, self.dataset, self.output_dim),
                 self.embed.get_embeddings())
         return self.embed(I, J)
