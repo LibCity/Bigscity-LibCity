@@ -1,7 +1,7 @@
 {
     "negative_ratio": 2,
     "batch_size": 1024,
-    "num_samples": 286980,
+    "times": 1,
 
     "train_rate": 0.7,
     "eval_rate": 0.1,
