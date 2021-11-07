@@ -57,15 +57,6 @@ class Alias:
 
 
 class LINEDataset(AbstractDataset):
-    def get_data_feature(self):
-        """
-        返回一个 dict，包含数据集的相关特征
-
-        Returns:
-            dict: 包含数据集的相关特征的字典
-        """
-        return {"scaler": self.scaler, "num_edges": self.num_edges,
-                "num_nodes": self.num_nodes}
 
     def __init__(self, config):
         # 数据集参数
@@ -153,6 +144,12 @@ class LINEDataset(AbstractDataset):
         self.edge_alias = Alias(norm_prob)
 
     def _generate_data(self):
+        """
+        LINE 采用的是按类似于 Skip-Gram 的训练方式，类似于 Word2Vec(Skip-Gram)，将单词对类比成图中的一条边，
+        LINE 同时采用了两个优化，一个是对边按照正比于边权重的概率进行采样，另一个是类似于 Word2Vec 当中的负采样方法，
+        在采样一条边时，同时产生该边起始点到目标点（按正比于度^0.75的概率采样获得）的多个"负采样"边。
+        最后，为了通过 Python 的均匀分布随机数产生符合目标分布的采样，使用 O(1) 的 alias 采样方法
+        """
         # 加载数据集
         self._load_geo()
         self._load_rel()
@@ -275,3 +272,13 @@ class LINEDataset(AbstractDataset):
             generate_dataloader(train_data, eval_data, test_data, self.feature_name, self.batch_size, self.num_workers)
 
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader
+
+    def get_data_feature(self):
+        """
+        返回一个 dict，包含数据集的相关特征
+
+        Returns:
+            dict: 包含数据集的相关特征的字典
+        """
+        return {"scaler": self.scaler, "num_edges": self.num_edges,
+                "num_nodes": self.num_nodes}
