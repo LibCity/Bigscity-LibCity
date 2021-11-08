@@ -1,0 +1,11 @@
+{
+    "order": "second",
+    "output_dim": 10,
+
+    "max_epoch": 100,
+    "learner": "asgd",
+    "learning_rate": 0.001,
+    "lr_decay": true,
+    "lr_scheduler": "reducelronplateau",
+    "lr_decay_ratio": 0.7
+}

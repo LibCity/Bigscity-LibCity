@@ -73,6 +73,33 @@ LibCity 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigcity.
 
 如果您遇到错误或有任何建议，请通过以下方式与我们联系： [提交issue](https://github.com/LibCity/Bigscity-LibCity/issues)。
 
+## Cite
+
+该工作已被ACM SIGSPATIAL 2021接收。如果您认为LibCity对您的科研工作有帮助，请引用我们的[论文](https://dl.acm.org/doi/10.1145/3474717.3483923)。
+
+```
+@inproceedings{10.1145/3474717.3483923,
+  author = {Wang, Jingyuan and Jiang, Jiawei and Jiang, Wenjun and Li, Chao and Zhao, Wayne Xin},
+  title = {LibCity: An Open Library for Traffic Prediction},
+  year = {2021},
+  isbn = {9781450386647},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/3474717.3483923},
+  doi = {10.1145/3474717.3483923},
+  booktitle = {Proceedings of the 29th International Conference on Advances in Geographic Information Systems},
+  pages = {145–148},
+  numpages = {4},
+  keywords = {Spatial-temporal System, Reproducibility, Traffic Prediction},
+  location = {Beijing, China},
+  series = {SIGSPATIAL '21}
+}
+```
+
+```
+Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
+```
+
 ## License
 
 LibCity 遵循 [Apache License 2.0](https://github.com/LibCity/Bigscity-LibCity/blob/master/LICENSE.txt) 协议。

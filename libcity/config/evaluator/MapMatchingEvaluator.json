@@ -1,4 +1,4 @@
 {
   "metrics": ["RMF", "AN", "AL"],
-  "save_modes": ["csv", "json"]
+  "save_modes": ["csv"]
 }

@@ -10,6 +10,7 @@ from libcity.data.dataset.traffic_state_grid_dataset import \
 from libcity.data.dataset.traffic_state_grid_od_dataset import \
     TrafficStateGridOdDataset
 from libcity.data.dataset.traffic_state_od_dataset import TrafficStateOdDataset
+from libcity.data.dataset.eta_dataset import ETADataset
 from libcity.data.dataset.acfm_dataset import ACFMDataset
 from libcity.data.dataset.tgclstm_dataset import TGCLSTMDataset
 from libcity.data.dataset.astgcn_dataset import ASTGCNDataset
@@ -30,6 +31,8 @@ from libcity.data.dataset.ccrnn_dataset import CCRNNDataset
 from libcity.data.dataset.geosan_dataset import GeoSANDataset
 from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
 from libcity.data.dataset.chebconv_dataset import ChebConvDataset
+from libcity.data.dataset.gsnet_dataset import GSNetDataset
+from libcity.data.dataset.line_dataset import LINEDataset
 from libcity.data.dataset.cstn_dataset import CSTNDataset
 
 __all__ = [
@@ -41,6 +44,7 @@ __all__ = [
     "TrafficStateGridDataset",
     "TrafficStateOdDataset",
     "TrafficStateGridOdDataset",
+    "ETADataset",
     "ACFMDataset",
     "TGCLSTMDataset",
     "ASTGCNDataset",
@@ -61,5 +65,7 @@ __all__ = [
     "DMVSTNetDataset",
     "MapMatchingDataset",
     'ChebConvDataset',
+    "GSNetDataset",
+    "LINEDataset",
     "CSTNDataset"
 ]

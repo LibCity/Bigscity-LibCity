@@ -32,4 +32,4 @@ class MapMatchingExecutor(AbstractTraditionExecutor):
             train_dataloader(torch.Dataloader): Dataloader
             eval_dataloader(torch.Dataloader): Dataloader
         """
-        assert True  # do nothing
+        pass  # do nothing

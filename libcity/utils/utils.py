@@ -58,7 +58,11 @@ def get_model(config, data_feature):
                         return getattr(importlib.import_module('libcity.model.traffic_od_prediction'),
                                        config['model'])(config, data_feature)
                     except AttributeError:
-                        raise AttributeError('model is not found')
+                        try:
+                            return getattr(importlib.import_module('libcity.model.traffic_accident_prediction'),
+                                           config['model'])(config, data_feature)
+                        except AttributeError:
+                            raise AttributeError('model is not found')
     elif config['task'] == 'map_matching':
         try:
             return getattr(importlib.import_module('libcity.model.map_matching'),
@@ -68,6 +72,12 @@ def get_model(config, data_feature):
     elif config['task'] == 'road_representation':
         try:
             return getattr(importlib.import_module('libcity.model.road_representation'),
+                           config['model'])(config, data_feature)
+        except AttributeError:
+            raise AttributeError('model is not found')
+    elif config['task'] == 'eta':
+        try:
+            return getattr(importlib.import_module('libcity.model.eta'),
                            config['model'])(config, data_feature)
         except AttributeError:
             raise AttributeError('model is not found')
