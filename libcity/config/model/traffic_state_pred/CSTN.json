@@ -1,0 +1,22 @@
+{
+    "n_layers": 3,
+    "c_lt": 75,
+
+    "batch_size": 16,
+    "scaler": "minmax01",
+    "load_external": true,
+    "normal_external": false,
+    "ext_scaler": "none",
+    "add_time_in_day": true,
+    "add_day_in_week": false,
+    "use_row_column": true,
+
+    "max_epoch": 100,
+    "learner": "adam",
+    "learning_rate": 0.001,
+    "weight_decay": 1e-6,
+    "lr_decay": false,
+    "clip_grad_norm": false,
+    "use_early_stop": true,
+    "patience": 50
+}
