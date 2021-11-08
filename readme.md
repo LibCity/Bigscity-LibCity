@@ -77,20 +77,29 @@ If you encounter a bug or have any suggestion, please contact us by [raising an 
 
 ## Cite
 
-Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for your research or development, please cite our [paper](https://libcity.ai/#/paper).
+Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for your research or development, please cite our [paper](https://dl.acm.org/doi/10.1145/3474717.3483923).
 
 ```
-@proceedings{libcity,
-  editor={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chao Li and Wayne Xin Zhao},
-  title={LibCity: An Open Library for Traffic Prediction},
-  booktitle={{SIGSPATIAL} '21: 29th International Conference on Advances in Geographic Information Systems, Beijing, China, November 2-5, 2021 },
-  publisher={{ACM}},
-  year={2021}
+@inproceedings{10.1145/3474717.3483923,
+  author = {Wang, Jingyuan and Jiang, Jiawei and Jiang, Wenjun and Li, Chao and Zhao, Wayne Xin},
+  title = {LibCity: An Open Library for Traffic Prediction},
+  year = {2021},
+  isbn = {9781450386647},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/3474717.3483923},
+  doi = {10.1145/3474717.3483923},
+  booktitle = {Proceedings of the 29th International Conference on Advances in Geographic Information Systems},
+  pages = {145–148},
+  numpages = {4},
+  keywords = {Spatial-temporal System, Reproducibility, Traffic Prediction},
+  location = {Beijing, China},
+  series = {SIGSPATIAL '21}
 }
 ```
 
 ```
-Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th ACM SIGSPATIAL International Conference on Advances in Geographic Information Systems. 
+Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
 ```
 
 ## License
