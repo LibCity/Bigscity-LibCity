@@ -29,18 +29,22 @@ class SLSTM(nn.Module):
             nn.Tanh()
         )
 
+        self.tanh = nn.Tanh()
+
         self.device = device
 
     def forward(self, x):
         # (T, B * N, 2E)
-        h_cur = 0
-        h = torch.zeros((x.shape[1], self.hidden_dim)).repeat(self.p_interval, 1).unsqueeze(dim=0).to(
-            self.device)  # (B * N, 2E)
-        c = torch.zeros((x.shape[1], self.cell_dim)).to(self.device)  # (B * N, 2E)
+        h = torch.zeros((x.shape[1], self.hidden_dim)).unsqueeze(dim=0).repeat(self.p_interval, 1, 1).to(self.device)
+        # (P, B * N, 2E)
+        c = torch.zeros((x.shape[1], self.hidden_dim)).unsqueeze(dim=0).repeat(self.p_interval, 1, 1).to(self.device)
+        # (P, B * N, 2E)
 
-        for t in range(x.shape[0]):
+        T = x.shape[0]
+
+        for t in range(T):
             x_ = x[t, :, :]  # (B * N, 2E)
-            x_ = torch.cat((x_, h[h_cur % self.p_interval]), 1)  # (B * N, 2E + 2E)
+            x_ = torch.cat((x_, h[t % self.p_interval]), 1)  # (B * N, 2E + 2E)
 
             f = self.f_gate(x_)  # (B * N, 2E)
 
@@ -50,36 +54,33 @@ class SLSTM(nn.Module):
 
             g = self.g_gate(x_)  # (B * N, 2E)
 
-            c = f * c + i * g
+            c = f * c[t % self.p_interval] + i * g  # (B * N, 2E)
 
-            h[(h_cur - 1) % self.p_interval] = o * c
+            c = self.tanh(c)  # (B * N, 2E)
 
-            h_cur = h_cur + 1
+            h[t % self.p_interval] = o * c  # (B * N, 2E)
 
-        return h[0]
+        return h[(T - 1) % self.p_interval]  # (B * N, 2E)
 
 
 class MutiLearning(nn.Module):
     def __init__(self, fea_dim, device):
         super(MutiLearning, self).__init__()
         self.fea_dim = fea_dim
-        transition = torch.randn(self.fea_dim, self.fea_dim)
-        self.transition = nn.Parameter(data=transition.to(device), requires_grad=True)
-        project_in = torch.randn(self.fea_dim, 1).to(device)
-        self.project_in = project_in
-        project_out = torch.randn(self.fea_dim, 1).to(device)
-        self.project_out = project_out
+        self.transition = nn.Parameter(data=torch.randn(self.fea_dim, self.fea_dim).to(device), requires_grad=True)
+        self.project_in = nn.Parameter(data=torch.randn(self.fea_dim, 1).to(device), requires_grad=True)
+        self.project_out = nn.Parameter(data=torch.randn(self.fea_dim, 1).to(device), requires_grad=True)
 
     def forward(self, x: torch.Tensor):
-        # (B, H * W, E)
-        x_t = x.permute(0, 2, 1)  # (B, E, N)
+        # (B, N, 2E)
+        x_t = x.permute(0, 2, 1)  # (B, 2E, N)
 
         x_in = torch.matmul(x, self.project_in)  # (B, N, 1)
 
         x_out = torch.matmul(x, self.project_out)  # (B, N, 1)
 
         x = torch.matmul(x, self.transition)
-        # (B, N, E)
+        # (B, N, 2E)
         x = torch.bmm(x, x_t)
         # (B, N, N)
 
@@ -141,9 +142,10 @@ class GCN(nn.Module):
         return torch.stack(embed, dim=1)
 
 
-def generate_geo_adj(cost_matrix: np.matrix):
-    # TODO cost_matrix[cost_matrix > ?] = inf
-    cost_matrix = torch.Tensor(cost_matrix)  # (N, N)
+def generate_geo_adj(adj_matrix: np.matrix):
+    adj_matrix = torch.Tensor(adj_matrix)  # (N, N)
+    cost_matrix = torch.Tensor([[abs(i - j) for j in range(adj_matrix.shape[0])] for i in range(adj_matrix.shape[1])])
+    cost_matrix = cost_matrix * adj_matrix
     sum_cost_vector = torch.sum(cost_matrix, dim=1, keepdim=True)  # (N, 1)
     weight_matrix = cost_matrix / sum_cost_vector
     weight_matrix[range(weight_matrix.shape[0]), range(weight_matrix.shape[1])] = 1
@@ -159,13 +161,13 @@ def generate_semantic_adj(demand_matrix, device):
 
     adj_matrix[in_matrix > 0] = 1
 
-    # (B, T, N, 1)
     degree_vector = torch.sum(adj_matrix, dim=3, keepdim=True)
+    # (B, T, N, 1)
 
     sum_degree_vector = torch.matmul(adj_matrix, degree_vector)
+    # (B, T, N, 1)
 
-    weight_matrix = torch.matmul(1 / (sum_degree_vector + torch.full(sum_degree_vector.shape, 1e-3).to(device)),
-                                 degree_vector.permute((0, 1, 3, 2)))  # (B, T, N, N)
+    weight_matrix = torch.matmul(1 / (sum_degree_vector + 1e-3), degree_vector.permute((0, 1, 3, 2)))  # (B, T, N, N)
 
     weight_matrix[:, :, range(weight_matrix.shape[2]), range(weight_matrix.shape[3])] = 1
 
