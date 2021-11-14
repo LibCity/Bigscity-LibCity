@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 
 from libcity.data.dataset import TrafficStateCPTDataset, TrafficStateGridDataset
