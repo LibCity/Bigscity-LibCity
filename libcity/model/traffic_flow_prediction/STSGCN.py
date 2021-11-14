@@ -7,8 +7,6 @@ from logging import getLogger
 from libcity.model import loss
 
 
-
-
 # 时空嵌入矩阵，真正的时空特征的嵌入表示
 class PositionEmbedding(nn.Module):
     def __init__(self, input_length, num_of_vertices, embedding_size, temporal=True, spatial=True, config=None):
