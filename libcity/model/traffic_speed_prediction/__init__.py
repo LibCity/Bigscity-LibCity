@@ -17,8 +17,10 @@ from libcity.model.traffic_speed_prediction.STMGAT import STMGAT
 from libcity.model.traffic_speed_prediction.DKFN import DKFN
 from libcity.model.traffic_speed_prediction.STTN import STTN
 from libcity.model.traffic_speed_prediction.FNN import FNN
+from libcity.model.traffic_speed_prediction.NewModel import NewModel
 
 __all__ = [
+    "NewModel",
     "DCRNN",
     "STGCN",
     "GWNET",

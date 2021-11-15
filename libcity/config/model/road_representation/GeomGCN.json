@@ -1,12 +1,10 @@
 {
-  "filter_type": "dual_random_walk",
-  "max_diffusion_step": 2,
-  "output_dim": 13,
+  "output_dim": 32,
   "dropout": 0.3,
 
   "scaler": "none",
 
-  "max_epoch": 2000,
+  "max_epoch": 100,
   "learner": "adam",
   "learning_rate": 0.001,
   "lr_decay": true,
