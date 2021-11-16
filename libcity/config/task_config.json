@@ -380,7 +380,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv", "LINE"
+            "ChebConv", "LINE", "GeomGCN"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -393,6 +393,11 @@
         "LINE": {
             "dataset_class": "LINEDataset",
             "executor": "LINEExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "GeomGCN": {
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         }
     }
