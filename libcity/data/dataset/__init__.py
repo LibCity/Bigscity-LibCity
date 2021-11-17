@@ -33,6 +33,7 @@ from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
 from libcity.data.dataset.chebconv_dataset import ChebConvDataset
 from libcity.data.dataset.gsnet_dataset import GSNetDataset
 from libcity.data.dataset.line_dataset import LINEDataset
+from libcity.data.dataset.cstn_dataset import CSTNDataset
 
 __all__ = [
     "AbstractDataset",
@@ -65,5 +66,6 @@ __all__ = [
     "MapMatchingDataset",
     'ChebConvDataset',
     "GSNetDataset",
-    "LINEDataset"
+    "LINEDataset",
+    "CSTNDataset"
 ]
