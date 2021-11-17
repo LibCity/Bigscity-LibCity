@@ -2,9 +2,7 @@ import itertools
 
 import random
 
-from joblib import Parallel, delayed
-
-from aliasmethod import alias_sample, create_alias_table
+from libcity.utils.aliasmethod import alias_sample, create_alias_table
 
 
 def partition_num(num, workers):
@@ -14,7 +12,7 @@ def partition_num(num, workers):
         return [num//workers]*workers + [num % workers]
 
 
-class RandomWalker:
+class Node2vec:
     def __init__(self, G, p=1, q=1, use_rejection_sampling=0):
         """
         :param G:
@@ -27,18 +25,7 @@ class RandomWalker:
         self.q = q
         self.use_rejection_sampling = use_rejection_sampling
 
-    def deepwalk_walk(self, walk_length, start_node):
-
-        walk = [start_node]
-
-        while len(walk) < walk_length:
-            cur = walk[-1]
-            cur_nbrs = list(self.G.neighbors(cur))
-            if len(cur_nbrs) > 0:
-                walk.append(random.choice(cur_nbrs))
-            else:
-                break
-        return walk
+        self.alias_nodes = None
 
     def node2vec_walk(self, walk_length, start_node):
 
@@ -119,16 +106,12 @@ class RandomWalker:
                 break
         return walk
 
-    def simulate_walks(self, num_walks, walk_length, workers=1, verbose=0):
+    def simulate_walks(self, num_walks, walk_length, workers=1):
 
         G = self.G
-
         nodes = list(G.nodes())
-
-        results = Parallel(n_jobs=workers, verbose=verbose, )(
-            delayed(self._simulate_walks)(nodes, num, walk_length) for num in
+        results = (self._simulate_walks(nodes, num, walk_length) for num in
             partition_num(num_walks, workers))
-
         walks = list(itertools.chain(*results))
 
         return walks
