@@ -2,6 +2,8 @@ import itertools
 
 import random
 
+from gensim.models import Word2Vec
+
 from libcity.utils.aliasmethod import alias_sample, create_alias_table
 
 
@@ -13,7 +15,7 @@ def partition_num(num, workers):
 
 
 class Node2vec:
-    def __init__(self, G, p=1, q=1, use_rejection_sampling=0):
+    def __init__(self, G, dataset, p=1, q=1, use_rejection_sampling=0):
         """
         :param G:
         :param p: Return parameter,controls the likelihood of immediately revisiting a node in the walk.
@@ -21,11 +23,13 @@ class Node2vec:
         :param use_rejection_sampling: Whether to use the rejection sampling strategy in node2vec.
         """
         self.G = G
+        self.dataset = dataset
         self.p = p
         self.q = q
         self.use_rejection_sampling = use_rejection_sampling
 
         self.alias_nodes = None
+        self.walks = {}
 
     def node2vec_walk(self, walk_length, start_node):
 
@@ -114,7 +118,7 @@ class Node2vec:
             partition_num(num_walks, workers))
         walks = list(itertools.chain(*results))
 
-        return walks
+        self.walks = walks
 
     def _simulate_walks(self, nodes, num_walks, walk_length,):
         walks = []
@@ -188,4 +192,16 @@ class Node2vec:
                 self.alias_edges = alias_edges
 
         self.alias_nodes = alias_nodes
+        return
+
+    # word2vec模型
+    def learn_embeddings(self, vector_size, window, workers, epochs, min_count=0, sg=1):
+        '''
+        Learn embeddings by optimizing the Skipgram objective using SGD.
+        '''
+
+        model = Word2Vec(sentences = self.walks, vector_size = vector_size, window = window, min_count = min_count,
+                sg = sg, workers = workers, epochs = epochs)
+        save_path = 'libcity/cache/{}_embedding.bin'.format(self.dataset)
+        model.wv.save_word2vec_format(save_path)
         return

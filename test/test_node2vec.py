@@ -3,11 +3,13 @@
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 import argparse as arg
+
 import warnings
 warnings.filterwarnings('ignore')
+
 from node2vec import Node2vec
-from node2vec_dataset import ReadGraph, Node2vecDataset
-from gensim.models import Word2Vec
+
+from node2vec_dataset import ReadGraph
 
 def parse_args():
     '''
@@ -15,8 +17,8 @@ def parse_args():
     '''
     parser = arg.ArgumentParser(description="Run node2vec.")
 
-    parser.add_argument('--input', nargs='?', default='',
-                        help='Input graph path')
+    parser.add_argument('--dataset', nargs='?', default='BJ_roadmap',
+                        help='Input dataset name')
     parser.add_argument('--p', type=float, default=0.25,help='Return hyperparameter. Default is 0.25.')
     parser.add_argument('--q', type=float, default=4, help='Return hyperparameter. Default is 4.')
     parser.add_argument('--walks', type=int, default=80,
@@ -33,36 +35,19 @@ def parse_args():
                         help='Number of parallel workers. Default is 8.')
     return parser.parse_args()
 
-#word2vec模型
-def learn_embeddings(self, walks):
-    '''
-    Learn embeddings by optimizing the Skipgram objective using SGD.
-    '''
-
-    model = Word2Vec(walks, vector_size=args.dimension, window=args.window, min_count=0, sg=1, workers=args.workers,
-                     epochs=args.iter)
-    save_path = self.cache_file_folder + '{}_embedding.bin'.format(self.dataset)
-    model.wv.save_word2vec_format(save_path)
-    return
-
 if __name__ == '__main__':
     args = parse_args()
-    config = {'dataset': 'BJ_roadmap'}
     #根据路网数据（rel文件）生成networkx图
-    RG = ReadGraph(config)
+    RG = ReadGraph(args)
     G = RG._load_graph()
 
     #生成node2vec游走 结果为由num_walks个长度为walk_length的一维list合成的二维list
-    rw = Node2vec(G, p=args.p, q=args.q, use_rejection_sampling=0)
+    rw = Node2vec(G, dataset = args.dataset, p=args.p, q=args.q, use_rejection_sampling=0)
     rw.preprocess_transition_probs()
-    sentences = rw.simulate_walks(num_walks=args.walks, walk_length=args.length)
-
-    data = Node2vecDataset(config, sentences)
-
-    #将游走结果分为训练集(train)、验证集(valid)、测试集(test)三个部分，并带入word2vec模型进行训练，输出最终结果
-    data.train_dataloader, data.eval_dataloader, data.test_dataloader = data.get_data()
-    train_walk = data.train_dataloader['mask']
-    learn_embeddings(data, train_walk)
+    rw.simulate_walks(num_walks=args.walks, walk_length=args.length)
+    #将游走结果带入word2vec模型进行训练，输出最终结果
+    rw.learn_embeddings(vector_size=args.dimension, window=args.window, min_count=0, sg=1, workers=args.workers,
+                         epochs=args.iter)
 
 
 
