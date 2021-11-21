@@ -25,9 +25,7 @@ class GAT(AbstractTrafficStateModel):
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
-        self.max_diffusion_step = config.get('max_diffusion_step', 2)
         self.output_dim = config.get('output_dim', 32)
-        self.filter_type = config.get('filter_type', 'dual_random_walk')
         self.model = config.get('model', '')
         self.dataset = config.get('dataset', '')
         GATLayer = GATLayerImp3

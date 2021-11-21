@@ -1,6 +1,5 @@
 {
-  "filter_type": "dual_random_walk",
-  "max_diffusion_step": 2,
+
   "output_dim": 32,
   "dropout": 0.3,
 
