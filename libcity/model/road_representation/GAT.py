@@ -16,10 +16,7 @@ class GAT(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.adj_mx = data_feature.get('adj_mx')
-        print("---------------")
-        print(type(self.adj_mx))
         self.Apt = torch.LongTensor([self.adj_mx.row.tolist(), self.adj_mx.col.tolist()])
-        print(self.Apt.data)
         self.num_nodes = data_feature.get('num_nodes', 1)
         self.feature_dim = data_feature.get('feature_dim', 1)
         config['num_nodes'] = self.num_nodes
@@ -38,10 +35,6 @@ class GAT(AbstractTrafficStateModel):
                                 num_of_heads=10, concat=False)
         self.decoder = GATLayer(num_in_features=self.output_dim, num_out_features=self.feature_dim,
                                 num_of_heads=10, concat=False)
-        # self.encoder1 = GATLayer(num_in_features=self.feature_dim, num_out_features=self.output_dim,
-        #                         num_of_heads=2, concat=False)
-        # self.decoder1 = GATLayer(num_in_features=self.output_dim, num_out_features=self.feature_dim,
-        #                         num_of_heads=2, concat=False)
 
     def forward(self, batch):
         """
@@ -57,11 +50,6 @@ class GAT(AbstractTrafficStateModel):
                 .format(self.model, self.dataset, self.output_dim),
                 encoder_state.detach().cpu().numpy())
         output = self.decoder([encoder_state, self.Apt])[0]  # N, feature_dim
-        # # encoder_state1 = self.encoder1([output, self.Apt])[0]  # N, output_dim
-        # # np.save('./libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'
-        # #         .format(self.model, self.dataset, self.output_dim),
-        # #         encoder_state.detach().cpu().numpy())
-        # output = self.decoder([encoder_state1, self.Apt])[0]  # N, feature_dim
         return output
 
     def calculate_loss(self, batch):
@@ -75,10 +63,6 @@ class GAT(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(y_true)
         y_predicted = self._scaler.inverse_transform(y_predicted)
         mask = batch['mask']
-        # print("***********")
-        # print(y_predicted)
-        # print("-----------")
-        # print(y_true)
         return loss.masked_mse_torch(y_predicted[mask], y_true[mask])
 
     def predict(self, batch):
