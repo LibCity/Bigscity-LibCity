@@ -137,6 +137,10 @@ class ChebConv(AbstractTrafficStateModel):
         y_true = self._scaler.inverse_transform(y_true)
         y_predicted = self._scaler.inverse_transform(y_predicted)
         mask = batch['mask']
+        # print("***********")
+        # print(y_predicted)
+        # print("-----------")
+        # print(y_true)
         return loss.masked_mse_torch(y_predicted[mask], y_true[mask])
 
     def predict(self, batch):
