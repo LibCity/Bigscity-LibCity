@@ -207,7 +207,7 @@ class GEML(AbstractTrafficStateModel):
     def forward(self, batch):
         x = batch['X'].squeeze(dim=-1)
         # (B, T, N, N)
-        x_ge_embed = self.GCN(x, self.geo_adj)
+        x_ge_embed = self.GCN(x, self.geo_adj[:x.shape[0], ...])
         # (B, T, N, E)
 
         x_se_embed = self.GCN(x, self.semantic_adj)
@@ -222,7 +222,7 @@ class GEML(AbstractTrafficStateModel):
 
         # _, (h, _) = self.LSTM(x_embed)
         # x_embed_pred = h[0].reshape((self.batch_size, -1, 2 * self.embed_dim))
-        x_embed_pred = self.LSTM(x_embed).reshape((self.batch_size, -1, 2 * self.embed_dim))
+        x_embed_pred = self.LSTM(x_embed).reshape((x.shape[0], -1, 2 * self.embed_dim))
         # (B, N, 2E)
 
         out = self.mutiLearning(x_embed_pred)
