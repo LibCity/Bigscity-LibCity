@@ -1,7 +1,3 @@
-# This is a sample Python script.
-
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 import argparse as arg
 
 import warnings
@@ -35,22 +31,28 @@ def parse_args():
                         help='Number of parallel workers. Default is 8.')
     return parser.parse_args()
 
-if __name__ == '__main__':
-    args = parse_args()
-    #根据路网数据（rel文件）生成networkx图
+def get_data(args):
+    # 根据路网数据（rel文件）生成networkx图
     RG = ReadGraph(args)
     G = RG._load_graph()
+    return G
 
-    #生成node2vec游走 结果为由num_walks个长度为walk_length的一维list合成的二维list
-    rw = Node2vec(G, dataset = args.dataset, p=args.p, q=args.q, use_rejection_sampling=0)
+def run_node2vec(G, args):
+    # 生成node2vec游走 结果为由num_walks个长度为walk_length的一维list合成的二维list
+    rw = Node2vec(G, dataset=args.dataset, p=args.p, q=args.q, use_rejection_sampling=0)
     rw.preprocess_transition_probs()
     rw.simulate_walks(num_walks=args.walks, walk_length=args.length)
-    #将游走结果带入word2vec模型进行训练，输出最终结果
+    # 将游走结果带入word2vec模型进行训练，输出最终结果
     rw.learn_embeddings(vector_size=args.dimension, window=args.window, min_count=0, sg=1, workers=args.workers,
-                         epochs=args.iter)
+                        epochs=args.iter)
 
+def main():
+    args = parse_args()
+    G = get_data(args)
+    run_node2vec(G, args)
 
-
+if __name__ == '__main__':
+    main()
 
 
 

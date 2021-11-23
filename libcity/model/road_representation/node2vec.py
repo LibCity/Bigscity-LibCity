@@ -2,6 +2,8 @@ import itertools
 
 import random
 
+import numpy as np
+
 from gensim.models import Word2Vec
 
 from libcity.utils.aliasmethod import alias_sample, create_alias_table
@@ -202,6 +204,6 @@ class Node2vec:
 
         model = Word2Vec(sentences = self.walks, vector_size = vector_size, window = window, min_count = min_count,
                 sg = sg, workers = workers, epochs = epochs)
-        save_path = 'libcity/cache/{}_embedding.bin'.format(self.dataset)
-        model.wv.save_word2vec_format(save_path)
+        save_path = 'libcity/cache/{}_embedding.npy'.format(self.dataset)
+        np.save(save_path, model)
         return
