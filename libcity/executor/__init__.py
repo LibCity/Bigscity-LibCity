@@ -7,7 +7,7 @@ from libcity.executor.mtgnn_executor import MTGNNExecutor
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 from libcity.executor.traj_loc_pred_executor import TrajLocPredExecutor
 from libcity.executor.abstract_tradition_executor import AbstractTraditionExecutor
-from libcity.executor.chebconv_executor import ChebConvExecutor
+from libcity.executor.roadrepresentation_executor import RoadRepresentationExecutor
 from libcity.executor.eta_executor import ETAExecutor
 from libcity.executor.HRNR_executor import HRNRExecutor
 
@@ -21,7 +21,7 @@ __all__ = [
     "MapMatchingExecutor",
     "GEMLExecutor",
     "AbstractTraditionExecutor",
-    "ChebConvExecutor",
+    "RoadRepresentationExecutor",
     "ETAExecutor",
     "HRNR_executor"
 ]

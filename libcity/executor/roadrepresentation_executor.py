@@ -1,15 +1,54 @@
 import os
 import time
+
 import torch
 from ray import tune
-from libcity.model import loss
+
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
+from libcity.model import loss
+from libcity.data import get_dataset
+from libcity.utils import get_model
 
 
-class ChebConvExecutor(TrafficStateExecutor):
+class RoadRepresentationExecutor(TrafficStateExecutor):
     def __init__(self, config, model):
         TrafficStateExecutor.__init__(self, config, model)
+        self.downstream = config.get("downstream", "self_regression")
         self.loss_func = None
+        if self.downstream == "self_regresssion":
+            self.loss_func = self.loss_self_regression
+            self.encoder = self.model
+
+            decoder_config = self.config.clone()
+            decoder_config.__setitem__("feature_dim", self.config.get("output_dim"))
+            decoder_config.__setitem__("output_dim", self.config.get("feature_dim"))
+            dataset = get_dataset(config)
+            data_feature = dataset.get_data_feature()
+            self.decoder = get_model(decoder_config, data_feature)
+        elif self.downstream == "label_prediction":
+            self.loss_func = self.loss_label_prediction
+            self.linear = torch.nn.Linear(self.config.get("output_dim"), self.config.get("label_num"))
+
+    def loss_self_regression(self, batch):
+        y_true = batch['node_features'].clone()  # N, feature_dim
+
+        inputs = batch['node_features']
+        encoder_state = self.encoder(inputs)  # N, output_dim
+        y_predicted = self.decoder(encoder_state)  # N, feature_dim
+
+        y_true = self._scaler.inverse_transform(y_true)
+        y_predicted = self._scaler.inverse_transform(y_predicted)
+
+        mask = batch['mask']
+        return loss.masked_mse_torch(y_predicted[mask], y_true[mask])
+
+    def loss_label_prediction(self, batch):
+        model = self.model
+        labels = batch['node_labels']
+        node_features = model(batch['node_features'])
+        mask = batch['mask']
+        predict_labels = self.linear(node_features[mask])
+        return torch.nn.CrossEntropyLoss()(labels[mask], predict_labels)
 
     def evaluate(self, test_dataloader):
         """
@@ -66,7 +105,7 @@ class ChebConvExecutor(TrafficStateExecutor):
 
             if (epoch_idx % self.log_every) == 0:
                 log_lr = self.optimizer.param_groups[0]['lr']
-                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'\
+                message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s' \
                     .format(epoch_idx, self.epochs, train_loss, val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
 
@@ -112,7 +151,7 @@ class ChebConvExecutor(TrafficStateExecutor):
             float: 训练集的损失值
         """
         node_features = torch.FloatTensor(train_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
+        node_labels = torch.FloatTensor(train_dataloader['node_labels']).to(self.device)
         train_mask = train_dataloader['mask']
 
         self.model.train()
