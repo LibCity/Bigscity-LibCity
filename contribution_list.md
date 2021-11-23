@@ -2,6 +2,8 @@
 
 The model reproduction work in the library has been assisted by several developers. The specific contribution list is shown below.
 
+For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/model.html), where you can see the abbreviation of the model and the corresponding papers and citations.
+
 | Task | Model  | Contributor                                                  |
 | ------ | ------------------------------------------------------------ | ------ |
 |Time Series Prediction|HA|[XBR-1111](https://github.com/XBR-1111), [aptx1231](https://github.com/aptx1231)|
