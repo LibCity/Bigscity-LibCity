@@ -6,6 +6,15 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
 from libcity.model import utils
 
+"""前馈
+Args:
+
+Return:
+    IMP1:第一种训练层
+    IMP2:第二种训练层
+    IMP3:第三种训练层
+    目前只使用了IMP3这种最高级的训练层
+"""
 
 class LayerType:
     IMP1 = 0,
@@ -26,9 +35,7 @@ class GAT(AbstractTrafficStateModel):
         self._scaler = self.data_feature.get('scaler')
 
         self.output_dim = config.get('output_dim', 32)
-        self.model = config.get('model', '')
-        self.dataset = config.get('dataset', '')
-        GATLayer = GATLayerImp3
+        GATLayer = get_layer_type(2)
         self.encoder = GATLayer(num_in_features=self.feature_dim, num_out_features=self.output_dim,
                                 num_of_heads=10, concat=False)
         self.decoder = GATLayer(num_in_features=self.output_dim, num_out_features=self.feature_dim,
