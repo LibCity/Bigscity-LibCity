@@ -31,15 +31,17 @@ class GAT(AbstractTrafficStateModel):
         config['num_nodes'] = self.num_nodes
         config['feature_dim'] = self.feature_dim
         self.device = config.get('device', torch.device("cpu"))
+        self.model = config.get("model", '')
+        self.dataset = config.get("dataset", '')
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
 
         self.output_dim = config.get('output_dim', 32)
-        GATLayer = get_layer_type(2)
+        GATLayer = GATLayerImp3
         self.encoder = GATLayer(num_in_features=self.feature_dim, num_out_features=self.output_dim,
-                                num_of_heads=10, concat=False)
+                                num_of_heads=5, concat=False, device=self.device)
         self.decoder = GATLayer(num_in_features=self.output_dim, num_out_features=self.feature_dim,
-                                num_of_heads=10, concat=False)
+                                num_of_heads=5, concat=False, device=self.device)
 
     def forward(self, batch):
         """
@@ -87,7 +89,7 @@ class GATLayer(torch.nn.Module):
 
     head_dim = 1
 
-    def __init__(self, num_in_features, num_out_features, num_of_heads, layer_type, concat=True, activation=nn.ELU(),
+    def __init__(self, num_in_features, num_out_features, num_of_heads, device, layer_type, concat=True, activation=nn.ELU(),
                  dropout_prob=0.6, add_skip_connection=True, bias=True, log_attention_weights=False):
 
         super().__init__()
@@ -97,7 +99,7 @@ class GATLayer(torch.nn.Module):
         self.num_out_features = num_out_features
         self.concat = concat  # whether we should concatenate or average the attention heads
         self.add_skip_connection = add_skip_connection
-
+        self.device = device
         #
         # Trainable weights: linear projection matrix (denoted as "W" in the paper), attention target/source
         # (denoted as "a" in the paper) and bias (not mentioned in the paper but present in the official GAT repo)
@@ -212,10 +214,10 @@ class GATLayerImp3(GATLayer):
     nodes_dim = 0  # node dimension/axis
     head_dim = 1  # attention head dimension/axis
 
-    def __init__(self, num_in_features, num_out_features, num_of_heads, concat=True, activation=nn.ELU(),
+    def __init__(self, num_in_features, num_out_features, num_of_heads, device, concat=True, activation=nn.ELU(),
                  dropout_prob=0.6, add_skip_connection=True, bias=True, log_attention_weights=False):
         # Delegate initialization to the base class
-        super().__init__(num_in_features, num_out_features, num_of_heads, LayerType.IMP3, concat, activation,
+        super().__init__(num_in_features, num_out_features, num_of_heads, device, LayerType.IMP3, concat, activation,
                          dropout_prob,
                          add_skip_connection, bias, log_attention_weights)
 
@@ -223,7 +225,6 @@ class GATLayerImp3(GATLayer):
         #
         # Step 1: Linear Projection + regularization
         #
-
         in_nodes_features, edge_index = data  # unpack data
         num_of_nodes = in_nodes_features.shape[self.nodes_dim]
         assert edge_index.shape[0] == 2, f'Expected edge index with shape=(2,E) got {edge_index.shape}'
@@ -328,12 +329,12 @@ class GATLayerImp3(GATLayer):
 
         # position i will contain a sum of exp scores of all the nodes that point to the node i (as dictated by the
         # target index)
-        neighborhood_sums.scatter_add_(self.nodes_dim, trg_index_broadcasted.to(device="cuda"), exp_scores_per_edge.to(device="cuda"))
+        neighborhood_sums.scatter_add_(self.nodes_dim, trg_index_broadcasted.to(device=self.device), exp_scores_per_edge.to(device=self.device))
 
         # Expand again so that we can use it as a softmax denominator. e.g. node i's sum will be copied to
         # all the locations where the source nodes pointed to i (as dictated by the target index)
         # shape = (N, NH) -> (E, NH)
-        return neighborhood_sums.index_select(self.nodes_dim, trg_index.to(device="cuda"))
+        return neighborhood_sums.index_select(self.nodes_dim, trg_index.to(device=self.device))
 
     def aggregate_neighbors(self, nodes_features_proj_lifted_weighted, edge_index, in_nodes_features, num_of_nodes):
         size = list(nodes_features_proj_lifted_weighted.shape)  # convert to list otherwise assignment is not possible
@@ -345,7 +346,7 @@ class GATLayerImp3(GATLayer):
                                                         nodes_features_proj_lifted_weighted)
         # aggregation step - we accumulate projected, weighted node features for all the attention heads
         # shape = (E, NH, FOUT) -> (N, NH, FOUT)
-        out_nodes_features.scatter_add_(self.nodes_dim, trg_index_broadcasted.to(device="cuda"), nodes_features_proj_lifted_weighted.to(device="cuda"))
+        out_nodes_features.scatter_add_(self.nodes_dim, trg_index_broadcasted.to(device=self.device), nodes_features_proj_lifted_weighted.to(device=self.device))
 
         return out_nodes_features
 
@@ -358,9 +359,9 @@ class GATLayerImp3(GATLayer):
         trg_nodes_index = edge_index[self.trg_nodes_dim]
 
         # Using index_select is faster than "normal" indexing (scores_source[src_nodes_index]) in PyTorch!
-        scores_source = scores_source.index_select(self.nodes_dim, src_nodes_index.to(device="cuda"))
-        scores_target = scores_target.index_select(self.nodes_dim, trg_nodes_index.to(device="cuda"))
-        nodes_features_matrix_proj_lifted = nodes_features_matrix_proj.index_select(self.nodes_dim, src_nodes_index.to(device="cuda"))
+        scores_source = scores_source.index_select(self.nodes_dim, src_nodes_index.to(device=self.device))
+        scores_target = scores_target.index_select(self.nodes_dim, trg_nodes_index.to(device=self.device))
+        nodes_features_matrix_proj_lifted = nodes_features_matrix_proj.index_select(self.nodes_dim, src_nodes_index.to(device=self.device))
 
         return scores_source, scores_target, nodes_features_matrix_proj_lifted
 
