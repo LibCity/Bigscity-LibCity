@@ -1,0 +1,17 @@
+{
+  "output_dim": 32,
+  "dropout": 0.3,
+
+  "scaler": "none",
+
+  "max_epoch": 2000,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_decay": true,
+  "lr_scheduler": "reducelronplateau",
+  "lr_decay_ratio": 0.7,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 100
+}
