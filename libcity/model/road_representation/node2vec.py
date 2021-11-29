@@ -2,6 +2,8 @@ import itertools
 
 import random
 
+import os
+
 import numpy as np
 
 from gensim.models import Word2Vec
@@ -17,17 +19,18 @@ def partition_num(num, workers):
 
 
 class Node2vec:
-    def __init__(self, G, dataset, p=1, q=1, use_rejection_sampling=0):
+    def __init__(self, config, data_feature, use_rejection_sampling=0):
         """
         :param G:
         :param p: Return parameter,controls the likelihood of immediately revisiting a node in the walk.
         :param q: In-out parameter,allows the search to differentiate between “inward” and “outward” nodes
         :param use_rejection_sampling: Whether to use the rejection sampling strategy in node2vec.
         """
-        self.G = G
-        self.dataset = dataset
-        self.p = p
-        self.q = q
+        self.G = data_feature.get('G', '')
+        self.config = config
+        self.p = self.config.get('p', '')
+        self.q = self.config.get('q', '')
+        self.dataset = self.config.get('dataset', '')
         self.use_rejection_sampling = use_rejection_sampling
 
         self.alias_nodes = None
@@ -204,6 +207,11 @@ class Node2vec:
 
         model = Word2Vec(sentences = self.walks, vector_size = vector_size, window = window, min_count = min_count,
                 sg = sg, workers = workers, epochs = epochs)
-        save_path = 'libcity/cache/{}_embedding.npy'.format(self.dataset)
-        np.save(save_path, model)
+        save_folder = 'libcity/cache/dataset_cache'
+        save_path = save_folder + '/{}_embedding.npy'.format(self.dataset)
+        if(os.path.exists(save_folder)):
+            np.save(save_path, model)
+        else:
+            os.mkdir(save_folder)
+            np.save(save_path, model)
         return

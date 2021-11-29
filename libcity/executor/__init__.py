@@ -10,6 +10,7 @@ from libcity.executor.traj_loc_pred_executor import TrajLocPredExecutor
 from libcity.executor.abstract_tradition_executor import AbstractTraditionExecutor
 from libcity.executor.chebconv_executor import ChebConvExecutor
 from libcity.executor.eta_executor import ETAExecutor
+from libcity.executor.node2vec_executor import Node2VecExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -23,5 +24,6 @@ __all__ = [
     "AbstractTraditionExecutor",
     "ChebConvExecutor",
     "LINEExecutor",
-    "ETAExecutor"
+    "ETAExecutor",
+    "Node2VecExecutor"
 ]

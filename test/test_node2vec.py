@@ -1,76 +1,40 @@
-import argparse as arg
-
 import warnings
 warnings.filterwarnings('ignore')
 
-from node2vec import Node2vec
+from libcity.data import get_dataset
 
-from node2vec_dataset import ReadGraph
+from libcity.utils import get_executor
 
-def parse_args():
-    '''
-    Parses the node2vec arguments.
-    '''
-    parser = arg.ArgumentParser(description="Run node2vec.")
-
-    parser.add_argument('--dataset', nargs='?', default='BJ_roadmap',
-                        help='Input dataset name')
-    parser.add_argument('--p', type=float, default=0.25,help='Return hyperparameter. Default is 0.25.')
-    parser.add_argument('--q', type=float, default=4, help='Return hyperparameter. Default is 4.')
-    parser.add_argument('--walks', type=int, default=80,
-                        help='Length of walk per source. Default is 80.')
-    parser.add_argument('--length', type=int, default=80,
-                        help='Length of walk per source. Default is 80.')
-    parser.add_argument('--dimension', type=int, default=128,
-                        help='Number of dimensions. Default is 128.')
-    parser.add_argument('--window', type=int, default=5,
-                        help='Context size for optimization. Default is 10.')
-    parser.add_argument('--iter', default=1, type=int,
-                        help='Number of epochs in SGD')
-    parser.add_argument('--workers', type=int, default=8,
-                        help='Number of parallel workers. Default is 8.')
-    return parser.parse_args()
-
-def get_data(args):
-    # 根据路网数据（rel文件）生成networkx图
-    RG = ReadGraph(args)
-    G = RG._load_graph()
-    return G
-
-def run_node2vec(G, args):
-    # 生成node2vec游走 结果为由num_walks个长度为walk_length的一维list合成的二维list
-    rw = Node2vec(G, dataset=args.dataset, p=args.p, q=args.q, use_rejection_sampling=0)
-    rw.preprocess_transition_probs()
-    rw.simulate_walks(num_walks=args.walks, walk_length=args.length)
-    # 将游走结果带入word2vec模型进行训练，输出最终结果
-    rw.learn_embeddings(vector_size=args.dimension, window=args.window, min_count=0, sg=1, workers=args.workers,
-                        epochs=args.iter)
-
-def main():
-    args = parse_args()
-    G = get_data(args)
-    run_node2vec(G, args)
-
-if __name__ == '__main__':
-    main()
+from libcity.utils import get_model
 
 
+config = {
+    'task' : 'road_representation',
+    'dataset': 'BJ_roadmap',
+    'dataset_class' : 'Node2VecDataset',
+    'model' : 'Node2vec',
+    'executor': 'Node2VecExecutor',
+    'p': 0.25,
+    'q': 4,
+    'walks': 80,
+    'length': 80,
+    'dimension': 128,
+    'window': 5,
+    'iter': 1,
+    'workers': 8
+}
 
+# 加载路网数据（rel文件），生成networkx图
+dataset = get_dataset(config)
+dataset.get_data()
+data_feature = dataset.get_data_feature()
 
+# #加载node2vec模型
+model = get_model(config, data_feature)
 
+# 加载执行器
+executor = get_executor(config, model)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# 生成node2vec游走 结果为由num_walks个长度为walk_length的一维list合成的二维list
+executor.run_model()
 
