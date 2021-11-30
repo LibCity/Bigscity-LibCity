@@ -21,7 +21,7 @@ class Node2VecExecutor(AbstractExecutor):
         self.model.learn_embeddings(vector_size=self.dimension, window=self.window, min_count=0, sg=1, workers=self.workers,
                             epochs=self.iter)
 
-    #Node2vec模型没有划分训练、验证集，无需用到以下函数
+    #train_data 与 valid_data 仅保持接口一致性，不会在本方法中调用
     def evaluate(self, test_dataloader):
         """
         use model to test data
