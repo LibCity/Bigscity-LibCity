@@ -14,7 +14,7 @@ from libcity.utils import get_model
 task = 'road_representation'
 model = 'Node2Vec'
 dataset = 'BJ_roadmap'
-evaluator = 'Node2VecEvaluator'
+evaluator = 'RoadRepresentationEvaluator'
 config = ConfigParser(task, model, dataset, config_file=None)
 
 # 加载路网数据（rel文件），生成networkx图

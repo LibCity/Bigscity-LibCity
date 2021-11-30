@@ -398,7 +398,7 @@
         "Node2Vec": {
             "dataset_class": "Node2VecDataset",
             "executor" : "Node2VecExecutor",
-            "evaluator" : "Node2VecEvaluator"
+            "evaluator" : "RoadRepresentationEvaluator"
         }
     }
 }
