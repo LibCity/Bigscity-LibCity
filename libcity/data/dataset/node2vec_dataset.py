@@ -29,6 +29,7 @@ class Node2VecDataset(AbstractDataset):
         for i in range(len(start)):
             nG.add_edge(start[i],end[i])
         self.graph = nG
+        return [], [], []
 
     def get_data_feature(self):
         """

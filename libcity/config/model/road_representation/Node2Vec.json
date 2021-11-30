@@ -1,0 +1,16 @@
+{
+    "task" : "road_representation",
+    "dataset": "BJ_roadmap",
+    "dataset_class" : "Node2VecDataset",
+    "model" : "Node2Vec",
+    "executor": "Node2VecExecutor",
+    "p": 0.25,
+    "q": 4,
+    "use_rejection_sampling" : 0,
+    "walks": 80,
+    "length": 80,
+    "dimension": 128,
+    "window": 5,
+    "iter": 1,
+    "workers": 8
+}

@@ -18,8 +18,8 @@ def partition_num(num, workers):
         return [num//workers]*workers + [num % workers]
 
 
-class Node2vec:
-    def __init__(self, config, data_feature, use_rejection_sampling=0):
+class Node2Vec:
+    def __init__(self, config, data_feature):
         """
         :param G:
         :param p: Return parameter,controls the likelihood of immediately revisiting a node in the walk.
@@ -30,8 +30,8 @@ class Node2vec:
         self.config = config
         self.p = self.config.get('p', '')
         self.q = self.config.get('q', '')
+        self.use_rejection_sampling = self.config.get('use_rejection_sampling', '')
         self.dataset = self.config.get('dataset', '')
-        self.use_rejection_sampling = use_rejection_sampling
 
         self.alias_nodes = None
         self.walks = {}
@@ -207,7 +207,7 @@ class Node2vec:
 
         model = Word2Vec(sentences = self.walks, vector_size = vector_size, window = window, min_count = min_count,
                 sg = sg, workers = workers, epochs = epochs)
-        save_folder = 'libcity/cache/dataset_cache'
+        save_folder = 'libcity/cache/evaluate_cache'
         save_path = save_folder + '/{}_embedding.npy'.format(self.dataset)
         if(os.path.exists(save_folder)):
             np.save(save_path, model)
