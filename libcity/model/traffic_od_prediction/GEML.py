@@ -81,7 +81,7 @@ class MutiLearning(nn.Module):
 
         x = torch.matmul(x, self.transition)
         # (B, N, 2E)
-        x = torch.bmm(x, x_t)
+        x = torch.matmul(x, x_t)
         # (B, N, N)
 
         x = x.unsqueeze(dim=-1).unsqueeze(dim=1)
@@ -107,7 +107,7 @@ class GraphConvolution(nn.Module):
 
     def forward(self, x, a):
         # (B, N, N)
-        embed = torch.bmm(a, x)
+        embed = torch.matmul(a, x)
         # (B, N, N)
         embed = torch.matmul(embed, self.weight)
         # (B, N, E)
@@ -142,12 +142,11 @@ class GCN(nn.Module):
         return torch.stack(embed, dim=1)
 
 
-def generate_geo_adj(adj_matrix: np.matrix):
-    adj_matrix = torch.Tensor(adj_matrix)  # (N, N)
-    cost_matrix = torch.Tensor([[abs(i - j) for j in range(adj_matrix.shape[0])] for i in range(adj_matrix.shape[1])])
-    cost_matrix = cost_matrix * adj_matrix
-    sum_cost_vector = torch.sum(cost_matrix, dim=1, keepdim=True)  # (N, 1)
-    weight_matrix = cost_matrix / sum_cost_vector
+def generate_geo_adj(distance_matrix: np.matrix):
+    distance_matrix = torch.Tensor(distance_matrix)  # (N, N)
+    distance_matrix = distance_matrix * distance_matrix
+    sum_cost_vector = torch.sum(distance_matrix, dim=1, keepdim=True)  # (N, 1)
+    weight_matrix = distance_matrix / sum_cost_vector
     weight_matrix[range(weight_matrix.shape[0]), range(weight_matrix.shape[1])] = 1
     return weight_matrix  # (N, N)
 
@@ -191,11 +190,8 @@ class GEML(AbstractTrafficStateModel):
         self.loss_p1 = config.get('loss_p1', 0.25)
         self.loss_p2 = config.get('loss_p2', 0.25)
 
-        adj_mx = self.data_feature.get('adj_mx')
-        self.geo_adj = generate_geo_adj(adj_mx) \
-            .repeat(self.batch_size * self.input_window, 1) \
-            .reshape((self.batch_size, self.input_window, self.num_nodes, self.num_nodes)) \
-            .to(self.device)
+        dis_mx = self.data_feature.get('adj_mx')
+        self.geo_adj = generate_geo_adj(dis_mx).to(self.device)
 
         self.GCN = GCN(self.num_nodes, self.embed_dim, self.device)
 
@@ -207,7 +203,7 @@ class GEML(AbstractTrafficStateModel):
     def forward(self, batch):
         x = batch['X'].squeeze(dim=-1)
         # (B, T, N, N)
-        x_ge_embed = self.GCN(x, self.geo_adj[:x.shape[0], ...])
+        x_ge_embed = self.GCN(x, self.geo_adj)
         # (B, T, N, E)
 
         x_se_embed = self.GCN(x, self.semantic_adj)
