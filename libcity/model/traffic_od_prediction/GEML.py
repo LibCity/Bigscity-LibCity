@@ -191,7 +191,10 @@ class GEML(AbstractTrafficStateModel):
         self.loss_p2 = config.get('loss_p2', 0.25)
 
         dis_mx = self.data_feature.get('adj_mx')
-        self.geo_adj = generate_geo_adj(dis_mx).to(self.device)
+        self.geo_adj = generate_geo_adj(dis_mx) \
+            .repeat(self.batch_size * self.input_window, 1) \
+            .reshape((self.batch_size, self.input_window, self.num_nodes, self.num_nodes)) \
+            .to(self.device)
 
         self.GCN = GCN(self.num_nodes, self.embed_dim, self.device)
 
@@ -203,7 +206,7 @@ class GEML(AbstractTrafficStateModel):
     def forward(self, batch):
         x = batch['X'].squeeze(dim=-1)
         # (B, T, N, N)
-        x_ge_embed = self.GCN(x, self.geo_adj)
+        x_ge_embed = self.GCN(x, self.geo_adj[:x.shape[0], ...])
         # (B, T, N, E)
 
         x_se_embed = self.GCN(x, self.semantic_adj)
