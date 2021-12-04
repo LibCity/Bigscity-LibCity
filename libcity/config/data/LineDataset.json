@@ -1,0 +1,10 @@
+{
+    "negative_ratio": 2,
+    "batch_size": 1024,
+    "times": 1,
+
+    "train_rate": 0.7,
+    "eval_rate": 0.1,
+    "cache_dataset": true,
+    "num_workers": 0
+}
