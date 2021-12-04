@@ -7,6 +7,7 @@ class TrafficAccidentEvaluator(TrafficStateEvaluator):
 
     def __init__(self, config):
         super(TrafficAccidentEvaluator, self).__init__(config)
+        self.topk = self.config.get('topk', 10)
 
     def _check_config(self):
         if not isinstance(self.metrics, list):
@@ -104,21 +105,17 @@ class TrafficAccidentEvaluator(TrafficStateEvaluator):
                         self.intermediate_result[metric + '@' + str(i)].append(
                             loss.explained_variance_score_torch(y_pred[:, i - 1], y_true[:, i - 1]).item())
                     elif metric == 'Precision':
-                        topk = 10
                         self.intermediate_result[metric + '@' + str(i)].append(
-                            eval_funcs.Precision_torch(y_pred[:, i - 1], y_true[:, i - 1], topk))
+                            eval_funcs.Precision_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
                     elif metric == 'Recall':
-                        topk = 10
                         self.intermediate_result[metric + '@' + str(i)].append(
-                            eval_funcs.Recall_torch(y_pred[:, i - 1], y_true[:, i - 1], topk))
+                            eval_funcs.Recall_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
                     elif metric == 'F1-Score':
-                        topk = 10
                         self.intermediate_result[metric + '@' + str(i)].append(
-                            eval_funcs.F1_Score_torch(y_pred[:, i - 1], y_true[:, i - 1], topk))
+                            eval_funcs.F1_Score_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
                     elif metric == 'MAP':
-                        topk = 10
                         self.intermediate_result[metric + '@' + str(i)].append(
-                            eval_funcs.MAP_torch(y_pred[:, i - 1], y_true[:, i - 1], topk))
+                            eval_funcs.MAP_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
                     elif metric == 'PCC':
                         self.intermediate_result[metric + '@' + str(i)].append(
                             eval_funcs.PCC_torch(y_pred[:, i - 1], y_true[:, i - 1]))
