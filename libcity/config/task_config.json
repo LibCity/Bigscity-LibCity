@@ -399,6 +399,7 @@
             "dataset_class": "Node2VecDataset",
             "executor" : "Node2VecExecutor",
             "evaluator" : "RoadRepresentationEvaluator"
+        },
         "GAT": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
