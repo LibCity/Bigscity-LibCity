@@ -34,7 +34,6 @@ from libcity.data.dataset.chebconv_dataset import ChebConvDataset
 from libcity.data.dataset.gsnet_dataset import GSNetDataset
 from libcity.data.dataset.line_dataset import LINEDataset
 from libcity.data.dataset.cstn_dataset import CSTNDataset
-from libcity.data.dataset.node2vec_dataset import Node2VecDataset
 
 __all__ = [
     "AbstractDataset",
@@ -68,6 +67,5 @@ __all__ = [
     'ChebConvDataset',
     "GSNetDataset",
     "LINEDataset",
-    "CSTNDataset",
-    "Node2VecDataset"
+    "CSTNDataset"
 ]
