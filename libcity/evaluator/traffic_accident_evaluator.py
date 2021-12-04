@@ -1,7 +1,5 @@
 from libcity.evaluator import TrafficStateEvaluator
 from libcity.model import loss
-import torch
-from libcity.utils.normalization import MinMax01Scaler
 from libcity.evaluator import eval_funcs
 
 
@@ -73,12 +71,6 @@ class TrafficAccidentEvaluator(TrafficStateEvaluator):
                         self.intermediate_result[metric + '@' + str(i)].append(
                             loss.explained_variance_score_torch(y_pred[:, :i], y_true[:, :i]).item())
         elif self.mode.lower() == 'single':  # 第i个时间步的loss
-            pred_scaler = MinMax01Scaler(torch.min(y_pred[:, self.len_timeslots - 1].flatten()),
-                                         torch.max(y_pred[:, self.len_timeslots - 1].flatten()))
-            true_scaler = MinMax01Scaler(torch.min(y_true[:, self.len_timeslots - 1].flatten()),
-                                         torch.max(y_true[:, self.len_timeslots - 1].flatten()))
-            y_pred[:, self.len_timeslots - 1] = pred_scaler.inverse_transform(y_pred[:, self.len_timeslots - 1])
-            y_true[:, self.len_timeslots - 1] = true_scaler.inverse_transform(y_true[:, self.len_timeslots - 1])
             for i in range(1, self.len_timeslots + 1):
                 for metric in self.metrics:
                     if metric == 'masked_MAE':
