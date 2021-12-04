@@ -380,7 +380,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv", "LINE", "GAT", "Node2Vec"
+            "ChebConv", "LINE", "GAT"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -395,10 +395,6 @@
             "executor": "LINEExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         },
-        "Node2Vec": {
-            "dataset_class": "Node2VecDataset",
-            "executor" : "Node2VecExecutor",
-            "evaluator" : "RoadRepresentationEvaluator"
         "GAT": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
