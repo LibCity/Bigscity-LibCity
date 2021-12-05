@@ -379,7 +379,7 @@
         ],
         "ChebConv": {
             "dataset_class": "RoadRepresentationDataset",
-            "executor": "ChebConvExecutor",
+            "executor": "RoadRepresentationExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         },
         "HRNR": {

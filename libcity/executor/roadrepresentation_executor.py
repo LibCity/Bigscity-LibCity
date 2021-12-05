@@ -15,15 +15,18 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
         TrafficStateExecutor.__init__(self, config, model)
         self.downstream = config.get("downstream", "self_regression")
         self.loss_func = None
-        if self.downstream == "self_regresssion":
+        if self.downstream == "self_regression":
             self.loss_func = self.loss_self_regression
             self.encoder = self.model
 
-            decoder_config = self.config.clone()
-            decoder_config.__setitem__("feature_dim", self.config.get("output_dim"))
-            decoder_config.__setitem__("output_dim", self.config.get("feature_dim"))
+            decoder_config = self.config.config.copy()
+            # TODO
             dataset = get_dataset(config)
             data_feature = dataset.get_data_feature()
+
+            data_feature["feature_dim"] = decoder_config["feature_dim"] = model.output_dim
+            data_feature["output_dim"] = decoder_config["output_dim"] = model.input_dim
+
             self.decoder = get_model(decoder_config, data_feature)
         elif self.downstream == "label_prediction":
             self.loss_func = self.loss_label_prediction

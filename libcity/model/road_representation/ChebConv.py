@@ -5,24 +5,19 @@ from libcity.model import utils
 from libcity.model.abstract_road_representation_model import AbstractRoadRepresentationModel
 
 
-class ChebConvModule(AbstractRoadRepresentationModel):
+class ChebConv(AbstractRoadRepresentationModel):
     """
-    路网表征模型的基类并不统一
-    图卷积，将N*C的输入矩阵映射成N*F的输出矩阵，其中邻接矩阵形状N*N。
+    K阶切比雪夫估计
+    num_nodes: 节点个数n
+    max_diffusion_step: K阶
+    adj_mx: list of 拉普拉斯矩阵
+    device: 设备
+    input_dim: 输入维度
+    output_dim: 输出维度
     """
 
     def __init__(self, config, data_feature):
-        """
-        K阶切比雪夫估计
-        Args:
-            num_nodes: 节点个数n
-            max_diffusion_step: K阶
-            adj_mx: list of 拉普拉斯矩阵
-            device: 设备
-            input_dim: 输入维度
-            output_dim: 输出维度
-        """
-        super().__init__()
+        super().__init__(config, data_feature)
         self.num_nodes = data_feature.get('num_nodes', 1)
         self.input_dim = data_feature.get('feature_dim', 1)
 

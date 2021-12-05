@@ -6,10 +6,10 @@ from scipy import sparse
 from torch.nn import Module
 from torch.nn.parameter import Parameter
 
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libcity.model.abstract_road_representation_model import AbstractRoadRepresentationModel
 
 
-class HRNR(AbstractTrafficStateModel):
+class HRNR(AbstractRoadRepresentationModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.device = config.get("device", torch.device("cpu"))
