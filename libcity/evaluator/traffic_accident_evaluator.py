@@ -118,6 +118,6 @@ class TrafficAccidentEvaluator(TrafficStateEvaluator):
                             eval_funcs.MAP_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
                     elif metric == 'PCC':
                         self.intermediate_result[metric + '@' + str(i)].append(
-                            eval_funcs.PCC_torch(y_pred[:, i - 1], y_true[:, i - 1]))
+                            eval_funcs.PCC_torch(y_pred[:, i - 1], y_true[:, i - 1], self.topk))
         else:
             raise ValueError('Error parameter evaluator_mode={}, please set `single` or `average`.'.format(self.mode))

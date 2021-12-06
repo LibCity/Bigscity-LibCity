@@ -145,11 +145,18 @@ def MAP_torch(preds, labels, topk):
     return sum(ap) / len(ap)
 
 
-def PCC_torch(preds, labels):
+def PCC_torch(preds, labels, topk):
     pcc = []
     for i in range(preds.shape[0]):
         label = labels[i].flatten()
         pred = preds[i].flatten()
+        sorted, rank = torch.sort(pred, descending=True)
+        pred = sorted[:topk]
+        rank = rank[:topk]
+        sorted_label = torch.zeros(topk)
+        for i in range(topk):
+            sorted_label[i] = label[rank[i]]
+        label = sorted_label
         label_average = torch.sum(label) / (label.shape[0])
         pred_average = torch.sum(pred) / (pred.shape[0])
         if torch.sqrt(torch.sum((label - label_average) * (label - label_average))) * torch.sqrt(
