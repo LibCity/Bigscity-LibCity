@@ -84,3 +84,84 @@ def top_k(loc_pred, loc_true, topk):
             rank += 1.0 / (rank_index + 1)
             dcg += 1.0 / np.log2(rank_index + 2)
     return hit, rank, dcg
+
+def Precision_torch(preds, labels, topk):
+    precision = []
+    for i in range(preds.shape[0]):
+        label = labels[i]
+        pred = preds[i]
+        accident_grids = label > 0
+        sorted, _ = torch.sort(pred.flatten(), descending=True)
+        threshold = sorted[topk - 1]
+        pred_grids = pred >= threshold
+        matched = pred_grids & accident_grids
+        precision.append(torch.sum(matched.flatten()).item() / topk)
+    return sum(precision) / len(precision)
+
+def Recall_torch(preds, labels, topk):
+    recall = []
+    for i in range(preds.shape[0]):
+        label = labels[i]
+        pred = preds[i]
+        accident_grids = label > 0
+        sorted, _ = torch.sort(pred.flatten(), descending=True)
+        threshold = sorted[topk - 1]
+        pred_grids = pred >= threshold
+        matched = pred_grids & accident_grids
+        if torch.sum(accident_grids).item() != 0:
+            recall.append(torch.sum(matched.flatten()).item() / torch.sum(accident_grids.flatten()).item())
+    return sum(recall) / len(recall)
+
+def F1_Score_torch(preds, labels, topk):
+    precision = Precision_torch(preds, labels, topk)
+    recall = Recall_torch(preds, labels, topk)
+    return 2 * precision * recall / (precision + recall)
+
+
+
+def MAP_torch(preds, labels, topk):
+    ap = []
+    for i in range(preds.shape[0]):
+        label = labels[i].flatten()
+        pred = preds[i].flatten()
+        accident_grids = label > 0
+        sorted, rank = torch.sort(pred, descending=True)
+        rank = rank[:topk]
+        if topk != 0:
+            threshold = sorted[topk - 1]
+        else:
+            threshold = 0
+        label = label != 0
+        pred = pred >= threshold
+        matched = pred & label
+        match_num = 0
+        precision_sum = 0
+        for i in range(rank.shape[0]):
+            if matched[rank[i]]:
+                match_num += 1
+                precision_sum += match_num / (i + 1)
+        if rank.shape[0] != 0:
+            ap.append(precision_sum / rank.shape[0])
+    return sum(ap) / len(ap)
+
+
+def PCC_torch(preds, labels, topk):
+    pcc = []
+    for i in range(preds.shape[0]):
+        label = labels[i].flatten()
+        pred = preds[i].flatten()
+        sorted, rank = torch.sort(pred, descending=True)
+        pred = sorted[:topk]
+        rank = rank[:topk]
+        sorted_label = torch.zeros(topk)
+        for i in range(topk):
+            sorted_label[i] = label[rank[i]]
+        label = sorted_label
+        label_average = torch.sum(label) / (label.shape[0])
+        pred_average = torch.sum(pred) / (pred.shape[0])
+        if torch.sqrt(torch.sum((label - label_average) * (label - label_average))) * torch.sqrt(
+                torch.sum((pred - pred_average) * (pred - pred_average))) != 0:
+            pcc.append((torch.sum((label - label_average) * (pred - pred_average)) / (
+                    torch.sqrt(torch.sum((label - label_average) * (label - label_average))) * torch.sqrt(
+                    torch.sum((pred - pred_average) * (pred - pred_average))))).item())
+    return sum(pcc) / len(pcc)
