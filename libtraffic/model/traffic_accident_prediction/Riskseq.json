@@ -1,0 +1,9 @@
+{
+    "GCN_input": 5,
+    "GCN_hidden": 320,
+    "Fine_inputsize": 354,
+    "Fine_hidsize": 192,
+    "Coarse_inputsize": 18,
+    "Coarse_hidsize": 16,
+    "batchsize": 30
+}
