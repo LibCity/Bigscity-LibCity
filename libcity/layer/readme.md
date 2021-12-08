@@ -1,30 +1,30 @@
 # Layer List
-| Layer | Model | Completer | Test |
-| :- | :-: | :-: | :-:|
-|Spatial.gnn.GCN|-| ZWT | √ | 
-|Spatial.gnn.GAT|-| ZWT | × |
-|Spatial.gnn.AVWGCN|AGCRN|ZWT|√|
-|Spatial.gnn.LearnedGCN|STAGGCN|ZWT|×|
-|Spatial.gnn.ChebConvWithSAt|ASTGCN|ZWT|√|
-|Spatial.cnn.CNN|-| ZWT | √ | 
-|Spatial.cnn.SpatialViewCNN|ASTGCN| ZWT | √ | 
-|Spatial.atten.SpatialAttention|GMAN| ZWT | √ | 
-|Spatial.embedding.Embed|GMAN| ZWT | √ | 
-|Spatial.embedding.PositionalEmbedding|DCRNN| ZWT | × | 
-|Spatial.embedding.STEmbedding |GMAN| ZWT | √  |
-|Spatial.embedding.MultiEmbed|DeepMove| ZWT | × |
-|Temporal.rnn.TGRU|-| ZWT | √  |
-|Temporal.rnn.TGCGRU|TGCN| ZWT | √  |
-|Temporal.rnn.AGCGRU|AGCRN| ZWT | √  |
-|Temporal.rnn.TLSTM|-| ZWT | √  |
-|Temporal.cnn.TemporalCNN|-| ZWT | √  |
-|Temporal.tcn.TemporalConvNet|TCN| ZWT | ×  |
-|Temporal.atten.TemporalAttention|GMAN| ZWT | √  |
-|output.atten.TransformAttention|GMAN| ZWT | √  |
-|output.encoder_decoder.GMANEncoder|GMAN| ZWT | √  |
-|output.encoder_decoder.GMANDecoder|GMAN| ZWT | √  |
-|output.mlp.FusionLayer|ASTGCN| ZWT | √  |
-|output.mlp.FC|GMAN| ZWT | √  |
+| Layer | Model |  Test |
+| :- | :-: |  :-:|
+|Spatial.gnn.GCN|-| √ | 
+|Spatial.gnn.GAT|-|  × |
+|Spatial.gnn.AVWGCN|AGCRN|√|
+|Spatial.gnn.LearnedGCN|STAGGCN|×|
+|Spatial.gnn.ChebConvWithSAt|ASTGCN|√|
+|Spatial.cnn.CNN|-|  √ | 
+|Spatial.cnn.SpatialViewCNN|ASTGCN| √ | 
+|Spatial.atten.SpatialAttention|GMAN|  √ | 
+|Spatial.embedding.Embed|GMAN| √ | 
+|Spatial.embedding.PositionalEmbedding|DCRNN| × | 
+|Spatial.embedding.STEmbedding |GMAN| √  |
+|Spatial.embedding.MultiEmbed|DeepMove|  × |
+|Temporal.rnn.TGRU|-| √  |
+|Temporal.rnn.TGCGRU|TGCN|  √  |
+|Temporal.rnn.AGCGRU|AGCRN|  √  |
+|Temporal.rnn.TLSTM|-|  √  |
+|Temporal.cnn.TemporalCNN|-|  √  |
+|Temporal.tcn.TemporalConvNet|TCN|  ×  |
+|Temporal.atten.TemporalAttention|GMAN|  √  |
+|output.atten.TransformAttention|GMAN|  √  |
+|output.encoder_decoder.GMANEncoder|GMAN| √  |
+|output.encoder_decoder.GMANDecoder|GMAN| √  |
+|output.mlp.FusionLayer|ASTGCN| √  |
+|output.mlp.FC|GMAN| √  |
 # Todo List
 | Layer | Model |
 | :- | :-: |
