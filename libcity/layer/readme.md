@@ -20,6 +20,7 @@
 |Temporal.cnn.TemporalCNN|-|  √  |
 |Temporal.tcn.TemporalConvNet|TCN|  ×  |
 |Temporal.atten.TemporalAttention|GMAN|  √  |
+|output.atten.SelfAttention|-|  √  |
 |output.atten.TransformAttention|GMAN|  √  |
 |output.encoder_decoder.GMANEncoder|GMAN| √  |
 |output.encoder_decoder.GMANDecoder|GMAN| √  |
