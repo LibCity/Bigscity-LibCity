@@ -4,11 +4,14 @@ import torch.nn.functional as F
 
 from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
-from libcity.model.eta.DeepTTE import unnormalize
 
 
 def normalize(data, mean, std):
     return (data - mean) / std
+
+
+def unnormalize(data, mean, std):
+    return data * std + mean
 
 
 class Attr(nn.Module):
