@@ -7,6 +7,14 @@ from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
+def normalize(data, mean, std):
+    return (data - mean) / std
+
+
+def unnormalize(data, mean, std):
+    return data * std + mean
+
+
 def get_local_seq(full_seq, kernel_size, mean, std, device=torch.device('cpu')):
     seq_len = full_seq.size()[1]
 
@@ -53,10 +61,9 @@ class Attr(nn.Module):
 
             em_list.append(attr_t)
 
-        dist_mean = self.data_feature.get("dist_mean", 9.578281194509781)
-        dist_std = self.data_feature.get("dist_std", 3.9656010701306283)
-        dist = (batch["dist"] - dist_mean) / dist_std
-        dist = (dist - dist_mean) / dist_std
+        dist_mean, dist_std = self.data_feature["dist_mean"], self.data_feature["dist_std"]
+        dist = normalize(batch["dist"], dist_mean, dist_std)
+        dist = normalize(dist, dist_mean, dist_std)
         em_list.append(dist)
 
         return torch.cat(em_list, dim=1)
@@ -76,13 +83,11 @@ class GeoConv(nn.Module):
         self.conv = nn.Conv1d(16, self.num_filter, self.kernel_size)
 
     def forward(self, batch):
-        longi_mean = self.data_feature.get("longi_mean", 104.05810954320589)
-        longi_std = self.data_feature.get("longi_std", 0.04988770679679998)
-        current_longi = (batch["current_longi"] - longi_mean) / longi_std
+        longi_mean, longi_std = self.data_feature["longi_mean"], self.data_feature["longi_std"]
+        current_longi = normalize(batch["current_longi"], longi_mean, longi_std)
         lngs = torch.unsqueeze(current_longi, dim=2)
-        lati_mean = self.data_feature.get("lati_mean", 30.652312982784895)
-        lati_std = self.data_feature.get("lati_std", 0.04988770679679998)
-        current_lati = (batch['current_lati'] - lati_mean) / lati_std
+        lati_mean, lati_std = self.data_feature["lati_mean"], self.data_feature["lati_std"]
+        current_lati = normalize(batch["current_lati"], lati_mean, lati_std)
         lats = torch.unsqueeze(current_lati, dim=2)
 
         states = self.state_em(batch['current_state'].long())
@@ -95,9 +100,8 @@ class GeoConv(nn.Module):
 
         conv_locs = F.elu(self.conv(locs)).permute(0, 2, 1)
 
-        dist_gap_mean = self.data_feature.get("dist_gap_mean", 0.274716042312)
-        dist_gap_std = self.data_feature.get("dist_gap_std", 0.127051674693)
-        current_dis = (batch["current_dis"] - dist_gap_mean) / dist_gap_std
+        dist_gap_mean, dist_gap_std = self.data_feature["dist_gap_mean"], self.data_feature["dist_gap_std"]
+        current_dis = normalize(batch["current_dis"], dist_gap_mean, dist_gap_std)
 
         # calculate the dist for local paths
         local_dist = get_local_seq(current_dis, self.kernel_size, dist_gap_mean, dist_gap_std, self.device)
@@ -193,7 +197,7 @@ class SpatioTemporal(nn.Module):
         # concat the loc_conv and the attributes
         conv_locs = torch.cat((conv_locs, expand_attr_t), dim=2)
 
-        lens = [batch["current_dis"].shape[1]] * batch["current_dis"].shape[0]
+        lens = [batch["current_longi"].shape[1]] * batch["current_longi"].shape[0]
         lens = list(map(lambda x: x - self.kernel_size + 1, lens))
 
         packed_inputs = nn.utils.rnn.pack_padded_sequence(conv_locs, lens, batch_first=True)
@@ -362,18 +366,16 @@ class DeepTTE(AbstractTrafficStateModel):
         else:
             entire_out = self.predict(batch)
 
-        time_mean = self.data_feature.get("time_mean", 1555.75269436)
-        time_std = self.data_feature.get("time_std", 646.373021152)
-        entire_out = (entire_out - time_mean) / time_std
-        time = (batch["time"] - time_mean) / time_std
+        time_mean, time_std = self.data_feature["time_mean"], self.data_feature["time_std"]
+        entire_out = normalize(entire_out, time_mean, time_std)
+        time = normalize(batch["time"], time_mean, time_std)
         entire_loss = self.entire_estimate.eval_on_batch(entire_out, time, time_mean, time_std)
 
         if self.training:
             # get the mean/std of each local path
-            time_gap_mean = self.data_feature.get("time_gap_mean", 43.8756927994)
-            time_gap_std = self.data_feature.get("time_gap_std", 51.4811932987)
+            time_gap_mean, time_gap_std = self.data_feature["time_gap_mean"], self.data_feature["time_gap_std"]
             mean, std = (self.kernel_size - 1) * time_gap_mean, (self.kernel_size - 1) * time_gap_std
-            current_tim = (batch["current_tim"] - time_gap_mean) / time_gap_std
+            current_tim = normalize(batch["current_tim"], time_gap_mean, time_gap_std)
 
             # get ground truth of each local path
             local_label = get_local_seq(current_tim, self.kernel_size, mean, std, self.device)
@@ -384,13 +386,12 @@ class DeepTTE(AbstractTrafficStateModel):
             return entire_loss
 
     def predict(self, batch):
-        time_mean = self.data_feature.get("time_mean", 1555.75269436)
-        time_std = self.data_feature.get("time_std", 646.373021152)
+        time_mean, time_std = self.data_feature["time_mean"], self.data_feature["time_std"]
         if self.training:
             entire_out, (local_out, local_length) = self.forward(batch)
-            entire_out = entire_out * time_std + time_mean
+            entire_out = unnormalize(entire_out, time_mean, time_std)
             return entire_out, (local_out, local_length)
         else:
             entire_out = self.forward(batch)
-            entire_out = entire_out * time_std + time_mean
+            entire_out = unnormalize(entire_out, time_mean, time_std)
             return entire_out

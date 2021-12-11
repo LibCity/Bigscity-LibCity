@@ -57,21 +57,21 @@ class ETADataset(AbstractDataset):
         self.dyna_feature_column = {col: i for i, col in enumerate(dyna_file)}
         res = dict()
         traj_id_set = set()
-        for index, row in dyna_file.iterrows():
-            traj_id = dyna_file.loc[index, "traj_id"]
+        for dyna in dyna_file.itertuples():
+            traj_id = getattr(dyna, "traj_id")
             if traj_id in traj_id_set:
                 continue
             traj_id_set.add(traj_id)
 
-            entity_id = dyna_file.loc[index, "entity_id"]
+            entity_id = getattr(dyna, "entity_id")
             if entity_id not in res:
                 res[entity_id] = []
             rows = dyna_file[dyna_file['traj_id'] == traj_id]
 
             traj = []
-            for index, row in rows.iterrows():
+            for _, row in rows.iterrows():
                 traj.append(row.tolist())
-            res[entity_id].append(traj)
+            res[entity_id].append(traj[:])
         return res
 
     def _encode_traj(self, data):

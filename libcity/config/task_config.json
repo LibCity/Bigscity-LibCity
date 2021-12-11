@@ -343,16 +343,22 @@
     },
     "eta": {
         "allowed_model": [
-            "DeepTTE"
+            "DeepTTE", "TTPNet"
         ],
         "allowed_dataset": [
-            "Chengdu_Taxi_Sample1"
+            "Chengdu_Taxi_Sample1", "Beijing_Taxi_Sample"
         ],
         "DeepTTE": {
             "dataset_class": "ETADataset",
             "executor": "ETAExecutor",
             "evaluator": "ETAEvaluator",
             "eta_encoder": "DeeptteEncoder"
+        },
+        "TTPNet": {
+            "dataset_class": "ETADataset",
+            "executor": "ETAExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "TtpnetEncoder"
         }
     },
     "map_matching": {
