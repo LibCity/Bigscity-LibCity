@@ -34,7 +34,7 @@ class Attr(nn.Module):
             embed = getattr(self, name + '_em')
             attr_t = batch[name]
 
-            attr_t = torch.squeeze(embed(attr_t))
+            attr_t = torch.squeeze(embed(attr_t), dim=1)
 
             em_list.append(attr_t)
 
@@ -198,9 +198,8 @@ class Road(nn.Module):
         lats = torch.unsqueeze(current_lati, dim=2)
 
         grid_ids = torch.unsqueeze(batch['current_loc'].long(), dim=2)
-        grids = torch.squeeze(self.embedding(grid_ids))
-        
-        locs = torch.cat([lngs, lats, grids], dim = 2)
+        grids = torch.squeeze(self.embedding(grid_ids), dim=2)
+        locs = torch.cat([lngs, lats, grids], dim=2)
         locs = self.process_coords(locs)
         locs = torch.tanh(locs)
         
@@ -298,10 +297,10 @@ class TTPNet(AbstractTrafficStateModel):
         h_f = []
 
         for i in range(2, n):
-            h_f_temp = torch.sum(hiddens[:, :i], dim = 1)
+            h_f_temp = torch.sum(hiddens[:, :i], dim=1)
             h_f.append(h_f_temp)
   
-        h_f.append(torch.sum(hiddens, dim = 1))
+        h_f.append(torch.sum(hiddens, dim=1))
         h_f = torch.stack(h_f).permute(1, 0, 2)
 
         T_f_hat = self.input2hid(h_f)
@@ -310,15 +309,14 @@ class TTPNet(AbstractTrafficStateModel):
         T_f_hat = F.relu(T_f_hat)
         T_f_hat = self.hid2out(T_f_hat)
 
-        return T_f_hat
+        return T_f_hat.squeeze(dim=2)
 
     def calculate_loss(self, batch):
         if self.training:
-            T_f_hat = self.predict(batch)
+            T_f_hat = self.predict(batch).unsqueeze(dim=2)
 
             T_f = torch.unsqueeze(batch["current_tim"][:, 1:], dim=2)
             M_f = torch.unsqueeze(batch["masked_current_tim"][:, 1:], dim=1)
-
             loss_f = torch.bmm(M_f, torch.pow((T_f_hat - T_f) / T_f, 2)) / torch.bmm(M_f, M_f.permute(0, 2, 1))
             loss_f = torch.pow(loss_f, 1/2)
             return loss_f.mean()

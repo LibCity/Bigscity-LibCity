@@ -39,7 +39,9 @@ class DeeptteEncoder(AbstractETAEncoder):
             'timeid': 'int',
             'dist': 'float',
             'time': 'float',
+            'traj_len': 'int',
         }
+        self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
@@ -87,6 +89,7 @@ class DeeptteEncoder(AbstractETAEncoder):
             timeid = int(begin_time.strftime('%H')) * 60 + int(begin_time.strftime('%M'))
             time = (end_time - begin_time).seconds
             self.time_list.append(time)
+            traj_len = len(traj)
             last_dis = 0
             last_tim = begin_time
             for point in traj:
@@ -129,6 +132,7 @@ class DeeptteEncoder(AbstractETAEncoder):
                 [timeid],
                 [dist],
                 [time],
+                [traj_len],
             ])
         return encoded_trajectories
 
@@ -141,6 +145,7 @@ class DeeptteEncoder(AbstractETAEncoder):
             'current_state': 0,
         }
         self.data_feature = {
+            'traj_len_idx': self.traj_len_idx,
             'uid_size': self.uid_size,
             'longi_mean': np.mean(self.longi_list),
             'longi_std': np.std(self.longi_list),

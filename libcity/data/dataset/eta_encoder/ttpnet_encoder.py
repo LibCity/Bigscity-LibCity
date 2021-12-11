@@ -44,7 +44,9 @@ class TtpnetEncoder(AbstractETAEncoder):
             'dist': 'float',
             'holiday': 'int',
             'time': 'float',
+            'traj_len': 'int',
         }
+        self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:
@@ -105,6 +107,8 @@ class TtpnetEncoder(AbstractETAEncoder):
             elif weekid == 0 or weekid == 6:
                 holiday = 1
 
+            traj_len = len(traj)
+
             last_dis = 0
             last_tim = begin_time
             for point in traj:
@@ -135,9 +139,9 @@ class TtpnetEncoder(AbstractETAEncoder):
                 speeds_long.extend(speed_long)
                 self.speeds_long_list.extend(speed_long)
 
-                len = point[dyna_feature_column["grid_len"]]
-                grid_len.append(len)
-                self.grid_len_list.append(len)
+                grid_length = point[dyna_feature_column["grid_len"]]
+                grid_len.append(grid_length)
+                self.grid_len_list.append(grid_length)
 
                 if "current_dis" in dyna_feature_column:
                     dis = point[dyna_feature_column["current_dis"]]
@@ -167,6 +171,7 @@ class TtpnetEncoder(AbstractETAEncoder):
                 [dist],
                 [holiday],
                 [time],
+                [traj_len],
             ])
         return encoded_trajectories
 
@@ -185,6 +190,7 @@ class TtpnetEncoder(AbstractETAEncoder):
             'grid_len': 0,
         }
         self.data_feature = {
+            'traj_len_idx': self.traj_len_idx,
             'geo_embedding': self.geo_embedding,
             'uid_size': self.uid_size,
             'longi_mean': np.mean(self.longi_list),

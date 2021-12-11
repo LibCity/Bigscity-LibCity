@@ -134,6 +134,14 @@ class ETADataset(AbstractDataset):
             test_data += encoded_trajectories[eval_num:]
         return train_data, eval_data, test_data
 
+    def _sort_data(self, data, traj_len_idx, chunk_size):
+        chunks = (len(data) + chunk_size - 1) // chunk_size
+        # re-arrange indices to minimize the padding
+        for i in range(chunks):
+            data[i * chunk_size: (i + 1) * chunk_size] = sorted(
+                data[i * chunk_size: (i + 1) * chunk_size], key=lambda x: x[traj_len_idx], reverse=True)
+        return data
+
     def get_data(self):
         if self.data is None:
             if self.config['cache_dataset'] and os.path.exists(self.encoder.cache_file_name):
@@ -157,6 +165,18 @@ class ETADataset(AbstractDataset):
                     self._logger.info('Saved at ' + self.encoder.cache_file_name)
         # TODO: 可以按照uid来划分，也可以全部打乱划分
         train_data, eval_data, test_data = self._divide_data()
+        sort_by_traj_len = self.config["sort_by_traj_len"]
+        if sort_by_traj_len:
+            '''
+            Divide the data into chunks with size = batch_size * 100
+            sort by the length in one chunk
+            '''
+            traj_len_idx = self.data["data_feature"]["traj_len_idx"]
+            chunk_size = self.config['batch_size'] * 100
+
+            train_data = self._sort_data(train_data, traj_len_idx, chunk_size)
+            eval_data = self._sort_data(eval_data, traj_len_idx, chunk_size)
+            test_data = self._sort_data(test_data, traj_len_idx, chunk_size)
         self._logger.info("Number of train data: {}".format(len(train_data)))
         self._logger.info("Number of eval  data: {}".format(len(eval_data)))
         self._logger.info("Number of test  data: {}".format(len(test_data)))
@@ -165,6 +185,7 @@ class ETADataset(AbstractDataset):
             self.encoder.feature_dict,
             self.config['batch_size'],
             self.config['num_workers'], self.pad_item,
+            shuffle=not sort_by_traj_len,
         )
 
     def get_data_feature(self):
