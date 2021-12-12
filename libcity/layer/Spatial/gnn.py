@@ -5,6 +5,15 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 
+class GraphConvConfig:
+    def __init__(self, g, input_size, hidden_size, output_size, device=None):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.g=g  # graph adj
+        self.device = device if device != None else torch.device("cpu")
+
+
 # fixme 添加注释
 class GraphConvolution(nn.Module):
     def __init__(self, input_size, output_size, device):
