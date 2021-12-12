@@ -2,155 +2,67 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
-import Spatial.gnn as GNN
 import math
 
 
 # fixme cell应该这样添加么，要不要学习FOST写一个 base cell
 
-
-class GRUCell(nn.Module):
-    """
-    An implementation of GRUCell.
-
-    """
-
-    def __init__(self, input_dim, output_dim, bias=True):
-        super(GRUCell, self).__init__()
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.bias = bias
-        self.x2h = nn.Linear(input_dim, 3 * output_dim, bias=bias)
-        self.h2h = nn.Linear(output_dim, 3 * output_dim, bias=bias)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        std = 1.0 / math.sqrt(self.output_dim)
-        for w in self.parameters():
-            w.data.uniform_(-std, std)
-
-    def forward(self, x, hidden):
-        """
-
-        Args:
-            x: (batch,num_nodes,input_dim)
-            hidden: (batch,num_nodes,output_dim)
-
-        Returns:
-
-        """
-        batch, num_nodes = x.shape[:2]
-        x = x.reshape(-1, x.size(2))
-        hidden = hidden.reshape(-1, hidden.size(2))
-
-        gate_x = self.x2h(x)
-        gate_h = self.h2h(hidden)
-
-        gate_x = gate_x.squeeze()
-        gate_h = gate_h.squeeze()
-
-        i_r, i_i, i_n = gate_x.chunk(3, 1)
-        h_r, h_i, h_n = gate_h.chunk(3, 1)
-
-        resetgate = F.sigmoid(i_r + h_r)
-        inputgate = F.sigmoid(i_i + h_i)
-        newgate = F.tanh(i_n + (resetgate * h_n))
-        hy = newgate + inputgate * (hidden - newgate)
-
-        hy = hy.view(batch, num_nodes, -1)
-        return hy
-
-
 class TGCNCell(nn.Module):
-    def __init__(self, node_num, dim_in, dim_out, bias):
+    def __init__(self, config, gate, update):
         super(TGCNCell, self).__init__()
-        self.node_num = node_num
-        self.hidden_dim = dim_out
-        self.gate = nn.Linear(dim_in + self.hidden_dim, 2 * dim_out, bias=bias)
-        self.update = nn.Linear(dim_in + self.hidden_dim, dim_out, bias=bias)
+        """
+            config['gate'] and config['update'] = { num_nodes, dim_in, dim_out, ... }
+            gate output_dim = 2 * update output_dim
+        """
+        self.gate = gate(config['gate'])
+        self.update = update(config['update'])
 
     def forward(self, x, state):
         """
 
+        u/r = sigmoid(W_u/W_r(f(A，[X,state])) + b)
+        c = tanh( W_c(f(A,[X,r * state])) +b)
+        out = u*state + (1-u) * c
+
         Args:
             x: B, num_nodes, input_dim
             state: B, num_nodes, hidden_dim
-
         Returns:
             tensor: B, num_nodes, hidden_dim
         """
         state = state.to(x.device)
         input_and_state = torch.cat((x, state), dim=-1)
-        z_r = torch.sigmoid(self.gate(input_and_state))
-        z, r = torch.split(z_r, self.hidden_dim, dim=-1)
-        candidate = torch.cat((x, z * state), dim=-1)
+        u_r = torch.sigmoid(self.gate(input_and_state))
+        u, r = torch.split(u_r, self.hidden_dim, dim=-1)
+        candidate = torch.cat((x, u * state), dim=-1)
         hc = torch.tanh(self.update(candidate))
         h = r * state + (1 - r) * hc
         return h
 
-    def init_hidden_state(self, batch_size):
-        return torch.zeros(batch_size, self.node_num, self.hidden_dim)
 
-
-class AGCRNCell(nn.Module):
-    def __init__(self, node_num, dim_in, dim_out, cheb_k, embed_dim):
-        super(AGCRNCell, self).__init__()
-        self.node_num = node_num
-        #         print("num_nodes:"+str(self.num_nodes))
-        self.hidden_dim = dim_out
-        self.gate = GNN.AVWGCN(dim_in + self.hidden_dim, 2 * dim_out, cheb_k, self.node_num, embed_dim)
-        self.update = GNN.AVWGCN(dim_in + self.hidden_dim, dim_out, cheb_k, self.node_num, embed_dim)
-
-    def forward(self, x, state):
-        """
-
-        Args:
-            x: B, num_nodes, input_dim
-            state: B, num_nodes, hidden_dim
-
-        Returns:
-            tensor: B, num_nodes, hidden_dim
-        """
-        state = state.to(x.device)
-        input_and_state = torch.cat((x, state), dim=-1)
-        z_r = torch.sigmoid(self.gate(input_and_state))
-        z, r = torch.split(z_r, self.hidden_dim, dim=-1)
-        candidate = torch.cat((x, z * state), dim=-1)
-        hc = torch.tanh(self.update(candidate))
-        h = r * state + (1 - r) * hc
-        return h
-
-    def init_hidden_state(self, batch_size):
-        return torch.zeros(batch_size, self.node_num, self.hidden_dim)
-
-
-class TGCGRU(nn.Module):
-    def __init__(self, config, bias=True):
-        super(TGCGRU, self).__init__()
+class TemporalGRU(nn.Module):
+    def __init__(self, config, update, gate):
+        super(TemporalGRU, self).__init__()
         # Hidden dimensions
         self.num_nodes = config['num_nodes']
         #         print("num_nodes:"+str(self.num_nodes))
         self.feature_dim = config['feature_dim']
-        self.hidden_dim = config.get('rnn_units', 64)
-        self.embed_dim = config.get('embed_dim', 10)
-        #         self.num_layers = config.get('num_layers', 2)
-        # fixme cell 替换成可以替换？
         self.device = config.get('device')
-        self.gru_cell = TGCNCell(self.num_nodes, self.feature_dim, self.hidden_dim, bias)
+        self.gru_cell = TGCNCell(config,gate, update)
 
     def forward(self, x):
         """
-
         Args:
             x: shape (batch,num_timesteps,num_nodes,input_dim)
 
         Returns:
             tensor shape=(btach,num_nodes,hidden_dim)
         """
-        if torch.cuda.is_available():
+        if self.device:
             h0 = Variable(torch.zeros(x.size(0), x.size(2), self.hidden_dim).to(self.device))
         else:
             h0 = Variable(torch.zeros(x.size(0), x.size(2), self.hidden_dim))
+
         outs = []
         hn = h0
         x = x.permute(1, 0, 2, 3)  # (num_timesteps, batch,num_nodes,input_dim)
@@ -163,49 +75,15 @@ class TGCGRU(nn.Module):
         return outs
 
 
-class AGCGRU(nn.Module):
-    def __init__(self, config):
-        super(AGCGRU, self).__init__()
-        # Hidden dimensions
-        self.num_nodes = config['num_nodes']
-        self.feature_dim = config['feature_dim']
-        self.hidden_dim = config.get('rnn_units', 64)
-        self.embed_dim = config.get('embed_dim', 10)
-        self.cheb_k = config.get('cheb_order', 2)
-        self.device = config.get('device')
-        self.gru_cell = AGCRNCell(self.num_nodes, self.feature_dim, self.hidden_dim, self.cheb_k, self.embed_dim)
-
-    def forward(self, x):
-        """
-        Args:
-            x: shape (batch,num_timesteps,num_nodes,input_dim)
-
-        Returns:
-            h: shape (btach,num_nodes,hidden_dim)
-        """
-        if torch.cuda.is_available():
-            h0 = Variable(torch.zeros(x.size(0), x.size(2), self.hidden_dim).to(self.device))
-        else:
-            h0 = Variable(torch.zeros(x.size(0), x.size(2), self.hidden_dim))
-        outs = []
-        hn = h0
-        x = x.permute(1, 0, 2, 3)  # (num_timesteps, batch,num_nodes,input_dim)
-        for seq in range(x.size(0)):
-            hn = self.gru_cell(x[seq], hn)
-            outs.append(hn)
-        outs = torch.stack(outs)
-        outs = outs.permute(1, 0, 2, 3)  # (batch,num_timesteps,num_nodes,input_dim)
-        return outs
-
-
-class LSTMCell(nn.Module):
-    def __init__(self, input_size, hidden_size, bias=True):
-        super(LSTMCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.bias = bias
-        self.x2h = nn.Linear(input_size, 4 * hidden_size, bias=bias)
-        self.h2h = nn.Linear(hidden_size, 4 * hidden_size, bias=bias)
+class TGCLSTMCell(nn.Module):
+    def __init__(self,config, gcn):
+        super(TGCLSTMCell, self).__init__()
+        self.input_size = config.get('input_size')
+        self.hidden_size = config.get('hidden_size')
+        self.bias = config.get('bias', True)
+        self.gcn=gcn(config['gcn'])
+        self.x2h = nn.Linear(self.input_size, 4 * self.hidden_size, bias=self.bias)
+        self.h2h = nn.Linear(self.hidden_size, 4 * self.hidden_size, bias=self.bias)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -215,6 +93,10 @@ class LSTMCell(nn.Module):
 
     def forward(self, x, hidden):
         """
+        f/i/o = sigmoid( W(f(x)) + U(hidden) +bias)
+        c = tanh( W(f(x)) + U(hidden) +bias)
+        C_hot = f * context + i * c
+        h_hot = o * tanh(c_hot)
 
         Args:
             x: shape (batch,num_nodes,input_dim)
@@ -226,7 +108,9 @@ class LSTMCell(nn.Module):
         """
         hx, cx = hidden
 
-        x = x.view(-1, x.size(1))
+        x = self.gcn(x)
+
+        x = x.view(-1, x.size(-1))  # (batch*num_nodes,input_size)
 
         gates = self.x2h(x) + self.h2h(hx)  # (batch*num_nodes,4*hidden)
 
@@ -234,11 +118,10 @@ class LSTMCell(nn.Module):
 
         ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)  # (batch*num_nodes,hidden)
 
-        # fixme shape
         ingate = F.sigmoid(ingate)
         forgetgate = F.sigmoid(forgetgate)
-        cellgate = F.tanh(cellgate)
         outgate = F.sigmoid(outgate)
+        cellgate = F.tanh(cellgate)
 
         cy = torch.mul(cx, forgetgate) + torch.mul(ingate, cellgate)
 
@@ -247,19 +130,17 @@ class LSTMCell(nn.Module):
 
 
 class TemporalLSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, layer_dim, output_dim, device):
+    def __init__(self, config,gcn):
         super(TemporalLSTM, self).__init__()
         # Hidden dimensions
-        self.hidden_dim = hidden_dim
-        # Number of hidden layers
-        self.layer_dim = layer_dim
-        self.lstm = LSTMCell(input_dim, hidden_dim, layer_dim)
-        self.fc = nn.Linear(hidden_dim, output_dim)
-        self.device = device
+        self.hidden_dim = config.get("hidden_dim")
+        self.output_dim= config.get("output_dim")
+        self.lstm = TGCLSTMCell(config,gcn)
+        self.fc = nn.Linear(self.hidden_dim, self.output_dim)
+        self.device = config.get("device")
 
     def forward(self, x):
         """
-
         Args:
             x: shape=(batch,num_timesteps,num_nodes,input_dim)
 
@@ -282,6 +163,6 @@ class TemporalLSTM(nn.Module):
             hn, cn = self.lstm(x[seq], (hn, cn))
             outs.append(hn)
         outs = torch.vstack(outs)
-        outs = outs.permute(1, 0, 2, 3)
         # out.shape=(batch,num_timesteps,num_nodes,output_dim)
+        outs = outs.permute(1, 0, 2, 3)
         return outs
