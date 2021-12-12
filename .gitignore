@@ -10,3 +10,5 @@
 /libcity/log/*
 /libcity/model/*/__pycache__
 /libcity/data/dataset/trajectory_encoder/__pycache__
+*.ipynb
+*.pyc

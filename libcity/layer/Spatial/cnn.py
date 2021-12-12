@@ -1,13 +1,4 @@
-import random
-from decimal import Decimal
-from logging import getLogger
-import torch
-import torch.optim as optim
 import torch.nn as nn
-import torch.nn.functional as F
-from tqdm import trange
-from tqdm import tqdm
-
 
 
 class SpatialViewConv(nn.Module):
@@ -25,6 +16,3 @@ class SpatialViewConv(nn.Module):
 
     def forward(self, inp):
         return self.relu(self.batch(self.conv(inp)))
-
-
-

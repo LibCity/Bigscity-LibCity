@@ -1,10 +1,9 @@
-import math
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 from scipy.sparse.linalg import eigs
 from Output.mlp import FC
+
 
 def cheb_polynomial(l_tilde, k):
     """
@@ -47,7 +46,9 @@ def scaled_laplacian(weight):
     lambda_max = eigs(lap, k=1, which='LR')[0].real
     return (2 * lap) / lambda_max - np.identity(weight.shape[0])
 
+
 class GatedFusion(nn.Module):
+
     def __init__(self, dim, bn, bn_decay, device):
         super(GatedFusion, self).__init__()
         self.D = dim
@@ -62,12 +63,17 @@ class GatedFusion(nn.Module):
                             bn=self.bn, bn_decay=self.bn_decay, device=self.device)
 
     def forward(self, HS, HT):
-        '''
+        """
         gated fusion
-        HS:     (batch_size, num_step, num_nodes, D)
-        HT:     (batch_size, num_step, num_nodes, D)
-        return: (batch_size, num_step, num_nodes, D)
-        '''
+
+        Args:
+            HS:     (batch_size, num_step, num_nodes, D)
+            HT:     (batch_size, num_step, num_nodes, D)
+
+        Returns:
+            tensor: (batch_size, num_step, num_nodes, D)
+
+        """
         XS = self.HS_fc(HS)
         XT = self.HT_fc(HT)
         z = torch.sigmoid(torch.add(XS, XT))

@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 
-#fixme 明确n,h,w的指代
+
+# fixme 明确n,h,w的指代
 class FusionLayer(nn.Module):
     # Matrix-based fusion
     def __init__(self, n, h, w, device):
@@ -15,7 +14,8 @@ class FusionLayer(nn.Module):
         # assuming x is of size B-n-h-w
         x = x * self.weights  # element-wise multiplication
         return x
-    
+
+
 class FC(nn.Module):  # is_training: self.training
     def __init__(self, input_dims, units, activations, bn, bn_decay, device, use_bias=True):
         super(FC, self).__init__()

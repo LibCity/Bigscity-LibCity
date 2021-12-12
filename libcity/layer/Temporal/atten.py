@@ -1,16 +1,14 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 from Output.mlp import FC
 
-    
+
 class TemporalAttention(nn.Module):
     def __init__(self, num_heads, dim, bn, bn_decay, device, mask=True):
         super(TemporalAttention, self).__init__()
         self.num_heads = num_heads
         self.D = dim
-        assert self.D%self.num_heads==0
+        assert self.D % self.num_heads == 0
         self.d = self.D / self.num_heads
         self.bn = bn
         self.bn_decay = bn_decay
@@ -26,12 +24,12 @@ class TemporalAttention(nn.Module):
                             bn=self.bn, bn_decay=self.bn_decay, device=self.device)
 
     def forward(self, x, ste):
-        '''
+        """
         temporal attention mechanism
         x:      (batch_size, num_step, num_nodes, D)
         ste:    (batch_size, num_step, num_nodes, D)
         return: (batch_size, num_step, num_nodes, D)
-        '''
+        """
         x = torch.cat((x, ste), dim=-1)
         # (batch_size, num_step, num_nodes, D)
         query = self.input_query_fc(x)
@@ -68,5 +66,3 @@ class TemporalAttention(nn.Module):
         x = torch.cat(torch.split(x, x.size(0) // self.num_heads, dim=0), dim=-1)
         x = self.output_fc(x)  # (batch_size, output_length, num_nodes, D)
         return x
-
-

@@ -1,18 +1,15 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 from Output.mlp import FC
+
 
 class SpatialAttention(nn.Module):
     def __init__(self, num_heads, dim, bn, bn_decay, device):
         super(SpatialAttention, self).__init__()
-        #k num_heads
+        # k num_heads
         self.num_heads = num_heads
         self.D = dim
-        
-        assert self.D%self.num_heads==0
-        
+        assert self.D % self.num_heads == 0
         self.d = self.D / self.num_heads
         self.bn = bn
         self.bn_decay = bn_decay
@@ -27,12 +24,16 @@ class SpatialAttention(nn.Module):
                             bn=self.bn, bn_decay=self.bn_decay, device=self.device)
 
     def forward(self, x, ste):
-        '''
+        """
         spatial attention mechanism
-        x:      (batch_size, num_step, num_nodes, D)
-        ste:    (batch_size, num_step, num_nodes, D)
-        return: (batch_size, num_step, num_nodes, D)
-        '''
+
+        Args:
+            x: shape (batch_size, num_step, num_nodes, D)
+            ste: shape (batch_size, num_step, num_nodes, D)
+
+        Returns:
+            tensor: shape (batch_size, num_step, num_nodes, D)
+        """
         x = torch.cat((x, ste), dim=-1)
         # (batch_size, num_step, num_nodes, D)
         query = self.input_query_fc(x)

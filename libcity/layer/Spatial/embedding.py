@@ -1,8 +1,7 @@
-#todo list 1. multi-model embeding 2. location encoder layer 3 grid mapping
+# todo list 1. multi-model embeding 2. location encoder layer 3 grid mapping
 import torch
 import torch.nn as nn
 from Output.mlp import FC
-
 
 
 class Embed(nn.Module):
@@ -22,9 +21,7 @@ class Embed(nn.Module):
         for i in range(mask.shape[0]):  # N
             mask[i, 0:traj_len[i]] = 1
             delta_s[i, :traj_len[i]] = \
-                torch.index_select(mat2, 0, (traj_loc[i]-1)[:traj_len[i]])
-
-        # pdb.set_trace()
+                torch.index_select(mat2, 0, (traj_loc[i] - 1)[:traj_len[i]])
 
         esl, esu, etl, etu = \
             self.emb_sl(mask), self.emb_su(mask), \
@@ -44,12 +41,12 @@ class Embed(nn.Module):
         delta = space_interval + time_interval  # (N, M, L, emb)
 
         return delta
-    
+
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=120):
         super(PositionalEmbedding, self).__init__()
-        self.pos_emb_table = Embedding(max_len, d_model, zeros_pad=False, scale=False)
+        self.pos_emb_table = nn.Embedding(max_len, d_model)
         pos_vector = torch.arange(max_len)
         self.dropout = nn.Dropout(p=dropout)
         self.register_buffer('pos_vector', pos_vector)
@@ -58,8 +55,8 @@ class PositionalEmbedding(nn.Module):
         pos_emb = self.pos_emb_table(self.pos_vector[:x.size(0)].unsqueeze(1).repeat(1, x.size(1)))
         x += pos_emb
         return self.dropout(x)
-        
-        
+
+
 class STEmbedding(nn.Module):
     def __init__(self, T, D, bn, bn_decay, add_day_in_week, device):
         super(STEmbedding, self).__init__()
@@ -74,22 +71,26 @@ class STEmbedding(nn.Module):
                         activations=[nn.ReLU, None], bn=self.bn, bn_decay=self.bn_decay, device=self.device)
 
     def forward(self, SE, TE):
-        '''
+        """
         spatio-temporal embedding
-        SE:     (num_nodes, D)
-        TE:     (batch_size, input_length+output_length, 7+T or T)
-        retrun: (batch_size, input_length+output_length, num_nodes, D)
-        '''
+        Args:
+            SE: shape (num_nodes, D)
+            TE: shape (batch_size, input_length+output_length, 7+T or T)
+
+        Returns:
+            tensor: shape (batch_size, input_length+output_length, num_nodes, D)
+        """
         SE = SE.unsqueeze(0).unsqueeze(0)
         SE = self.SE_fc(SE)
         TE = self.TE_fc(TE)
         return torch.add(SE, TE)
-    
+
+
 class MultiEmbed(nn.Module):
     def __init__(self, ex, emb_size, embed_layers):
         super(MultiEmbed, self).__init__()
         self.emb_t, self.emb_l, self.emb_u, self.emb_su, \
-            self.emb_sl, self.emb_tu, self.emb_tl = embed_layers
+        self.emb_sl, self.emb_tu, self.emb_tl = embed_layers
         self.su, self.sl, self.tu, self.tl = ex
         self.emb_size = emb_size
 
@@ -120,8 +121,8 @@ class MultiEmbed(nn.Module):
             (self.tu - delta_t).unsqueeze(-1).expand(
                 -1, -1, -1, self.emb_size)
 
-        space_interval = (esl*vsu+esu*vsl) / (self.su-self.sl)
-        time_interval = (etl*vtu+etu*vtl) / (self.tu-self.tl)
+        space_interval = (esl * vsu + esu * vsl) / (self.su - self.sl)
+        time_interval = (etl * vtu + etu * vtl) / (self.tu - self.tl)
         delta = space_interval + time_interval  # (N, M, M, emb)
 
         return joint, delta
