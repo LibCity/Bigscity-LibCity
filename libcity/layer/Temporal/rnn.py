@@ -11,7 +11,7 @@ class TGCNCell(nn.Module):
     def __init__(self, config, gate, update):
         super(TGCNCell, self).__init__()
         """
-            config['gate'] and config['update'] = { num_nodes, dim_in, dim_out, ... }
+            config['gate'] and config['update'] = { adj, num_nodes, dim_in, dim_out, ... }
             gate output_dim = 2 * update output_dim
         """
         self.gate = gate(config['gate'])
