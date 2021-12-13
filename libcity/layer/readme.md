@@ -27,7 +27,8 @@
 |output.mlp.FusionLayer|ASTGCN| √  |
 |output.mlp.FC|GMAN| √  |
 # Todo List
-| Layer | Model |
-| :- | :-: |
-|output.mlp.FC(example)|GMAN|
-
+| :-： |
+|调整代码结构|
+|补充GNN网络和WaveNet|
+|实现Config类，可以覆盖Spatial下的所有Class|
+|测试代码|
