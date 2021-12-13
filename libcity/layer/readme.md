@@ -27,9 +27,9 @@
 |output.mlp.FusionLayer|ASTGCN| √  |
 |output.mlp.FC|GMAN| √  |
 # Todo List
-| 计划-12.13 |
-| :-： |
+| 计划-12.13 | 
+|  :-| 
 |调整代码结构|
 |补充GNN网络和WaveNet|
-|实现Config类，可以覆盖Spatial下的所有Class|
-|测试代码|
+|实现Config类，可以覆盖Spatial下的所有Class| 
+|测试代码| 
