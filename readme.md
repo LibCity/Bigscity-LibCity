@@ -54,7 +54,7 @@ More details about environment configuration is represented in [Docs](https://bi
 
 ## Quick-Start
 
-Before run models in LibCity, please make sure you download at least one dataset and put it in directory `./raw_data/`. The dataset link is [BaiduDisk with code 1231](https://pan.baidu.com/s/1qEfcXBO-QwZfiT0G3IYMpQ) or [Google Drive](https://drive.google.com/drive/folders/1g5v2Gq1tkOq8XO0HDCZ9nOTtRpB6-gPe?usp=sharing).
+Before run models in LibCity, please make sure you download at least one dataset and put it in directory `./raw_data/`. The dataset link is [BaiduDisk with code 1231](https://pan.baidu.com/s/1qEfcXBO-QwZfiT0G3IYMpQ) or [Google Drive](https://drive.google.com/drive/folders/1g5v2Gq1tkOq8XO0HDCZ9nOTtRpB6-gPe?usp=sharing). All data used in LibCity needs to be processed into an [atomic files](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/data/atomic_files.html) format.
 
 The script `run_model.py` is used for training and evaluating a single model in LibCity. When run the `run_model.py`, you must specify the following three parameters, namely **task**, **dataset** and **model**.  
 
@@ -68,6 +68,26 @@ This script will run the GRU model on the METR_LA dataset for traffic state pred
 
 More details is represented in [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/get_started/quick_start.html).
 
+## TensorBoard Visualization
+
+During the model training process, LibCity will record the loss of each epoch, and support tensorboard visualization.
+
+After running the model once, you can use the following command to visualize:
+
+```shell
+tensorboard --logdir 'libcity/cache'
+```
+
+```
+TensorFlow installation not found - running with reduced feature set.
+Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
+TensorBoard 2.4.1 at http://localhost:6006/ (Press CTRL+C to quit)
+```
+
+Visit this address(http://localhost:6006/) in the browser to see the visualized result.
+
+![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/tensorboard.png)
+
 ## Reproduced Model List
 
 For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/model.html), where you can see the abbreviation of the model and the corresponding papers and citations.
@@ -76,7 +96,7 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 
 In order to facilitate users to use LibCity, we provide users with some tutorials:
 
-- We gave lectures on both ACM SIGSPATIAL 2021 Main Track and Local Track. For related lecture videos and Slides, please see our [HomePage](https://libcity.ai/#/tutorial) (Chinese and English).
+- We gave lectures on both ACM SIGSPATIAL 2021 Main Track and Local Track. For related lecture videos and Slides, please see our [HomePage](https://libcity.ai/#/tutorial) (in Chinese and English).
 - We provide entry-level tutorials (in Chinese and English) in the documentation.
   - [Install and quick start](https://bigscity-libcity-docs.readthedocs.io/en/latest/tutorial/install_quick_start.html)  & [安装和快速上手](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/tutorial/install_quick_start.html)
   - [Run an existing model in LibCity](https://bigscity-libcity-docs.readthedocs.io/en/latest/tutorial/run_model.html) & [运行LibCity中已复现的模型](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/tutorial/run_model.html)

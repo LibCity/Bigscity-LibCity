@@ -96,6 +96,7 @@ class ChebConv(AbstractTrafficStateModel):
         self.filter_type = config.get('filter_type', 'dual_random_walk')
         self.model = config.get('model', '')
         self.dataset = config.get('dataset', '')
+        self.exp_id = config.get('exp_id', None)
 
         self.encoder = ChebConvModule(num_nodes=self.num_nodes, max_diffusion_step=self.max_diffusion_step,
                                       adj_mx=self.adj_mx, device=self.device, input_dim=self.feature_dim,
@@ -117,8 +118,8 @@ class ChebConv(AbstractTrafficStateModel):
         """
         inputs = batch['node_features']
         encoder_state = self.encoder(inputs)  # N, output_dim
-        np.save('./libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'
-                .format(self.model, self.dataset, self.output_dim),
+        np.save('./libcity/cache/{}/evaluate_cache/embedding_{}_{}_{}.npy'
+                .format(self.exp_id, self.model, self.dataset, self.output_dim),
                 encoder_state.detach().cpu().numpy())
         output = self.decoder(encoder_state)  # N, feature_dim
         return output

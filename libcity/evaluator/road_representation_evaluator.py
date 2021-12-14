@@ -13,11 +13,12 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         self._logger = getLogger()
         self.model = config.get('model', '')
         self.dataset = config.get('dataset', '')
+        self.exp_id = config.get('exp_id', None)
         self.data_path = './raw_data/' + self.dataset + '/'
         self.geo_file = config.get('geo_file', self.dataset)
         self.output_dim = config.get('output_dim', 32)
-        self.embedding_path = './libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'\
-            .format(self.model, self.dataset, self.output_dim)
+        self.embedding_path = './libcity/cache/{}/evaluate_cache/embedding_{}_{}_{}.npy'\
+            .format(self.exp_id, self.model, self.dataset, self.output_dim)
 
     def collect(self, batch):
         pass
@@ -53,8 +54,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
             if kind not in result_token:
                 result_token[kind] = []
             result_token[kind].append(self.ind_to_geo[i])
-        result_path = './libcity/cache/evaluate_cache/kmeans_category_{}_{}_{}.json'.\
-            format(self.model, str(self.output_dim), str(kinds))
+        result_path = './libcity/cache/{}/evaluate_cache/kmeans_category_{}_{}_{}.json'.\
+            format(self.exp_id, self.model, str(self.output_dim), str(kinds))
         json.dump(result_token, open(result_path, 'w'))
         self._logger.info('Kmeans category is saved at {}'.format(result_path))
 
@@ -78,8 +79,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         df = pd.DataFrame(df)
         df.columns = ['id', 'rid', 'class', 'wkt']
         df = df.sort_values(by='class')
-        result_path = './libcity/cache/evaluate_cache/kmeans_qgis_{}_{}_{}.csv'.\
-            format(self.model, str(self.output_dim), str(kinds))
+        result_path = './libcity/cache/{}/evaluate_cache/kmeans_qgis_{}_{}_{}.csv'.\
+            format(self.exp_id, self.model, str(self.output_dim), str(kinds))
         df.to_csv(result_path, index=False)
         self._logger.info('Kmeans result for QGIS is saved at {}'.format(result_path))
 
