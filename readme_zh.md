@@ -82,7 +82,7 @@ Serving TensorBoard on localhost; to expose to the network, use a proxy or pass 
 TensorBoard 2.4.1 at http://localhost:6006/ (Press CTRL+C to quit)
 ```
 
-在浏览器中访问这个地址（http://localhost:6006/）可以看到可视化的结果。
+在浏览器中访问这个地址（[http://localhost:6006/](http://localhost:6006/)） 可以看到可视化的结果。
 
 ![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/tensorboard.png)
 

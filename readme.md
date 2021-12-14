@@ -84,7 +84,7 @@ Serving TensorBoard on localhost; to expose to the network, use a proxy or pass 
 TensorBoard 2.4.1 at http://localhost:6006/ (Press CTRL+C to quit)
 ```
 
-Visit this address(http://localhost:6006/) in the browser to see the visualized result.
+Visit this address([http://localhost:6006/](http://localhost:6006/)) in the browser to see the visualized result.
 
 ![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/tensorboard.png)
 
