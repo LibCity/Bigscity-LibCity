@@ -71,6 +71,7 @@ class LINE(AbstractTrafficStateModel):
 
         self.model = config.get('model', '')
         self.dataset = config.get('dataset', '')
+        self.exp_id = config.get('exp_id', None)
 
     def calculate_loss(self, batch):
         I, J, is_neg = batch['I'], batch['J'], batch['Neg']
@@ -88,7 +89,7 @@ class LINE(AbstractTrafficStateModel):
             elif order == 'second':
                 [u'_j^T * v_i for (i,j) in zip(I, J)]; (B,)
         """
-        np.save('./libcity/cache/evaluate_cache/embedding_{}_{}_{}.npy'
-                .format(self.model, self.dataset, self.output_dim),
+        np.save('./libcity/cache/{}/evaluate_cache/embedding_{}_{}_{}.npy'
+                .format(self.exp_id, self.model, self.dataset, self.output_dim),
                 self.embed.get_embeddings())
         return self.embed(I, J)

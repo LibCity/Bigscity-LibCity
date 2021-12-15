@@ -13,9 +13,10 @@ class AbstractTraditionExecutor(AbstractExecutor):
         self.config = config
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model
+        self.exp_id = self.config.get('exp_id', None)
 
-        self.cache_dir = './libcity/cache/model_cache'
-        self.evaluate_res_dir = './libcity/cache/evaluate_cache'
+        self.cache_dir = './libcity/cache/{}/model_cache'.format(self.exp_id)
+        self.evaluate_res_dir = './libcity/cache/{}/evaluate_cache'.format(self.exp_id)
 
         ensure_dir(self.cache_dir)
         ensure_dir(self.evaluate_res_dir)
