@@ -5,32 +5,36 @@ import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
 
-#fixme 添加注释
+# fixme 添加注释
+from torch.autograd import Variable
+from torch.nn import Parameter
+
 from libcity.layer.utils import calculate_scaled_laplacian, calculate_cheb_poly, calculate_first_approx, \
-    calculate_random_walk_matrix, calculate_normalized_laplacian, sym_adj, asym_adj
+    calculate_random_walk_matrix
+from libcity.model.traffic_speed_prediction.STAGGCN import GATConv
 
 
 class GAT(nn.Module):
     # 2 layer GAT
-    def __init__(self, g, in_dim, hidden_dim , out_dim, num_heads):
+    def __init__(self, g, in_dim, hidden_dim, out_dim, num_heads):
         super(GAT, self).__init__()
-        self.layer1 = GATConv(g , in_dim, hidden_dim, num_heads)
-        self.layer2 = GATConv(g, hidden_dim*num_heads, out_dim, 1)
-        self.g=g
+        self.layer1 = GATConv(g, in_dim, hidden_dim, num_heads)
+        self.layer2 = GATConv(g, hidden_dim * num_heads, out_dim, 1)
+        self.g = g
 
-    def forward(self,h):
-        h = self.layer1(self.g,h)
+    def forward(self, h):
+        h = self.layer1(self.g, h)
         h = F.elu(h)
-        h = self.layer2(self.g,h)
+        h = self.layer2(self.g, h)
         return h
 
-    
-#可训练邻接矩阵+非共享权重GCN卷积
+
+# 可训练邻接矩阵+非共享权重GCN卷积
 class AVWGCN(nn.Module):
-    def __init__(self, dim_in, dim_out, cheb_k,num_nodes,embed_dim):
+    def __init__(self, dim_in, dim_out, cheb_k, num_nodes, embed_dim):
         super(AVWGCN, self).__init__()
         self.cheb_k = cheb_k
-        self.num_nodes=num_nodes
+        self.num_nodes = num_nodes
         self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, dim_in, dim_out))
         self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, dim_out))
         self.node_embeddings = nn.Parameter(torch.randn(num_nodes, embed_dim), requires_grad=True)
@@ -39,27 +43,27 @@ class AVWGCN(nn.Module):
         # x shaped[B, N, C], node_embeddings shaped [N, D] -> supports shaped [N, N]
         # output shape [B, N, C]
         node_num = self.num_nodes
-#         print("node_num：" +str(node_num))
+        #         print("node_num：" +str(node_num))
         supports = F.softmax(F.relu(torch.mm(self.node_embeddings, self.node_embeddings.transpose(0, 1))), dim=1)
         support_set = [torch.eye(node_num).to(supports.device), supports]
         # default cheb_k = 3
         for k in range(2, self.cheb_k):
             support_set.append(torch.matmul(2 * supports, support_set[-1]) - support_set[-2])
         supports = torch.stack(support_set, dim=0)
-#         print("suppoorts")
-#         print(supports.shape)
-#         print(x.shape)
+        #         print("suppoorts")
+        #         print(supports.shape)
+        #         print(x.shape)
         weights = torch.einsum('nd,dkio->nkio', self.node_embeddings, self.weights_pool)  # N, cheb_k, dim_in, dim_out
-        bias = torch.matmul(self.node_embeddings, self.bias_pool)                       # N, dim_out
-        x_g = torch.einsum("knm,bmc->bknc", supports, x)      # B, cheb_k, N, dim_in
+        bias = torch.matmul(self.node_embeddings, self.bias_pool)  # N, dim_out
+        x_g = torch.einsum("knm,bmc->bknc", supports, x)  # B, cheb_k, N, dim_in
         x_g = x_g.permute(0, 2, 1, 3)  # B, N, cheb_k, dim_in
-        x_gconv = torch.einsum('bnki,nkio->bno', x_g, weights) + bias     # b, N, dim_out
-        
+        x_gconv = torch.einsum('bnki,nkio->bno', x_g, weights) + bias  # b, N, dim_out
+
         return x_gconv
-    
-    
+
+
 class LearnedGCN(nn.Module):
-    def __init__(self, node_num, in_feature, out_feature,feat_dim):
+    def __init__(self, node_num, in_feature, out_feature, feat_dim):
         super(LearnedGCN, self).__init__()
         self.node_num = node_num
         self.in_feature = in_feature
@@ -83,10 +87,10 @@ class LearnedGCN(nn.Module):
 
 
 class ChebPolyConv(nn.Module):
-    def __init__(self, ks, c_in, c_out, lk, device):
+    def __init__(self, k, c_in, c_out, lk, device):
         super(ChebPolyConv, self).__init__()
         self.Lk = lk
-        self.theta = nn.Parameter(torch.FloatTensor(c_in, c_out, ks).to(device))  # kernel: C_in*C_out*ks
+        self.theta = nn.Parameter(torch.FloatTensor(c_in, c_out, k).to(device))  # kernel: C_in*C_out*k
         self.b = nn.Parameter(torch.FloatTensor(1, c_out, 1, 1).to(device))
         self.reset_parameters()
 
@@ -107,8 +111,10 @@ class ChebPolyConv(nn.Module):
         # x_in = self.align(x)  # (batch_size, c_out, input_length, num_nodes)
         return torch.relu(x_gc)
 
-class SpectrumGCN(nn.Module):
-    def __init__(self,config):
+
+class spectralGCN(nn.Module):
+    def __init__(self, config):
+        super(spectralGCN, self).__init__()
         self.K = config.get('K', 3)
         self.input_size = config.get('input_size', 1)
         self.output_size = config.get('output_size', 1)
@@ -121,15 +127,15 @@ class SpectrumGCN(nn.Module):
             self.Lk = calculate_cheb_poly(laplacian_mx, self.K)
             self._logger.info('Chebyshev_polynomial_Lk shape: ' + str(self.Lk.shape))
             self.Lk = torch.FloatTensor(self.Lk).to(self.device)
-        elif self.K == 1 :
+        elif self.K == 1:
             self.Lk = calculate_first_approx(adj_mx)
             self._logger.info('First_approximation_Lk shape: ' + str(self.Lk.shape))
             self.Lk = torch.FloatTensor(self.Lk).to(self.device)
             self.K = 1  # 一阶近似保留到K0和K1，但是不是数组形式，只有一个n*n矩阵，所以是1（本质上是2）
 
-        self.gcn = ChebPolyConv(self.K,self.input_size,self.output_size,self.Lk,self.device)
+        self.gcn = ChebPolyConv(self.K, self.input_size, self.output_size, self.Lk, self.device)
 
-    def forward(self,x):
+    def forward(self, x):
         return self.gcn(x)
 
 
@@ -154,19 +160,19 @@ class GCONV(nn.Module):
         x_ = x_.unsqueeze(0)
         return torch.cat([x, x_], dim=0)
 
-    def forward(self, inputs, state):
-        # 对X(t)和H(t-1)做图卷积，并加偏置bias
-        # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
+    def forward(self, inputs):
+        # 对X(t)做图卷积，并加偏置bias
+        # Reshape input and state to (batch_size, num_nodes, input_dim)
         batch_size = inputs.shape[0]
         inputs = torch.reshape(inputs, (batch_size, self._num_nodes, -1))
-        # (batch_size, num_nodes, total_arg_size(input_dim+state_dim))
-        input_size = inputs.size(2)  # =total_arg_size
+        # (batch_size, num_nodes, input_dim)
+        input_size = inputs.size(2)  # =input_dim
 
         x = inputs
         # T0=I x0=T0*x=x
-        x0 = x.permute(1, 2, 0)  # (num_nodes, total_arg_size, batch_size)
+        x0 = x.permute(1, 2, 0)  # (num_nodes, input_dim, batch_size)
         x0 = torch.reshape(x0, shape=[self._num_nodes, input_size * batch_size])
-        x = torch.unsqueeze(x0, 0)  # (1, num_nodes, total_arg_size * batch_size)
+        x = torch.unsqueeze(x0, 0)  # (1, num_nodes, input_dim * batch_size)
 
         # 3阶[T0,T1,T2]Chebyshev多项式近似g(theta)
         # 把图卷积公式中的~L替换成了随机游走拉普拉斯D^(-1)*W
@@ -183,7 +189,7 @@ class GCONV(nn.Module):
                     x2 = 2 * torch.sparse.mm(support, x1) - x0
                     x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
                     x1, x0 = x2, x1  # 循环
-        # x.shape (Ks, num_nodes, total_arg_size * batch_size)
+        # x.shape (Ks, num_nodes, input_dim  * batch_size)
         # Ks = len(supports) * self._max_diffusion_step + 1
 
         x = torch.reshape(x, shape=[self._num_matrices, self._num_nodes, input_size, batch_size])
@@ -195,8 +201,9 @@ class GCONV(nn.Module):
         # Reshape res back to 2D: (batch_size * num_node, state_dim) -> (batch_size, num_node * state_dim)
         return torch.reshape(x, [batch_size, self._num_nodes * self._output_dim])
 
+
 # k阶扩散卷积
-class DCGRUCell(nn.Module):
+class DCNN(nn.Module):
     def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian"):
         """
@@ -250,6 +257,7 @@ class DCGRUCell(nn.Module):
         return self._activation(self._gconv(inputs))
 
 
+#
 class FilterLinear(nn.Module):
     def __init__(self, device, input_dim, output_dim, in_features, out_features, filter_square_matrix, bias=True):
         """
@@ -286,10 +294,11 @@ class FilterLinear(nn.Module):
                + ', out_features=' + str(self.out_features) \
                + ', bias=' + str(self.bias is not None) + ')'
 
+
 # 直接乘adj的K次方
-class TGCLSTM(nn.Module):
-    def __init__(self, config, data_feature):
-        super(TGCLSTM, self).__init__(config, data_feature)
+class K_hopGCN(nn.Module):
+    def __init__(self, config):
+        super(K_hopGCN, self).__init__()
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.input_dim = self.data_feature.get('feature_dim', 1)
         self.in_features = self.input_dim * self.num_nodes
@@ -309,23 +318,15 @@ class TGCLSTM(nn.Module):
         adj_temp = torch.eye(self.num_nodes, self.num_nodes, device=self.device)
         for i in range(self.K):
             adj_temp = torch.matmul(adj_temp, adj)
-            if config.get('Clamp_A', True):
-                # confine elements of A
-                adj_temp = torch.clamp(adj_temp, max=1.)
-            if self.dataset_class == "TGCLSTMDataset":
-                self.A_list.append(
-                    torch.mul(adj_temp, torch.Tensor(data_feature['FFR'][self.back_length])
-                              .to(self.device)))
-            else:
-                self.A_list.append(adj_temp)
+            self.A_list.append(adj_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
         self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim, self.in_features,
                                                    self.out_features, self.A_list[i], bias=False) for i in
                                       range(self.K)])
+
     def step(self, x):
         # [batch_size, in_features]
-
         gc = self.gc_list[0](x)  # [batch_size, out_features]
         for i in range(1, self.K):
             gc = torch.cat((gc, self.gc_list[i](x)), 1)  # [batch_size, out_features * K]
@@ -355,7 +356,7 @@ class MixProp(nn.Module):
     def __init__(self, c_in, c_out, gdep, dropout, alpha):
         super(MixProp, self).__init__()
         self.nconv = NConv()
-        self.mlp = Linear((gdep+1)*c_in, c_out)
+        self.mlp = Linear((gdep + 1) * c_in, c_out)
         self.gdep = gdep
         self.dropout = dropout
         self.alpha = alpha
@@ -367,13 +368,14 @@ class MixProp(nn.Module):
         out = [h]
         a = adj / d.view(-1, 1)
         for i in range(self.gdep):
-            h = self.alpha*x + (1-self.alpha)*self.nconv(h, a)
+            h = self.alpha * x + (1 - self.alpha) * self.nconv(h, a)
             out.append(h)
         ho = torch.cat(out, dim=1)
         ho = self.mlp(ho)
         return ho
 
 
+# mixhop gcn
 class MixhopGCN(nn.Module):
     def __init__(self, config):
         self.input_size = config.get('input_size')
@@ -388,4 +390,3 @@ class MixhopGCN(nn.Module):
     def forward(self, x):
         h_out = self.gcn1(x, self.adj) + self.gcn2(x, self.adj.transpose(1, 0))
         return h_out
-
