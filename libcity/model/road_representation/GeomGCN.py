@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import dgl
 import dgl.function as fn
 from dgl import DGLGraph
 from logging import getLogger
@@ -18,16 +19,17 @@ class GeomGCNSingleChannel(nn.Module):
         self.num_divisions = num_divisions
         self.in_feats_dropout = nn.Dropout(dropout_prob)
 
-        self.linear_for_each_division = nn.ModuleList()
+        self.linear_for_each_division = nn.ModuleList().cuda()
         for i in range(self.num_divisions):
-            self.linear_for_each_division.append(nn.Linear(in_feats, out_feats, bias=False))
+            self.linear_for_each_division.append(nn.Linear(in_feats, out_feats, bias=False).cuda())
 
         for i in range(self.num_divisions):
-            nn.init.xavier_uniform_(self.linear_for_each_division[i].weight)
+            nn.init.xavier_uniform_(self.linear_for_each_division[i].weight.cuda())
 
         self.activation = activation
         self.g = g
         self.subgraph_edge_list_of_list = self.get_subgraphs(self.g)
+        self.subgraph_node_list_of_list = self.get_node_subgraphs(self.g)
         self.merge = merge
         self.out_feats = out_feats
 
@@ -39,18 +41,27 @@ class GeomGCNSingleChannel(nn.Module):
 
         return subgraph_edge_list
 
+    def get_node_subgraphs(self, g):
+        subgraph_node_list = [[] for _ in range(self.num_divisions)]
+        u, v, eid = g.all_edges(form='all')
+        for i in range(g.number_of_edges()):
+            subgraph_node_list[g.edges[u[i], v[i]].data['subgraph_idx']].append(u[i])
+            subgraph_node_list[g.edges[u[i], v[i]].data['subgraph_idx']].append(v[i])
+
+        return subgraph_node_list
+
     def forward(self, feature):
-        in_feats_dropout = self.in_feats_dropout(feature)  # 使输入挂上dropout
-        self.g.ndata['h'] = in_feats_dropout  # 使数据挂上dropout；ndata代表特征；加入关于h的索引；
+        in_feats_dropout = self.in_feats_dropout(feature).to(torch.device('cuda:0'))    # 使输入挂上dropout
+        self.g.ndata['h'] = in_feats_dropout.cuda()  # 使数据挂上dropout；ndata代表特征；加入关于h的索引；
 
         for i in range(self.num_divisions):
-            subgraph = self.g.edge_subgraph(self.subgraph_edge_list_of_list[i])
-            subgraph.copy_from_parent()
-            subgraph.ndata[f'Wh_{i}'] = self.linear_for_each_division[i](subgraph.ndata['h']) * subgraph.ndata['norm']
+            subgraph = self.g.subgraph(self.subgraph_node_list_of_list[i])
+            self.linear_for_each_division[i].cuda()
+            temp = self.linear_for_each_division[i](subgraph.ndata['h'])
+            subgraph.ndata[f'Wh_{i}'] = temp * subgraph.ndata['norm']
             subgraph.update_all(message_func=fn.copy_u(u=f'Wh_{i}', out=f'm_{i}'),
                                 reduce_func=fn.sum(msg=f'm_{i}', out=f'h_{i}'))
             subgraph.ndata.pop(f'Wh_{i}')
-            subgraph.copy_to_parent()
 
         self.g.ndata.pop('h')
 
@@ -63,9 +74,9 @@ class GeomGCNSingleChannel(nn.Module):
                     torch.zeros((feature.size(0), self.out_feats), dtype=torch.float32, device=feature.device))
 
         if self.merge == 'cat':
-            h_new = torch.cat(results_from_subgraph_list, dim=-1)
+            h_new = torch.cat(results_from_subgraph_list, dim=-1).cuda()
         else:
-            h_new = torch.mean(torch.stack(results_from_subgraph_list, dim=-1), dim=-1)
+            h_new = torch.mean(torch.stack(results_from_subgraph_list, dim=-1), dim=-1).cuda()
         h_new = h_new * self.g.ndata['norm']
         h_new = self.activation(h_new)
         return h_new
@@ -78,7 +89,7 @@ class GeomGCNNet(nn.Module):
         self.attention_heads = nn.ModuleList()
         for _ in range(num_heads):
             self.attention_heads.append(
-                GeomGCNSingleChannel(g, in_feats, out_feats, num_divisions, activation, dropout_prob, ggcn_merge))
+                GeomGCNSingleChannel(g, in_feats, out_feats, num_divisions, activation, dropout_prob, ggcn_merge)).cuda()
         self.channel_merge = channel_merge
         self.g = g
 
@@ -143,15 +154,9 @@ class GeomGCN(AbstractTrafficStateModel):
         layer_one_channel_merge = config.get('layer_one_channel_merge', 'cat')
         layer_two_channel_merge = config.get('layer_two_channel_merge', 'mean')
         adj_mx = data_feature.get('adj_mx')
-        # adj_mx = adj_mx.A
-        # adj_mx = adj_mx[0:100, 0:100]
-        # adj_mx = np.mat(adj_mx)
+
         G = nx.DiGraph(adj_mx)
 
-        # for node1 in range(adj_mx.shape[0]):
-        #     for node2 in range(adj_mx.shape[1]):
-        #         if adj_mx[node1, node2] == 1:
-        #             G.add_edge(node1, node2, subgraph_idx=0)
         for (node1, node2) in G.edges:
             G.remove_edge(node1, node2)
             G.add_edge(node1, node2, subgraph_idx=0)
@@ -162,15 +167,16 @@ class GeomGCN(AbstractTrafficStateModel):
             G.add_edge(node, node, subgraph_idx=1)
         adj = nx.adjacency_matrix(G, sorted(G.nodes))
         g = DGLGraph(adj)
+        g = g.to(torch.device('cuda:0'))
 
         for u, v, feature in G.edges(data='subgraph_idx'):
             if (feature is not None) and g.has_edge_between(u, v):
-                g.edges[g.edge_id(u, v)].data['subgraph_idx'] = torch.tensor([feature])
+                g.edges[g.edge_id(u, v)].data['subgraph_idx'] = torch.tensor([feature]).cuda()
 
         degs = g.in_degrees().float()
         norm = torch.pow(degs, -0.5)
         norm[torch.isinf(norm)] = 0
-        g.ndata['norm'] = norm.unsqueeze(1)
+        g.ndata['norm'] = norm.unsqueeze(1).to(torch.device('cuda:0')).requires_grad_()
 
         return g, num_input_features, num_output_classes, num_hidden, num_divisions, \
             num_heads_layer_one, num_heads_layer_two, dropout_rate, layer_one_ggcn_merge, \
