@@ -14,17 +14,18 @@ from libcity.model import utils
 
 
 class GeomGCNSingleChannel(nn.Module):
-    def __init__(self, g, in_feats, out_feats, num_divisions, activation, dropout_prob, merge):
+    def __init__(self, g, in_feats, out_feats, num_divisions, activation, dropout_prob, merge, device):
         super(GeomGCNSingleChannel, self).__init__()
         self.num_divisions = num_divisions
         self.in_feats_dropout = nn.Dropout(dropout_prob)
+        self.device = device
 
-        self.linear_for_each_division = nn.ModuleList().cuda()
+        self.linear_for_each_division = nn.ModuleList().to(self.device)
         for i in range(self.num_divisions):
-            self.linear_for_each_division.append(nn.Linear(in_feats, out_feats, bias=False).cuda())
+            self.linear_for_each_division.append(nn.Linear(in_feats, out_feats, bias=False).to(self.device))
 
         for i in range(self.num_divisions):
-            nn.init.xavier_uniform_(self.linear_for_each_division[i].weight.cuda())
+            nn.init.xavier_uniform_(self.linear_for_each_division[i].weight.to(self.device))
 
         self.activation = activation
         self.g = g
@@ -51,12 +52,12 @@ class GeomGCNSingleChannel(nn.Module):
         return subgraph_node_list
 
     def forward(self, feature):
-        in_feats_dropout = self.in_feats_dropout(feature).to(torch.device('cuda:0'))    # 使输入挂上dropout
-        self.g.ndata['h'] = in_feats_dropout.cuda()  # 使数据挂上dropout；ndata代表特征；加入关于h的索引；
+        in_feats_dropout = self.in_feats_dropout(feature).to(self.device)    # 使输入挂上dropout
+        self.g.ndata['h'] = in_feats_dropout.to(self.device)  # 使数据挂上dropout；ndata代表特征；加入关于h的索引；
 
         for i in range(self.num_divisions):
             subgraph = self.g.subgraph(self.subgraph_node_list_of_list[i])
-            self.linear_for_each_division[i].cuda()
+            self.linear_for_each_division[i].to(self.device)
             temp = self.linear_for_each_division[i](subgraph.ndata['h'])
             subgraph.ndata[f'Wh_{i}'] = temp * subgraph.ndata['norm']
             subgraph.update_all(message_func=fn.copy_u(u=f'Wh_{i}', out=f'm_{i}'),
@@ -74,9 +75,9 @@ class GeomGCNSingleChannel(nn.Module):
                     torch.zeros((feature.size(0), self.out_feats), dtype=torch.float32, device=feature.device))
 
         if self.merge == 'cat':
-            h_new = torch.cat(results_from_subgraph_list, dim=-1).cuda()
+            h_new = torch.cat(results_from_subgraph_list, dim=-1).to(self.device)
         else:
-            h_new = torch.mean(torch.stack(results_from_subgraph_list, dim=-1), dim=-1).cuda()
+            h_new = torch.mean(torch.stack(results_from_subgraph_list, dim=-1), dim=-1).to(self.device)
         h_new = h_new * self.g.ndata['norm']
         h_new = self.activation(h_new)
         return h_new
@@ -84,12 +85,13 @@ class GeomGCNSingleChannel(nn.Module):
 
 class GeomGCNNet(nn.Module):
     def __init__(self, g, in_feats, out_feats, num_divisions, activation, num_heads, dropout_prob, ggcn_merge,
-                 channel_merge):
+                 channel_merge, device):
         super(GeomGCNNet, self).__init__()
         self.attention_heads = nn.ModuleList()
         for _ in range(num_heads):
             self.attention_heads.append(
-                GeomGCNSingleChannel(g, in_feats, out_feats, num_divisions, activation, dropout_prob, ggcn_merge)).cuda()
+                GeomGCNSingleChannel(g, in_feats, out_feats, num_divisions,
+                                     activation, dropout_prob, ggcn_merge, device))
         self.channel_merge = channel_merge
         self.g = g
 
@@ -104,12 +106,13 @@ class GeomGCNNet(nn.Module):
 class GeomGCN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
+        self.device = config.get('device')
         g, num_input_features, num_output_classes, num_hidden, num_divisions, \
         num_heads_layer_one, num_heads_layer_two, dropout_rate, layer_one_ggcn_merge, \
         layer_one_channel_merge, layer_two_ggcn_merge, layer_two_channel_merge = self.get_input(config, data_feature)
 
         self.geomgcn1 = GeomGCNNet(g, num_input_features, num_hidden, num_divisions, F.relu, num_heads_layer_one,
-                                   dropout_rate, layer_one_ggcn_merge, layer_one_channel_merge)
+                                   dropout_rate, layer_one_ggcn_merge, layer_one_channel_merge, self.device)
 
         if layer_one_ggcn_merge == 'cat':
             layer_one_ggcn_merge_multiplier = num_divisions
@@ -123,16 +126,18 @@ class GeomGCN(AbstractTrafficStateModel):
 
         self.geomgcn2 = GeomGCNNet(g, num_hidden * layer_one_ggcn_merge_multiplier * layer_one_channel_merge_multiplier,
                                    num_output_classes, num_divisions, lambda x: x,
-                                   num_heads_layer_two, dropout_rate, layer_two_ggcn_merge, layer_two_channel_merge)
+                                   num_heads_layer_two, dropout_rate, layer_two_ggcn_merge,
+                                   layer_two_channel_merge, self.device)
 
         self.geomgcn3 = GeomGCNNet(g, num_output_classes,
                                    num_hidden * layer_one_ggcn_merge_multiplier * layer_one_channel_merge_multiplier,
                                    num_divisions, lambda x: x,
-                                   num_heads_layer_two, dropout_rate, layer_two_ggcn_merge, layer_two_channel_merge)
+                                   num_heads_layer_two, dropout_rate, layer_two_ggcn_merge,
+                                   layer_two_channel_merge, self.device)
 
         self.geomgcn4 = GeomGCNNet(g, num_hidden * layer_one_ggcn_merge_multiplier * layer_one_channel_merge_multiplier,
                                    num_input_features,  num_divisions, F.relu, num_heads_layer_one,
-                                   dropout_rate, layer_two_ggcn_merge, layer_two_channel_merge)
+                                   dropout_rate, layer_two_ggcn_merge, layer_two_channel_merge, self.device)
 
         self.g = g
         self._logger = getLogger()
@@ -167,16 +172,16 @@ class GeomGCN(AbstractTrafficStateModel):
             G.add_edge(node, node, subgraph_idx=1)
         adj = nx.adjacency_matrix(G, sorted(G.nodes))
         g = DGLGraph(adj)
-        g = g.to(torch.device('cuda:0'))
+        g = g.to(self.device)
 
         for u, v, feature in G.edges(data='subgraph_idx'):
             if (feature is not None) and g.has_edge_between(u, v):
-                g.edges[g.edge_id(u, v)].data['subgraph_idx'] = torch.tensor([feature]).cuda()
+                g.edges[g.edge_id(u, v)].data['subgraph_idx'] = torch.tensor([feature]).to(self.device)
 
         degs = g.in_degrees().float()
         norm = torch.pow(degs, -0.5)
         norm[torch.isinf(norm)] = 0
-        g.ndata['norm'] = norm.unsqueeze(1).to(torch.device('cuda:0')).requires_grad_()
+        g.ndata['norm'] = norm.unsqueeze(1).to(self.device).requires_grad_()
 
         return g, num_input_features, num_output_classes, num_hidden, num_divisions, \
             num_heads_layer_one, num_heads_layer_two, dropout_rate, layer_one_ggcn_merge, \
@@ -184,15 +189,14 @@ class GeomGCN(AbstractTrafficStateModel):
 
     def forward(self, batch):
         """
-                自回归任务
+        自回归任务
 
-                Args:
-                    batch: dict, need key 'node_features' contains tensor shape=(N, feature_dim)
+        Args:
+            batch: dict, need key 'node_features' contains tensor shape=(N, feature_dim)
 
-                Returns:
-                    torch.tensor: N, output_classes
-
-                """
+        Returns:
+            torch.tensor: N, output_classes
+        """
         inputs = batch['node_features']
         x = self.geomgcn1(inputs)
         encoder_state = self.geomgcn2(x)
@@ -205,13 +209,12 @@ class GeomGCN(AbstractTrafficStateModel):
 
     def calculate_loss(self, batch):
         """
+        Args:
+            batch: dict, need key 'node_features', 'node_labels', 'mask'
 
-                Args:
-                    batch: dict, need key 'node_features', 'node_labels', 'mask'
+        Returns:
 
-                Returns:
-
-                """
+        """
         y_true = batch['node_labels']
         y_predicted = self.predict(batch)
         mask = batch['mask']
@@ -219,12 +222,11 @@ class GeomGCN(AbstractTrafficStateModel):
 
     def predict(self, batch):
         """
+        Args:
+            batch: dict, need key 'node_features'
 
-                Args:
-                    batch: dict, need key 'node_features'
+        Returns:
+            torch.tensor
 
-                Returns:
-                    torch.tensor
-
-                """
+        """
         return self.forward(batch)
