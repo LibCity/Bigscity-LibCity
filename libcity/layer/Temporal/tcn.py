@@ -1,4 +1,5 @@
 """implemented by https://github.com/locuslab/TCN/tree/master/TCN """
+import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
 
@@ -47,8 +48,9 @@ class TemporalBlock(nn.Module):
 
 
 class TemporalConvNet(nn.Module):
-    def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2):
+    def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2,return_hidden=False):
         super(TemporalConvNet, self).__init__()
+        self.return_hidden=return_hidden
         layers = []
         num_levels = len(num_channels)
         for i in range(num_levels):
@@ -57,11 +59,57 @@ class TemporalConvNet(nn.Module):
             out_channels = num_channels[i]
             layers += [TemporalBlock(in_channels, out_channels, kernel_size, stride=1, dilation=dilation_size,
                                      padding=(kernel_size - 1) * dilation_size, dropout=dropout)]
-
-        self.network = nn.Sequential(*layers)
+        if return_hidden:
+            self.network = nn.ModuleList()
+            for layer in layers:
+                self.network.append(layer)
+        else:
+            self.network = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.network(x)
+        if self.return_hidden:
+            lens=len(self.network)
+            h=self.network[0](x)
+            out=[h]
+            for i in range(1,lens):
+                h = self.network[i](h)
+                out.append(h)
+            out = torch.cat(out, dim=1)
+            return out
+        else:
+            return self.network(x)
+
+
+# Inception Tcn
+class DilatedInception(nn.Module):
+    def __init__(self, cin, cout, dilation_factor=2):
+        super(DilatedInception, self).__init__()
+        self.tconv = nn.ModuleList()
+        self.kernel_set = [2, 3, 6, 7]
+        cout = int(cout / len(self.kernel_set))
+        for kern in self.kernel_set:
+            self.tconv.append(nn.Conv2d(cin, cout, (1, kern), dilation=(1, dilation_factor)))
+
+    def forward(self, input):
+        x = []
+        for i in range(len(self.kernel_set)):
+            x.append(self.tconv[i](input))
+        for i in range(len(self.kernel_set)):
+            x[i] = x[i][..., -x[-1].size(3):]
+        x = torch.cat(x, dim=1)
+        return x
+
+
+# temporal gate conv
+
+
+
+
+
+
+
+
+
 
 
 

@@ -63,3 +63,9 @@ class TransformAttention(nn.Module):
         x = torch.cat(torch.split(x, x.size(0) // self.K, dim=0), dim=-1)
         x = self.output_fc(x)  # (batch_size, output_length, num_nodes, D)
         return x
+
+# fixme
+# class LstmAttn(nn.Module):
+#     def __init__(self):
+#
+

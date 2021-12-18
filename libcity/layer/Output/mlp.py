@@ -5,10 +5,10 @@ import torch.nn as nn
 # fixme 明确n,h,w的指代
 class FusionLayer(nn.Module):
     # Matrix-based fusion
-    def __init__(self, n, h, w, device):
+    def __init__(self, output_window, num_nodes, output_dim, device):
         super(FusionLayer, self).__init__()
         # define the trainable parameter
-        self.weights = nn.Parameter(torch.FloatTensor(1, n, h, w).to(device))
+        self.weights = nn.Parameter(torch.FloatTensor(1, output_window, num_nodes, output_dim).to(device))
 
     def forward(self, x):
         # assuming x is of size B-n-h-w

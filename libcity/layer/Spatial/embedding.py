@@ -126,3 +126,5 @@ class MultiEmbed(nn.Module):
         delta = space_interval + time_interval  # (N, M, M, emb)
 
         return joint, delta
+
+

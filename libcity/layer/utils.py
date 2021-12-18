@@ -184,3 +184,19 @@ def asym_adj(adj):
     d_inv[np.isinf(d_inv)] = 0.
     d_mat = sp.diags(d_inv)
     return d_mat.dot(adj).astype(np.float32).todense()
+
+
+class Align(nn.Module):
+    def __init__(self, c_in, c_out):
+        super(Align, self).__init__()
+        self.c_in = c_in
+        self.c_out = c_out
+        if c_in > c_out:
+            self.conv1x1 = nn.Conv2d(c_in, c_out, 1)  # filter=(1,1)
+
+    def forward(self, x):  # x: (batch_size, feature_dim(c_in), input_length, num_nodes)
+        if self.c_in > self.c_out:
+            return self.conv1x1(x)
+        if self.c_in < self.c_out:
+            return F.pad(x, [0, 0, 0, 0, 0, self.c_out - self.c_in, 0, 0])
+        return x  # return: (batch_size, c_out, input_length-1+1, num_nodes-1+1)
