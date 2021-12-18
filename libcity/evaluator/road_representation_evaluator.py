@@ -46,7 +46,7 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         k_means.fit(node_emb)
         y_predict = k_means.predict(node_emb)
 
-        rid_pos = self._load_geo()
+        rid_file = self._load_geo()
         # 记录每个类别都有哪些geo实体
         result_token = dict()
         for i in range(len(y_predict)):
@@ -60,18 +60,27 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         self._logger.info('Kmeans category is saved at {}'.format(result_path))
 
         # QGIS可视化
-        rid_pos = rid_pos['coordinates']
+        rid_type = rid_file['type'][0]
+        rid_pos = rid_file['coordinates']
         rid2wkt = dict()
-        for i in range(rid_pos.shape[0]):
-            rid_list = eval(rid_pos[i])
-            wkt_str = 'LINESTRING('
-            for j in range(len(rid_list)):
-                rid = rid_list[j]
-                wkt_str += (str(rid[0]) + ' ' + str(rid[1]))
-                if j != len(rid_list) - 1:
-                    wkt_str += ','
-            wkt_str += ')'
-            rid2wkt[i] = wkt_str
+        if rid_type == 'LineString':
+            for i in range(rid_pos.shape[0]):
+                rid_list = eval(rid_pos[i])  # [(lat1, lon1), (lat2, lon2)...]
+                wkt_str = 'LINESTRING('
+                for j in range(len(rid_list)):
+                    rid = rid_list[j]
+                    wkt_str += (str(rid[0]) + ' ' + str(rid[1]))
+                    if j != len(rid_list) - 1:
+                        wkt_str += ','
+                wkt_str += ')'
+                rid2wkt[i] = wkt_str
+        elif rid_type == 'Point':
+            for i in range(rid_pos.shape[0]):
+                rid_list = eval(rid_pos[i])  # [lat1, lon1]
+                wkt_str = 'Point({} {})'.format(rid_list[0], rid_list[1])
+                rid2wkt[i] = wkt_str
+        else:
+            raise ValueError('Error geo type!')
 
         df = []
         for i in range(len(y_predict)):
