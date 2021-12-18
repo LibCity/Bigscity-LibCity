@@ -1,0 +1,11 @@
+{
+    "output_dim": 128,
+    "is_directed": true,
+    "p": 2,
+    "q": 1,
+    "num_walks": 10,
+    "walk_length": 80,
+    "window_size": 10,
+    "num_workers": 10,
+    "max_epoch": 1000
+}
