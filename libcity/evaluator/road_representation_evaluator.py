@@ -46,6 +46,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         k_means.fit(node_emb)
         y_predict = k_means.predict(node_emb)
 
+        # !这个load_geo必须跟dataset部分相同，也就是得到同样的geo_id和index的映射，否则就会乱码
+        # TODO: 把dataset部分得到的geo_to_ind和ind_to_geo传过来
         rid_file = self._load_geo()
         # 记录每个类别都有哪些geo实体
         result_token = dict()
@@ -54,8 +56,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
             if kind not in result_token:
                 result_token[kind] = []
             result_token[kind].append(self.ind_to_geo[i])
-        result_path = './libcity/cache/{}/evaluate_cache/kmeans_category_{}_{}_{}.json'.\
-            format(self.exp_id, self.model, str(self.output_dim), str(kinds))
+        result_path = './libcity/cache/{}/evaluate_cache/kmeans_category_{}_{}_{}_{}.json'.\
+            format(self.exp_id, self.model, self.dataset, str(self.output_dim), str(kinds))
         json.dump(result_token, open(result_path, 'w'))
         self._logger.info('Kmeans category is saved at {}'.format(result_path))
 
@@ -88,8 +90,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         df = pd.DataFrame(df)
         df.columns = ['id', 'rid', 'class', 'wkt']
         df = df.sort_values(by='class')
-        result_path = './libcity/cache/{}/evaluate_cache/kmeans_qgis_{}_{}_{}.csv'.\
-            format(self.exp_id, self.model, str(self.output_dim), str(kinds))
+        result_path = './libcity/cache/{}/evaluate_cache/kmeans_qgis_{}_{}_{}_{}.csv'.\
+            format(self.exp_id, self.model, self.dataset, str(self.output_dim), str(kinds))
         df.to_csv(result_path, index=False)
         self._logger.info('Kmeans result for QGIS is saved at {}'.format(result_path))
 

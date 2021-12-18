@@ -90,8 +90,10 @@ class TrafficStateDataset(AbstractDataset):
         self.geo_ids = list(geofile['geo_id'])
         self.num_nodes = len(self.geo_ids)
         self.geo_to_ind = {}
+        self.ind_to_geo = {}
         for index, idx in enumerate(self.geo_ids):
             self.geo_to_ind[idx] = index
+            self.ind_to_geo[index] = idx
         self._logger.info("Loaded file " + self.geo_file + '.geo' + ', num_nodes=' + str(len(self.geo_ids)))
 
     def _load_grid_geo(self):
