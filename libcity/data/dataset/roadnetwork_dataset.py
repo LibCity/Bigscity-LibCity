@@ -26,4 +26,5 @@ class RoadNetWorkDataset(TrafficStateDataset):
         Returns:
             dict: 包含数据集的相关特征的字典
         """
-        return {"adj_mx": self.adj_mx, "num_nodes": self.num_nodes}
+        return {"adj_mx": self.adj_mx, "num_nodes": self.num_nodes,
+                "geo_to_ind": self.geo_to_ind, "ind_to_geo": self.ind_to_geo}

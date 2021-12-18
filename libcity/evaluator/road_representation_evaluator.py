@@ -46,6 +46,8 @@ class RoadRepresentationEvaluator(AbstractEvaluator):
         k_means.fit(node_emb)
         y_predict = k_means.predict(node_emb)
 
+        # !这个load_geo必须跟dataset部分相同，也就是得到同样的geo_id和index的映射，否则就会乱码
+        # TODO: 把dataset部分得到的geo_to_ind和ind_to_geo传过来
         rid_file = self._load_geo()
         # 记录每个类别都有哪些geo实体
         result_token = dict()

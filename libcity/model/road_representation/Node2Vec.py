@@ -1,5 +1,5 @@
 import random
-
+import json
 import networkx as nx
 import numpy as np
 from gensim.models import Word2Vec
@@ -172,6 +172,8 @@ class Node2Vec(AbstractTraditionModel):
         super().__init__(config, data_feature)
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
+        self.geo_to_ind = data_feature.get('geo_to_ind', None)
+        self.ind_to_geo = data_feature.get('ind_to_geo', None)
         self._logger = getLogger()
 
         self.output_dim = config.get('output_dim', 64)
@@ -220,3 +222,7 @@ class Node2Vec(AbstractTraditionModel):
 
         self._logger.info('词向量和模型保存完成')
         self._logger.info('词向量维度：(' + str(len(model.wv)) + ',' + str(len(model.wv[0])) + ')')
+        json.dump(self.ind_to_geo, open('./libcity/cache/{}/evaluate_cache/ind_to_geo_{}.json'.format(
+            self.exp_id, self.dataset), 'w'))
+        json.dump(self.geo_to_ind, open('./libcity/cache/{}/evaluate_cache/geo_to_ind_{}.json'.format(
+            self.exp_id, self.dataset), 'w'))
