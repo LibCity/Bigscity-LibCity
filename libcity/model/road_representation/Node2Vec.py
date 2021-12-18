@@ -158,10 +158,10 @@ def alias_draw(J, q):
         return J[kk]
 
 
-def learn_embeddings(walks, dimensions, window_size, workers, iters):
+def learn_embeddings(walks, dimensions, window_size, workers, iters, min_count=0, sg=1, hs=0):
     walks = [list(map(str, walk)) for walk in walks]
     model = Word2Vec(
-        walks, vector_size=dimensions, window=window_size, min_count=0, sg=1,
+        walks, vector_size=dimensions, window=window_size, min_count=min_count, sg=sg, hs=hs,
         workers=workers, epochs=iters)
     return model
 
@@ -198,8 +198,11 @@ class Node2Vec(AbstractTraditionModel):
         nx_g = nx.from_numpy_matrix(self.adj_mx, create_using=nx.DiGraph())
         g = Graph(nx_g, self.is_directed, self.p, self.q)
         g.preprocess_transition_probs()
+
         walks = g.simulate_walks(self.num_walks, self.walk_length)
-        model = learn_embeddings(walks, self.output_dim, self.window_size, self.num_workers, self.iter)
+
+        model = learn_embeddings(walks=walks, dimensions=self.output_dim,
+                                 window_size=self.window_size, workers=self.num_workers, iters=self.iter)
         model.wv.save_word2vec_format(self.txt_cache_file)
         model.save(self.model_cache_file)
 
