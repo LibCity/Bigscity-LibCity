@@ -133,9 +133,14 @@ class TrafficStateDataset(AbstractDataset):
             self.distance_df = relfile[~relfile[self.weight_col].isna()][[
                 'origin_id', 'destination_id', self.weight_col]]
         else:
-            if len(relfile.columns) != 5:  # properties不只一列，且未指定weight_col，报错
+            if len(relfile.columns) > 5 or len(relfile.columns) < 4:  # properties不只一列，且未指定weight_col，报错
                 raise ValueError("Don't know which column to be loaded! Please set `weight_col` parameter!")
-            else:  # properties只有一列，那就默认这一列是权重列
+            elif len(relfile.columns) == 4:  # 4列说明没有properties列，那就是rel文件中有的代表相邻，否则不相邻
+                self.calculate_weight_adj = False
+                self.set_weight_link_or_dist = 'link'
+                self.init_weight_inf_or_zero = 'zero'
+                self.distance_df = relfile[['origin_id', 'destination_id']]
+            else:  # len(relfile.columns) == 5, properties只有一列，那就默认这一列是权重列
                 self.weight_col = relfile.columns[-1]
                 self.distance_df = relfile[~relfile[self.weight_col].isna()][[
                     'origin_id', 'destination_id', self.weight_col]]
