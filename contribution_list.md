@@ -72,6 +72,8 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 ||HMMM|[XBR-1111](https://github.com/XBR-1111)|
 |Road Network Representation Learning|ChebConv|[aptx1231](https://github.com/aptx1231)|
 ||LINE|[l782993610](https://github.com/l782993610)|
+||Node2Vec|[aptx1231](https://github.com/aptx1231)|
+||GAT|[Qwtdgh](https://github.com/Qwtdgh)|
 
 
 
