@@ -1,26 +1,61 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from Output.mlp import FC
 
+class TemporalAttentionLayer(nn.Module):
+    def __init__(self, device, in_channels, num_of_vertices, num_of_timesteps):
+        super(TemporalAttentionLayer, self).__init__()
+        self.U1 = nn.Parameter(torch.FloatTensor(num_of_vertices).to(device))
+        self.U2 = nn.Parameter(torch.FloatTensor(in_channels, num_of_vertices).to(device))
+        self.U3 = nn.Parameter(torch.FloatTensor(in_channels).to(device))
+        self.be = nn.Parameter(torch.FloatTensor(1, num_of_timesteps, num_of_timesteps).to(device))
+        self.Ve = nn.Parameter(torch.FloatTensor(num_of_timesteps, num_of_timesteps).to(device))
+
+    def forward(self, x):
+        """
+        Args:
+            x: (batch_size, N, F_in, T)
+
+        Returns:
+            torch.tensor: (B, T, T)
+        """
+
+        lhs = torch.matmul(torch.matmul(x.permute(0, 3, 2, 1), self.U1), self.U2)
+        # x:(B, N, F_in, T) -> (B, T, F_in, N)
+        # (B, T, F_in, N)(N) -> (B,T,F_in)
+        # (B,T,F_in)(F_in,N)->(B,T,N)
+
+        rhs = torch.matmul(self.U3, x)  # (F)(B,N,F,T)->(B, N, T)
+
+        product = torch.matmul(lhs, rhs)  # (B,T,N)(B,N,T)->(B,T,T)
+
+        e = torch.matmul(self.Ve, torch.sigmoid(product + self.be))  # (B, T, T)
+
+        e_normalized = F.softmax(e, dim=1)
+
+        o = torch.matmul(e_normalized,x)
+
+        return o
 
 class TemporalAttention(nn.Module):
-    def __init__(self, num_heads, dim, bn, bn_decay, device, mask=True):
+    def __init__(self, num_heads, input_size, bn, bn_decay, device, mask=True):
         super(TemporalAttention, self).__init__()
         self.num_heads = num_heads
-        self.D = dim
-        assert self.D % self.num_heads == 0
-        self.d = self.D / self.num_heads
+        self.input_size = input_size
+        assert self.input_size % self.num_heads == 0
+        self.d = self.input_size / self.num_heads
         self.bn = bn
         self.bn_decay = bn_decay
         self.device = device
         self.mask = mask
-        self.input_query_fc = FC(input_dims=2 * self.D, units=self.D, activations=nn.ReLU,
+        self.input_query_fc = FC(input_dims=2 * self.input_size, units=self.input_size, activations=nn.ReLU,
                                  bn=self.bn, bn_decay=self.bn_decay, device=self.device)
-        self.input_key_fc = FC(input_dims=2 * self.D, units=self.D, activations=nn.ReLU,
+        self.input_key_fc = FC(input_dims=2 * self.input_size, units=self.input_size, activations=nn.ReLU,
                                bn=self.bn, bn_decay=self.bn_decay, device=self.device)
-        self.input_value_fc = FC(input_dims=2 * self.D, units=self.D, activations=nn.ReLU,
+        self.input_value_fc = FC(input_dims=2 * self.input_size, units=self.input_size, activations=nn.ReLU,
                                  bn=self.bn, bn_decay=self.bn_decay, device=self.device)
-        self.output_fc = FC(input_dims=self.D, units=[self.D, self.D], activations=[nn.ReLU, None],
+        self.output_fc = FC(input_dims=self.input_size, units=[self.input_size, self.input_size], activations=[nn.ReLU, None],
                             bn=self.bn, bn_decay=self.bn_decay, device=self.device)
 
     def forward(self, x, ste):

@@ -62,3 +62,4 @@ class FC(nn.Module):  # is_training: self.training
         x = self.layers(x)
         x = x.transpose(2, 3).transpose(1, 3)  # x: (N, H, W, C)
         return x
+

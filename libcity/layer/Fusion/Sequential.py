@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from libcity.layer.Spatial.atten import SpatialAttention
 from libcity.layer.Spatial.gnn import spectralGCN
-from libcity.layer.Temporal.atten import TemporalAttention
+from libcity.layer.Temporal.atten import TemporalAttention, TemporalAttentionLayer
 from libcity.layer.Temporal.cnn import TemporalConvLayer
 from libcity.layer.utils import calculate_scaled_laplacian, calculate_cheb_poly, calculate_first_approx, GatedFusion
 
@@ -21,18 +21,16 @@ class ST2Block(nn.Module):
         temporal conv/gate
     """
 
-    def __init__(self, ks, kt, n, c, p, lk, device, residual=False):
+    def __init__(self, ks, kt, n, c, p, lk,timestep, device, residual=False):
         super(ST2Block, self).__init__()
         self.tconv = TemporalConvLayer(kt, c[0], c[1], "GLU")
-        # fixme 修正gcn参数
-        self.sconv = spectralGCN(ks, c[1], c[1], lk, device)
+        self.sconv = spectralGCN(K=ks, input_size=c[1], output_size=c[1], adj_mx=lk, device=device)
         self.ln = nn.LayerNorm([n, c[2]])
         self.dropout = nn.Dropout(p)
 
         self.residual = residual
         if self.residual:
-            # fixme 检查参数是否正确，最后的stride为临时填写
-            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, 2))
+            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, timestep))
 
     def forward(self, x):  # x: (batch_size, feature_dim/c[0], input_length, num_nodes)
         x = self.sconv(x)
@@ -40,9 +38,9 @@ class ST2Block(nn.Module):
 
         # residual 模块
         if self.residual:
-            # fixme 检查维度是否匹配
             x_res = self.residual_conv(x)
             x += x_res
+
         return self.dropout(x)
 
 
@@ -55,19 +53,17 @@ class ST3Block_impl1(nn.Module):
         temporal gate
     """
 
-    def __init__(self, ks, kt, n, c, p, lk, device, residual=False):
+    def __init__(self, ks, kt, n, c, p, lk, timestep,device, residual=False):
         super(ST3Block_impl1, self).__init__()
         self.tconv1 = TemporalConvLayer(kt, c[0], c[1], "GLU")
-        # fixme 修正gcn参数
-        self.sconv = spectralGCN(ks, c[1], c[1], lk, device)
-        self.tconv2 = TemporalConvLayer(kt, c[1], c[2])
+        self.sconv = spectralGCN(K=ks, input_size=c[1], output_size=c[1], adj_mx=lk, device=device)
+        self.tconv2 = TemporalConvLayer(kt=kt, c_in=c[1], c_out=c[2])
         self.ln = nn.LayerNorm([n, c[2]])
         self.dropout = nn.Dropout(p)
 
         self.residual = residual
         if self.residual:
-            # fixme 检查参数是否正确，最后的stride为临时填写
-            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, 2))
+            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, timestep))
 
     def forward(self, x):  # x: (batch_size, feature_dim/c[0], input_length, num_nodes)
         x_t1 = self.tconv1(x)  # (batch_size, c[1], input_length-kt+1, num_nodes)
@@ -76,7 +72,6 @@ class ST3Block_impl1(nn.Module):
 
         # residual 模块
         if self.residual:
-            # fixme 检查维度是否匹配
             x_res = self.residual_conv(x)
             x_t2 += x_res
 
@@ -93,19 +88,17 @@ class ST3Block_impl2(nn.Module):
         temporal attn ->
     """
 
-    def __init__(self, ks, kt, n, c, p, lk, device, residual=False):
+    def __init__(self, ks, kt, n, c, p, lk, timestep,device, residual=False):
         super(ST3Block_impl2, self).__init__()
-        self.tconv1 = TemporalConvLayer(kt, c[0], c[1], "GLU")
-        # fixme 修正gcn参数
-        self.sconv = spectralGCN(ks, c[1], c[1], lk, device)
-        self.tconv2 = TemporalAttention(kt, c[1], c[2])
+        self.tconv1 = TemporalConvLayer(kt=kt, c_in=c[0], c_out=c[1], act="GLU")
+        self.sconv = spectralGCN(K=ks, input_size=c[1], output_size=c[1], adj_mx=lk, device=device)
+        self.tconv2 = TemporalAttentionLayer(num_of_timesteps=timestep,num_of_vertices=c[2],device=device,in_channels=c[1])
         self.ln = nn.LayerNorm([n, c[2]])
         self.dropout = nn.Dropout(p)
 
         self.residual = residual
         if self.residual:
-            # fixme 检查参数是否正确，最后的stride为临时填写
-            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, 2))
+            self.residual_conv = nn.Conv2d(c[0], c[2], kernel_size=(1, 1), stride=(1, timestep))
 
     def forward(self, x):  # x: (batch_size, feature_dim/c[0], input_length, num_nodes)
         x_t1 = self.tconv1(x)  # (batch_size, c[1], input_length-kt+1, num_nodes)
@@ -114,7 +107,6 @@ class ST3Block_impl2(nn.Module):
 
         # residual 模块
         if self.residual:
-            # fixme 检查维度是否匹配
             x_res = self.residual_conv(x)
             x_t2 += x_res
 
@@ -138,10 +130,10 @@ class STParBlock(nn.Module):
         self.bn_decay = bn_decay
         self.device = device
         self.mask = mask
-        self.sp_att = SpatialAttention(K=self.K, D=self.D, bn=self.bn, bn_decay=self.bn_decay, device=self.device)
-        self.temp_att = TemporalAttention(K=self.K, D=self.D, bn=self.bn, bn_decay=self.bn_decay,
+        self.sp_att = SpatialAttention(num_heads=self.K, dim=self.D, bn=self.bn, bn_decay=self.bn_decay, device=self.device)
+        self.temp_att = TemporalAttention(num_heads=self.K, input_size=self.D, bn=self.bn, bn_decay=self.bn_decay,
                                           device=self.device)
-        self.gated_fusion = GatedFusion(D=self.D, bn=self.bn, bn_decay=self.bn_decay, device=self.device)  # outputLayer
+        self.gated_fusion = GatedFusion(dim=self.D, bn=self.bn, bn_decay=self.bn_decay, device=self.device)  # outputLayer
 
     def forward(self, x, ste):
         HS = self.sp_att(x, ste)
@@ -188,6 +180,25 @@ class STSycBlock(nn.Module):
         return torch.max(torch.cat(need_concat, dim=0), dim=0)[0]
 
 
+class OutputLayer(nn.Module):
+    def __init__(self, c, t, n, out_dim):
+        super(OutputLayer, self).__init__()
+        self.tconv1 = TemporalConvLayer(t, c, c, "GLU")
+        self.ln = nn.LayerNorm([n, c])
+        self.tconv2 = TemporalConvLayer(1, c, c, "sigmoid")  # kernel=1*1
+        self.fc = FullyConvLayer(c, out_dim)
+
+    def forward(self, x):
+        # (batch_size, input_dim(c), T, num_nodes)
+        x_t1 = self.tconv1(x)
+        # (batch_size, input_dim(c), 1, num_nodes)
+        x_ln = self.ln(x_t1.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+        # (batch_size, input_dim(c), 1, num_nodes)
+        x_t2 = self.tconv2(x_ln)
+        # (batch_size, input_dim(c), 1, num_nodes)
+        return self.fc(x_t2)
+        # (batch_size, output_dim, 1, num_nodes)
+
 class STsequential(nn.Module):
     def __init__(self, config):
         super(STsequential, self).__init__()
@@ -225,7 +236,8 @@ class STsequential(nn.Module):
             self.st_blocks.append(ST3Block_impl1(self.Ks, self.Kt, self.num_nodes,
                                                  self.blocks[i], self.drop_prob, self.Lk, self.device))
 
-        # self.output = OutputLayer()
+        self.output = OutputLayer(self.blocks[-1][2], self.input_window - len(self.blocks) * 2
+                                  * (self.Kt - 1), self.num_nodes, self.output_dim)
 
     def forward(self, x, return_hidden=False):
         # return hidden 控制是否输出中间层结果
@@ -244,7 +256,8 @@ class STsequential(nn.Module):
         else:
             for i in range(self.num_blocks):
                 x = self.st_blocks[i](x)
-            return x
+            outputs = self.output(x)  # (batch_size, output_dim(1), output_length(1), num_nodes)
+            outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim)
+            return outputs
 
-        # outputs = self.output(x)  # (batch_size, output_dim(1), output_length(1), num_nodes)
-        # outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim)
+
