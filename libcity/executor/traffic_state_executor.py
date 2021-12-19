@@ -17,10 +17,11 @@ class TrafficStateExecutor(AbstractExecutor):
         self.config = config
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model.to(self.device)
+        self.exp_id = self.config.get('exp_id', None)
 
-        self.cache_dir = './libcity/cache/model_cache'
-        self.evaluate_res_dir = './libcity/cache/evaluate_cache'
-        self.summary_writer_dir = './libcity/log/runs'
+        self.cache_dir = './libcity/cache/{}/model_cache'.format(self.exp_id)
+        self.evaluate_res_dir = './libcity/cache/{}/evaluate_cache'.format(self.exp_id)
+        self.summary_writer_dir = './libcity/cache/{}/'.format(self.exp_id)
         ensure_dir(self.cache_dir)
         ensure_dir(self.evaluate_res_dir)
         ensure_dir(self.summary_writer_dir)

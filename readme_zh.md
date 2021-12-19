@@ -54,7 +54,7 @@ cd Bigscity-LibCity
 
 ## Quick-Start
 
-在 LibCity 中运行模型之前，请确保您至少下载了一个数据集并将其放在目录 `./raw_data/` 中。 数据集链接是 [BaiduDisk with code 1231](https://pan.baidu.com/s/1qEfcXBO-QwZfiT0G3IYMpQ) 或 [Google Drive](https://drive.google.com/drive/folders/1g5v2Gq1tkOq8XO0HDCZ9nOTtRpB6-gPe?usp=sharing) 。
+在 LibCity 中运行模型之前，请确保您至少下载了一个数据集并将其放在目录 `./raw_data/` 中。 数据集链接是 [BaiduDisk with code 1231](https://pan.baidu.com/s/1qEfcXBO-QwZfiT0G3IYMpQ) 或 [Google Drive](https://drive.google.com/drive/folders/1g5v2Gq1tkOq8XO0HDCZ9nOTtRpB6-gPe?usp=sharing) 。LibCity 中所用的数据集需要被处理成[原子文件](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/data/atomic_files.html)的格式。
 
 脚本 `run_model.py` 用于在 LibCity 中训练和评估单个模型。 运行`run_model.py`时，必须指定以下三个参数，即**task、dataset和model**。例如：
 
@@ -66,9 +66,29 @@ python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 
 更多细节请访问 [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/get_started/quick_start.html) 。
 
+## TensorBoard Visualization
+
+在模型训练过程中，LibCity 会记录每个 epoch 的损失，并支持 tensorboard 可视化。
+
+模型运行一次后，可以使用以下命令进行可视化：
+
+```shell
+tensorboard --logdir 'libcity/cache'
+```
+
+```
+TensorFlow installation not found - running with reduced feature set.
+Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
+TensorBoard 2.4.1 at http://localhost:6006/ (Press CTRL+C to quit)
+```
+
+在浏览器中访问这个地址（[http://localhost:6006/](http://localhost:6006/)） 可以看到可视化的结果。
+
+![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/tensorboard.png)
+
 ## Reproduced Model List
 
-LibCity 中所复现的全部模型列表见[文档](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/model.html)，在这里你可以看到模型的简称和对应的论文及引用文献。
+LibCity 中所复现的全部模型列表见[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/model.html)，在这里你可以看到模型的简称和对应的论文及引用文献。
 
 ## Tutorial
 
