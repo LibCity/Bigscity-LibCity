@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
 
-# fixme 添加注释
 from torch.autograd import Variable
 from torch.nn import Parameter
 
@@ -16,43 +15,64 @@ from libcity.model.traffic_speed_prediction.STAGGCN import GATConv
 
 class GAT(nn.Module):
     # 2 layer GAT
-    def __init__(self, g, in_dim, hidden_dim, out_dim, num_heads):
+    def __init__(self, adj_mx, input_size, hidden_dim, output_size, num_heads):
+        """
+        两层GAT模型
+        Args:
+            adj_mx:
+            input_size:
+            hidden_dim:
+            output_size:
+            num_heads:
+        """
         super(GAT, self).__init__()
-        self.layer1 = GATConv(g, in_dim, hidden_dim, num_heads)
-        self.layer2 = GATConv(g, hidden_dim * num_heads, out_dim, 1)
-        self.g = g
+
+        self.input_size = input_size
+        self.output_size = output_size
+        self.hidden_dim = hidden_dim
+        self.num_heads = num_heads
+
+        self.layer1 = GATConv(adj_mx, input_size, hidden_dim, num_heads)
+        self.layer2 = GATConv(adj_mx, hidden_dim * num_heads, output_size, 1)
+        self.adj_mx = adj_mx
 
     def forward(self, h):
-        h = self.layer1(self.g, h)
+        h = self.layer1(self.adj_mx, h)
         h = F.elu(h)
-        h = self.layer2(self.g, h)
+        h = self.layer2(self.adj_mx, h)
         return h
 
 
 # 可训练邻接矩阵+非共享权重GCN卷积
 class AVWGCN(nn.Module):
-    def __init__(self, dim_in, dim_out, cheb_k, num_nodes, embed_dim):
+    def __init__(self, input_size, output_size, cheb_k, num_nodes, feat_dim):
+        """
+        快速版 可学习邻接矩阵GCN
+        借鉴了MF算法，对W进行矩阵分解，降低复杂度
+        Args:
+            input_size:
+            output_size:
+            cheb_k:
+            num_nodes:
+            feat_dim:
+        """
         super(AVWGCN, self).__init__()
         self.cheb_k = cheb_k
         self.num_nodes = num_nodes
-        self.weights_pool = nn.Parameter(torch.FloatTensor(embed_dim, cheb_k, dim_in, dim_out))
-        self.bias_pool = nn.Parameter(torch.FloatTensor(embed_dim, dim_out))
-        self.node_embeddings = nn.Parameter(torch.randn(num_nodes, embed_dim), requires_grad=True)
+        self.weights_pool = nn.Parameter(torch.FloatTensor(feat_dim, cheb_k, input_size, output_size))
+        self.bias_pool = nn.Parameter(torch.FloatTensor(feat_dim, output_size))
+        self.node_embeddings = nn.Parameter(torch.randn(num_nodes, feat_dim), requires_grad=True)
 
     def forward(self, x):
         # x shaped[B, N, C], node_embeddings shaped [N, D] -> supports shaped [N, N]
         # output shape [B, N, C]
         node_num = self.num_nodes
-        #         print("node_num：" +str(node_num))
         supports = F.softmax(F.relu(torch.mm(self.node_embeddings, self.node_embeddings.transpose(0, 1))), dim=1)
         support_set = [torch.eye(node_num).to(supports.device), supports]
         # default cheb_k = 3
         for k in range(2, self.cheb_k):
             support_set.append(torch.matmul(2 * supports, support_set[-1]) - support_set[-2])
         supports = torch.stack(support_set, dim=0)
-        #         print("suppoorts")
-        #         print(supports.shape)
-        #         print(x.shape)
         weights = torch.einsum('nd,dkio->nkio', self.node_embeddings, self.weights_pool)  # N, cheb_k, dim_in, dim_out
         bias = torch.matmul(self.node_embeddings, self.bias_pool)  # N, dim_out
         x_g = torch.einsum("knm,bmc->bknc", supports, x)  # B, cheb_k, N, dim_in
@@ -63,15 +83,23 @@ class AVWGCN(nn.Module):
 
 
 class LearnedGCN(nn.Module):
-    def __init__(self, node_num, in_feature, out_feature, feat_dim):
+    def __init__(self, node_num, input_size, output_size, feat_dim):
+        """
+        邻接矩阵为可学习的矩阵的GCN
+        Args:
+            node_num:
+            input_size:
+            output_size:
+            feat_dim: node embedding，大小决定了可学习邻接矩阵的表达能力，越大表达能力越强，复杂度越高
+        """
         super(LearnedGCN, self).__init__()
         self.node_num = node_num
-        self.in_feature = in_feature
-        self.out_feature = out_feature
+        self.input_size = input_size
+        self.output_size = output_size
 
         self.source_embed = nn.Parameter(torch.Tensor(self.node_num, feat_dim))
         self.target_embed = nn.Parameter(torch.Tensor(feat_dim, self.node_num))
-        self.linear = nn.Linear(self.in_feature, self.out_feature)
+        self.linear = nn.Linear(self.input_size, self.output_size)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -113,15 +141,14 @@ class ChebPolyConv(nn.Module):
 
 
 class spectralGCN(nn.Module):
-    def __init__(self, config):
+    def __init__(self, K, input_size, output_size, dropout, adj_mx, device):
         super(spectralGCN, self).__init__()
-        self.K = config.get('K', 3)
-        self.input_size = config.get('input_size', 1)
-        self.output_size = config.get('output_size', 1)
-        self.drop_prob = config.get('dropout', 0)
-        self.device = config.get('device')
-        # self.num_layer=config.get('num_layer',1)
-        adj_mx = config.get('adj_mx')  # ndarray
+        self.K = K
+        self.input_size = input_size
+        self.output_size = output_size
+        self.drop_prob = dropout
+        self.device = device
+        adj_mx = adj_mx  # ndarray
         if self.K != 1:
             laplacian_mx = calculate_scaled_laplacian(adj_mx)
             self.Lk = calculate_cheb_poly(laplacian_mx, self.K)
@@ -209,21 +236,21 @@ class DCNN(nn.Module):
         """
 
         Args:
-            input_dim:
-            num_units:
-            adj_mx:
-            max_diffusion_step:
-            num_nodes:
-            device:
-            nonlinearity:
+            input_dim: 输入维度
+            num_units: 输出维度
+            adj_mx: 邻接矩阵
+            max_diffusion_step: 扩散步数
+            num_nodes: 节点个数
+            device: GPU/CPU
+            nonlinearity: 激活函数
             filter_type: "laplacian", "random_walk", "dual_random_walk"
-            use_gc_for_ru: whether to use Graph convolution to calculate the reset and update gates.
         """
 
         super().__init__()
         self._activation = torch.tanh if nonlinearity == 'tanh' else torch.relu
-        self._num_nodes = num_nodes
-        self._num_units = num_units
+        self.input_size = input_dim
+        self.num_nodes = num_nodes
+        self.output_size = num_units
         self._device = device
         self._max_diffusion_step = max_diffusion_step
         self._supports = []
@@ -241,8 +268,8 @@ class DCNN(nn.Module):
         for support in supports:
             self._supports.append(self._build_sparse_matrix(support, self._device))
 
-        self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._supports, self._device,
-                            input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units, bias_start=0.0)
+        self._gconv = GCONV(self.num_nodes, self._max_diffusion_step, self._supports, self._device,
+                            input_dim=input_dim, hid_dim=self.output_size, output_dim=self.output_size, bias_start=0.0)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -297,20 +324,28 @@ class FilterLinear(nn.Module):
 
 # 直接乘adj的K次方
 class K_hopGCN(nn.Module):
-    def __init__(self, config):
+    def __init__(self, K, input_size, output_size, num_nodes, adj_mx, device):
+        """
+        用邻接矩阵的1-K次方组成的集合作为多级邻接矩阵
+        Args:
+            K:
+            input_size:
+            output_size:
+            num_nodes:
+            adj_mx:
+            device:
+        """
         super(K_hopGCN, self).__init__()
-        self.num_nodes = self.data_feature.get('num_nodes', 1)
-        self.input_dim = self.data_feature.get('feature_dim', 1)
-        self.in_features = self.input_dim * self.num_nodes
-        self.output_dim = self.data_feature.get('output_dim', 1)
-        self.out_features = self.output_dim * self.num_nodes
-
-        self.K = config.get('K_hop_numbers', 3)
-        self.back_length = config.get('back_length', 3)
-        self.device = config.get('device', torch.device('cpu'))
+        self.num_nodes = num_nodes
+        self.input_size = input_size
+        self.in_features = self.input_size * self.num_nodes
+        self.output_size = output_size
+        self.out_features = self.output_size * self.num_nodes
+        self.K = K
+        self.device = device
 
         self.A_list = []  # Adjacency Matrix List
-        adj_mx = config.get('adj')
+        adj_mx = adj_mx
         adj_mx[adj_mx > 1e-4] = 1
         adj_mx[adj_mx <= 1e-4] = 0
 
@@ -321,7 +356,7 @@ class K_hopGCN(nn.Module):
             self.A_list.append(adj_temp)
 
         # a length adjustable Module List for hosting all graph convolutions
-        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_dim, self.output_dim, self.in_features,
+        self.gc_list = nn.ModuleList([FilterLinear(self.device, self.input_size, self.output_size, self.in_features,
                                                    self.out_features, self.A_list[i], bias=False) for i in
                                       range(self.K)])
 
@@ -377,15 +412,25 @@ class MixProp(nn.Module):
 
 # mixhop gcn
 class MixhopGCN(nn.Module):
-    def __init__(self, config):
-        self.input_size = config.get('input_size')
-        self.output_size = config.get('output_size')
-        self.gdep = config.get('graph_depth')
-        self.adj = config.get('adj')
-        self.dropout = config.get('dropout')
-        self.alpha = config.get('alpha')
-        self.gcn1 = MixProp(self.input_size, self.output_size, self.gdep, self.dropout, self.alpha)
-        self.gcn2 = MixProp(self.input_size, self.output_size, self.gdep, self.dropout, self.alpha)
+    def __init__(self, input_size, output_size, adj_mx, dropout, graph_depth, alpha, device):
+        """
+        Args:
+            input_size:
+            output_size:
+            adj_mx: 邻接矩阵
+            dropout:
+            graph_depth: 跳数
+            alpha: 混合比重，越高自身特征影响越大
+            device:
+        """
+        self.input_size = input_size
+        self.output_size = output_size
+        self.gdep = graph_depth
+        self.adj_mx = adj_mx
+        self.dropout = dropout
+        self.alpha = alpha
+        self.gcn1 = MixProp(self.input_size, self.output_size, self.gdep, self.dropout, self.alpha).to(device)
+        self.gcn2 = MixProp(self.input_size, self.output_size, self.gdep, self.dropout, self.alpha).to(device)
 
     def forward(self, x):
         h_out = self.gcn1(x, self.adj) + self.gcn2(x, self.adj.transpose(1, 0))
