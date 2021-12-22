@@ -9,5 +9,6 @@ __all__ = [
     "LINE",
     "GAT",
     "Node2Vec",
-    "DeepWalk"
+    "DeepWalk",
+    "VAE",
 ]

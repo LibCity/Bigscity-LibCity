@@ -1,0 +1,10 @@
+{
+    "model":"gcn_vae",
+    "seed": 42 ,
+    "max_epoch":200,
+    "hidden1":32,
+    "hidden2":16,
+    "learning_rate":0.01,
+    "dropout":0,
+    "lr":0.01
+}

@@ -409,6 +409,11 @@
             "dataset_class": "RoadNetWorkDataset",
             "executor": "GensimExecutor",
             "evaluator": "RoadRepresentationEvaluator"
+        },
+        "VAE":{
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
         }
     }
 }
