@@ -1,0 +1,13 @@
+{
+  "points_per_hour": 12,
+  "num_for_predict":12,
+  "num_of_weeks" : 0,
+  "num_of_days" : 0,
+  "num_of_hours" : 1,
+  "epochs" : 180,
+  "fine_tune_epochs" : 90,
+  "direction" : 2,
+  "adj_filename" : "raw_data/PEMSD3/PEMSD3.rel",
+  "graph_signal_matrix_filename" : "raw_data/PEMSD3/PEMSD3.dyna",
+  "id_filename" :"raw_data/PEMSD3/PEMSD3.geo"
+}
