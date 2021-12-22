@@ -97,7 +97,7 @@ class Batch(object):
             if self.feature_name[key] == 'int':
                 self.data[key] = torch.LongTensor(np.array(self.data[key])).to(device)
             elif self.feature_name[key] == 'float':
-                self.data[key] = torch.FloatTensor(np.array(self.data[key].cpu())).to(device)
+                self.data[key] = torch.FloatTensor(np.array(self.data[key])).to(device)
             elif self.feature_name[key] == 'array of int':
                 for i in range(len(self.data[key])):
                     for j in range(len(self.data[key][i])):
