@@ -1,6 +1,6 @@
 import math
 from logging import getLogger
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
