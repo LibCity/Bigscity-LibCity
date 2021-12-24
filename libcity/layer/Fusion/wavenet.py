@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from libcity.layer.Spatial.gnn import K_hopGCN
 
-
+# Gwavenet ST-MGAT
 class Wavenet(nn.Module):
     def __init__(self, config):
         super(Wavenet, self).__init__()

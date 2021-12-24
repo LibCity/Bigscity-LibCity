@@ -203,7 +203,6 @@ class STsequential(nn.Module):
     def __init__(self, config):
         super(STsequential, self).__init__()
         self.config = config
-
         self.num_nodes = self.config.get('num_nodes', 1)
         self.feature_dim = self.config.get('feature_dim', 1)
         self.output_dim = self.config.get('output_dim', 1)
@@ -259,5 +258,8 @@ class STsequential(nn.Module):
             outputs = self.output(x)  # (batch_size, output_dim(1), output_length(1), num_nodes)
             outputs = outputs.permute(0, 2, 3, 1)  # (batch_size, output_length(1), num_nodes, output_dim)
             return outputs
+
+
+
 
 

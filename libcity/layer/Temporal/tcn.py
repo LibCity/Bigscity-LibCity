@@ -102,6 +102,9 @@ class DilatedInception(nn.Module):
 
 # temporal gate conv
 
+class GatedTCN(nn.Module):
+    def __init__(self,input_channel,output_channel,kernal_size,dilation):
+
 
 
 
