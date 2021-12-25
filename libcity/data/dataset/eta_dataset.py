@@ -130,7 +130,7 @@ class ETADataset(AbstractDataset):
             eval_num = math.ceil(
                 traj_len * (train_rate + eval_rate))
             train_data += encoded_trajectories[:train_num]
-            eval_data += encoded_trajectories[train_num:eval_num]
+            eval_data += encoded_trajectories[train_num: eval_num]
             test_data += encoded_trajectories[eval_num:]
         return train_data, eval_data, test_data
 
@@ -165,6 +165,8 @@ class ETADataset(AbstractDataset):
                     self._logger.info('Saved at ' + self.encoder.cache_file_name)
         # TODO: 可以按照uid来划分，也可以全部打乱划分
         train_data, eval_data, test_data = self._divide_data()
+        scalar_data_feature = self.encoder.gen_scalar_data_feature(train_data)
+        self.data["data_feature"].update(scalar_data_feature)
         sort_by_traj_len = self.config["sort_by_traj_len"]
         if sort_by_traj_len:
             '''

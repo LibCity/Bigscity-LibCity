@@ -49,28 +49,7 @@ class DeeptteEncoder(AbstractETAEncoder):
         self.cache_file_name = os.path.join(
             './libcity/cache/dataset_cache/', 'eta{}.json'.format(parameters_str))
 
-        # self.geo_coord = dict()
-        # path = "./raw_data/{}/{}.geo".format(config['dataset'], config['dataset'])
-        # f_geo = open(path)
-        # self._logger.info("Loaded file " + self.config['dataset'] + '.geo')
-        # lines = f_geo.readlines()
-
-        # for i, line in enumerate(lines):
-        #     if i == 0:
-        #         continue
-        #     tokens = line.strip().replace("\"", "").replace("[", "").replace("]", "").split(',')
-
-        #     loc_id, loc_longi, loc_lati = int(tokens[0]), float(tokens[2]), float(tokens[3])
-        #     self.geo_coord[loc_id] = (loc_longi, loc_lati)
-        # f_geo.close()
-
         self.uid_size = 0
-        self.longi_list = []
-        self.lati_list = []
-        self.dist_list = []
-        self.time_list = []
-        self.dist_gap_list = []
-        self.time_gap_list = []
 
     def encode(self, uid, trajectories, dyna_feature_column):
         self.uid_size = max(uid + 1, self.uid_size)
@@ -82,26 +61,17 @@ class DeeptteEncoder(AbstractETAEncoder):
             current_dis = []
             current_state = []
             dist = traj[-1][dyna_feature_column["current_dis"]] - traj[0][dyna_feature_column["current_dis"]]
-            self.dist_list.append(dist)
             begin_time = datetime.strptime(traj[0][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             end_time = datetime.strptime(traj[-1][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             weekid = int(begin_time.weekday())
             timeid = int(begin_time.strftime('%H')) * 60 + int(begin_time.strftime('%M'))
             time = (end_time - begin_time).seconds
-            self.time_list.append(time)
             traj_len = len(traj)
-            last_dis = 0
-            last_tim = begin_time
             for point in traj:
-                # loc = point[dyna_feature_column["location"]]
-                # longi, lati = self.geo_coord[loc][0], self.geo_coord[loc][1]
                 coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
-
                 current_longi.append(longi)
-                self.longi_list.append(longi)
                 current_lati.append(lati)
-                self.lati_list.append(lati)
 
                 if "current_dis" in dyna_feature_column:
                     dis = point[dyna_feature_column["current_dis"]]
@@ -110,13 +80,9 @@ class DeeptteEncoder(AbstractETAEncoder):
                 else:
                     dis = geo_distance(current_longi[-2], current_lati[-2], longi, lati) + last_dis
                 current_dis.append(dis)
-                self.dist_gap_list.append(dis - last_dis)
-                last_dis = dis
 
                 tim = datetime.strptime(point[dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
                 current_tim.append(float((tim - begin_time).seconds))
-                self.time_gap_list.append(float((tim - last_tim).seconds))
-                last_tim = tim
 
                 if "current_state" in dyna_feature_column:
                     state = point[dyna_feature_column["current_state"]]
@@ -147,28 +113,44 @@ class DeeptteEncoder(AbstractETAEncoder):
         self.data_feature = {
             'traj_len_idx': self.traj_len_idx,
             'uid_size': self.uid_size,
-            'longi_mean': np.mean(self.longi_list),
-            'longi_std': np.std(self.longi_list),
-            'lati_mean': np.mean(self.lati_list),
-            'lati_std': np.std(self.lati_list),
-            'dist_mean': np.mean(self.dist_list),
-            'dist_std': np.std(self.dist_list),
-            'time_mean': np.mean(self.time_list),
-            'time_std': np.std(self.time_list),
-            'dist_gap_mean': np.mean(self.dist_gap_list),
-            'dist_gap_std': np.std(self.dist_gap_list),
-            'time_gap_mean': np.mean(self.time_gap_list),
-            'time_gap_std': np.std(self.time_gap_list),
         }
-        self._logger.info("longi_mean: {}".format(self.data_feature["longi_mean"]))
-        self._logger.info("longi_std : {}".format(self.data_feature["longi_std"]))
-        self._logger.info("lati_mean : {}".format(self.data_feature["lati_mean"]))
-        self._logger.info("lati_std  : {}".format(self.data_feature["lati_std"]))
-        self._logger.info("dist_mean : {}".format(self.data_feature["dist_mean"]))
-        self._logger.info("dist_std  : {}".format(self.data_feature["dist_std"]))
-        self._logger.info("time_mean : {}".format(self.data_feature["time_mean"]))
-        self._logger.info("time_std  : {}".format(self.data_feature["time_std"]))
-        self._logger.info("dist_gap_mean : {}".format(self.data_feature["dist_gap_mean"]))
-        self._logger.info("dist_gap_std  : {}".format(self.data_feature["dist_gap_std"]))
-        self._logger.info("time_gap_mean : {}".format(self.data_feature["time_gap_mean"]))
-        self._logger.info("time_gap_std  : {}".format(self.data_feature["time_gap_std"]))
+
+    def gen_scalar_data_feature(self, train_data):
+        longi_list = []
+        lati_list = []
+        dist_list = []
+        time_list = []
+        dist_gap_list = []
+        time_gap_list = []
+        scalar_feature_column = {}
+        for i, key in enumerate(self.feature_dict):
+            scalar_feature_column[key] = i
+        for data in train_data:
+            traj_len = data[scalar_feature_column["traj_len"]][0]
+            longi_list.extend(data[scalar_feature_column["current_longi"]])
+            lati_list.extend(data[scalar_feature_column["current_lati"]])
+            dist_list.extend(data[scalar_feature_column["dist"]])
+            time_list.extend(data[scalar_feature_column["time"]])
+            dist_gap = data[scalar_feature_column["current_dis"]][:traj_len]
+            dist_gap = list(map(lambda x: x[0] - x[1], zip(dist_gap[1:], dist_gap[:-1])))
+            dist_gap_list.extend(dist_gap)
+            time_gap = data[scalar_feature_column["current_tim"]][:traj_len]
+            time_gap = list(map(lambda x: x[0] - x[1], zip(time_gap[1:], time_gap[:-1])))
+            time_gap_list.extend(time_gap)
+        scalar_data_feature = {
+            'longi_mean': np.mean(longi_list),
+            'longi_std': np.std(longi_list),
+            'lati_mean': np.mean(lati_list),
+            'lati_std': np.std(lati_list),
+            'dist_mean': np.mean(dist_list),
+            'dist_std': np.std(dist_list),
+            'time_mean': np.mean(time_list),
+            'time_std': np.std(time_list),
+            'dist_gap_mean': np.mean(dist_gap_list),
+            'dist_gap_std': np.std(dist_gap_list),
+            'time_gap_mean': np.mean(time_gap_list),
+            'time_gap_std': np.std(time_gap_list),
+        }
+        for k, v in scalar_data_feature.items():
+            self._logger.info("{}: {}".format(k, v))
+        return scalar_data_feature

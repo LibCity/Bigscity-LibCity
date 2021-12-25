@@ -335,4 +335,4 @@ class TTPNet(AbstractTrafficStateModel):
         if self.training:
             return T_f_hat
         else:
-            return T_f_hat[:, -1]
+            return T_f_hat[:, -1:]

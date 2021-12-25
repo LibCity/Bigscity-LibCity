@@ -32,11 +32,9 @@ class TtpnetEncoder(AbstractETAEncoder):
     def __init__(self, config):
         super().__init__(config)
         self.feature_dict = {
-            'current_longi': 'float', 'current_lati': 'float',
-            'current_loc': 'int',
+            'current_longi': 'float', 'current_lati': 'float', 'current_loc': 'int',
             'current_tim': 'float', 'masked_current_tim': 'float', 'current_dis': 'float',
-            'speeds': 'float', 'speeds_relevant1': 'float',
-            'speeds_relevant2': 'float', 'speeds_long': 'float',
+            'speeds': 'float', 'speeds_relevant1': 'float', 'speeds_relevant2': 'float', 'speeds_long': 'float',
             'grid_len': 'float',
             'uid': 'int',
             'weekid': 'int',
@@ -63,17 +61,6 @@ class TtpnetEncoder(AbstractETAEncoder):
             self.geo_embedding.append(embedding[:])
 
         self.uid_size = 0
-        self.longi_list = []
-        self.lati_list = []
-        self.dist_list = []
-        self.time_list = []
-        self.dist_gap_list = []
-        self.time_gap_list = []
-        self.speeds_list = []
-        self.speeds_relevant1_list = []
-        self.speeds_relevant2_list = []
-        self.speeds_long_list = []
-        self.grid_len_list = []
 
     def encode(self, uid, trajectories, dyna_feature_column):
         self.uid_size = max(uid + 1, self.uid_size)
@@ -92,14 +79,12 @@ class TtpnetEncoder(AbstractETAEncoder):
             grid_len = []
 
             dist = traj[-1][dyna_feature_column["current_dis"]] - traj[0][dyna_feature_column["current_dis"]]
-            self.dist_list.append(dist)
 
             begin_time = datetime.strptime(traj[0][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             end_time = datetime.strptime(traj[-1][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             weekid = int(begin_time.weekday())
             timeid = int(begin_time.strftime('%H')) * 4 + int(begin_time.strftime('%M')) // 15
             time = (end_time - begin_time).seconds
-            self.time_list.append(time)
 
             holiday = 0
             if "holiday" in dyna_feature_column:
@@ -109,39 +94,29 @@ class TtpnetEncoder(AbstractETAEncoder):
 
             traj_len = len(traj)
 
-            last_dis = 0
-            last_tim = begin_time
             for point in traj:
                 coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
-
                 current_longi.append(longi)
-                self.longi_list.append(longi)
                 current_lati.append(lati)
-                self.lati_list.append(lati)
 
                 loc = point[dyna_feature_column["location"]]
                 current_loc.append(loc)
 
                 speed = eval(point[dyna_feature_column["speeds"]])
                 speeds.extend(speed)
-                self.speeds_list.extend(speed)
 
                 speed_relevant1 = eval(point[dyna_feature_column["speeds_relevant1"]])
                 speeds_relevant1.extend(speed_relevant1)
-                self.speeds_relevant1_list.extend(speed_relevant1)
 
                 speed_relevant2 = eval(point[dyna_feature_column["speeds_relevant2"]])
                 speeds_relevant2.extend(speed_relevant2)
-                self.speeds_relevant2_list.extend(speed_relevant2)
 
                 speed_long = eval(point[dyna_feature_column["speeds_long"]])
                 speeds_long.extend(speed_long)
-                self.speeds_long_list.extend(speed_long)
 
                 grid_length = point[dyna_feature_column["grid_len"]]
                 grid_len.append(grid_length)
-                self.grid_len_list.append(grid_length)
 
                 if "current_dis" in dyna_feature_column:
                     dis = point[dyna_feature_column["current_dis"]]
@@ -150,14 +125,10 @@ class TtpnetEncoder(AbstractETAEncoder):
                 else:
                     dis = geo_distance(current_longi[-2], current_lati[-2], longi, lati) + last_dis
                 current_dis.append(dis)
-                self.dist_gap_list.append(dis - last_dis)
-                last_dis = dis
 
                 tim = datetime.strptime(point[dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
                 current_tim.append(float((tim - begin_time).seconds))
                 masked_current_tim.append(1)
-                self.time_gap_list.append(float((tim - last_tim).seconds))
-                last_tim = tim
 
             encoded_trajectories.append([
                 current_longi[:], current_lati[:],
@@ -193,48 +164,64 @@ class TtpnetEncoder(AbstractETAEncoder):
             'traj_len_idx': self.traj_len_idx,
             'geo_embedding': self.geo_embedding,
             'uid_size': self.uid_size,
-            'longi_mean': np.mean(self.longi_list),
-            'longi_std': np.std(self.longi_list),
-            'lati_mean': np.mean(self.lati_list),
-            'lati_std': np.std(self.lati_list),
-            'dist_mean': np.mean(self.dist_list),
-            'dist_std': np.std(self.dist_list),
-            'time_mean': np.mean(self.time_list),
-            'time_std': np.std(self.time_list),
-            'dist_gap_mean': np.mean(self.dist_gap_list),
-            'dist_gap_std': np.std(self.dist_gap_list),
-            'time_gap_mean': np.mean(self.time_gap_list),
-            'time_gap_std': np.std(self.time_gap_list),
-            'speeds_mean': np.mean(self.speeds_list),
-            'speeds_std': np.std(self.speeds_list),
-            'speeds_relevant1_mean': np.mean(self.speeds_relevant1_list),
-            'speeds_relevant1_std': np.std(self.speeds_relevant1_list),
-            'speeds_relevant2_mean': np.mean(self.speeds_relevant2_list),
-            'speeds_relevant2_std': np.std(self.speeds_relevant2_list),
-            'speeds_long_mean': np.mean(self.speeds_long_list),
-            'speeds_long_std': np.std(self.speeds_long_list),
-            'grid_len_mean': np.mean(self.grid_len_list),
-            'grid_len_std': np.std(self.grid_len_list),
         }
-        self._logger.info("longi_mean: {}".format(self.data_feature["longi_mean"]))
-        self._logger.info("longi_std : {}".format(self.data_feature["longi_std"]))
-        self._logger.info("lati_mean : {}".format(self.data_feature["lati_mean"]))
-        self._logger.info("lati_std  : {}".format(self.data_feature["lati_std"]))
-        self._logger.info("dist_mean : {}".format(self.data_feature["dist_mean"]))
-        self._logger.info("dist_std  : {}".format(self.data_feature["dist_std"]))
-        self._logger.info("time_mean : {}".format(self.data_feature["time_mean"]))
-        self._logger.info("time_std  : {}".format(self.data_feature["time_std"]))
-        self._logger.info("dist_gap_mean : {}".format(self.data_feature["dist_gap_mean"]))
-        self._logger.info("dist_gap_std  : {}".format(self.data_feature["dist_gap_std"]))
-        self._logger.info("time_gap_mean : {}".format(self.data_feature["time_gap_mean"]))
-        self._logger.info("time_gap_std  : {}".format(self.data_feature["time_gap_std"]))
-        self._logger.info("speeds_mean : {}".format(self.data_feature["speeds_mean"]))
-        self._logger.info("speeds_std  : {}".format(self.data_feature["speeds_std"]))
-        self._logger.info("speeds_relevant1_mean : {}".format(self.data_feature["speeds_relevant1_mean"]))
-        self._logger.info("speeds_relevant1_std  : {}".format(self.data_feature["speeds_relevant1_std"]))
-        self._logger.info("speeds_relevant2_mean : {}".format(self.data_feature["speeds_relevant2_mean"]))
-        self._logger.info("speeds_relevant2_std  : {}".format(self.data_feature["speeds_relevant2_std"]))
-        self._logger.info("speeds_long_mean : {}".format(self.data_feature["speeds_long_mean"]))
-        self._logger.info("speeds_long_std  : {}".format(self.data_feature["speeds_long_std"]))
-        self._logger.info("grid_len_mean : {}".format(self.data_feature["grid_len_mean"]))
-        self._logger.info("grid_len_std  : {}".format(self.data_feature["grid_len_std"]))
+
+    def gen_scalar_data_feature(self, train_data):
+        longi_list = []
+        lati_list = []
+        dist_list = []
+        time_list = []
+        dist_gap_list = []
+        time_gap_list = []
+        speeds_list = []
+        speeds_relevant1_list = []
+        speeds_relevant2_list = []
+        speeds_long_list = []
+        grid_len_list = []
+        scalar_feature_column = {}
+        for i, key in enumerate(self.feature_dict):
+            scalar_feature_column[key] = i
+        for data in train_data:
+            traj_len = data[scalar_feature_column["traj_len"]][0]
+            longi_list.extend(data[scalar_feature_column["current_longi"]])
+            lati_list.extend(data[scalar_feature_column["current_lati"]])
+            dist_list.extend(data[scalar_feature_column["dist"]])
+            time_list.extend(data[scalar_feature_column["time"]])
+            dist_gap = data[scalar_feature_column["current_dis"]][:traj_len]
+            dist_gap = list(map(lambda x: x[0] - x[1], zip(dist_gap[1:], dist_gap[:-1])))
+            dist_gap_list.extend(dist_gap)
+            time_gap = data[scalar_feature_column["current_tim"]][:traj_len]
+            time_gap = list(map(lambda x: x[0] - x[1], zip(time_gap[1:], time_gap[:-1])))
+            time_gap_list.extend(time_gap)
+            speeds_list.extend(data[scalar_feature_column["speeds"]])
+            speeds_relevant1_list.extend(data[scalar_feature_column["speeds_relevant1"]])
+            speeds_relevant2_list.extend(data[scalar_feature_column["speeds_relevant2"]])
+            speeds_long_list.extend(data[scalar_feature_column["speeds_long"]])
+            grid_len_list.extend(data[scalar_feature_column["grid_len"]])
+        scalar_data_feature = {
+            'longi_mean': np.mean(longi_list),
+            'longi_std': np.std(longi_list),
+            'lati_mean': np.mean(lati_list),
+            'lati_std': np.std(lati_list),
+            'dist_mean': np.mean(dist_list),
+            'dist_std': np.std(dist_list),
+            'time_mean': np.mean(time_list),
+            'time_std': np.std(time_list),
+            'dist_gap_mean': np.mean(dist_gap_list),
+            'dist_gap_std': np.std(dist_gap_list),
+            'time_gap_mean': np.mean(time_gap_list),
+            'time_gap_std': np.std(time_gap_list),
+            'speeds_mean': np.mean(speeds_list),
+            'speeds_std': np.std(speeds_list),
+            'speeds_relevant1_mean': np.mean(speeds_relevant1_list),
+            'speeds_relevant1_std': np.std(speeds_relevant1_list),
+            'speeds_relevant2_mean': np.mean(speeds_relevant2_list),
+            'speeds_relevant2_std': np.std(speeds_relevant2_list),
+            'speeds_long_mean': np.mean(speeds_long_list),
+            'speeds_long_std': np.std(speeds_long_list),
+            'grid_len_mean': np.mean(grid_len_list),
+            'grid_len_std': np.std(grid_len_list),
+        }
+        for k, v in scalar_data_feature.items():
+            self._logger.info("{}: {}".format(k, v))
+        return scalar_data_feature
