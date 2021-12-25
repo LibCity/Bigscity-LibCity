@@ -400,5 +400,14 @@
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         }
+    },
+    "route_planning": {
+        "allowed_model": ["NASR"],
+        "allowed_dataset": ["BJTaxi_201511"],
+        "NASR": {
+            "dataset_class": "NASRDataset",
+            "executor": "NASRExecutor",
+            "evaluator": "RoutePlanningEvaluator"
+        }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "max_epoch": 20,
+  "gpu": true,
+  "gpu_id": 0,
+  "learning_rate": 0.005,
+  "L2": 0.0001,
+  "hyper_tune": false,
+  "load_best_epoch": true,
+  "optimizer": "adam",
+  "early_stop_lr": 9e-6,
+  "debug": false,
+  "lr_step": 2,
+  "lr_decay": 0.1,
+  "schedule_threshold": 1e-3
+}

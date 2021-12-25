@@ -81,6 +81,12 @@ def get_model(config, data_feature):
                            config['model'])(config, data_feature)
         except AttributeError:
             raise AttributeError('model is not found')
+    elif config['task'] == 'route_planning':
+        try:
+            return getattr(importlib.import_module('libcity.model.route_planning'),
+                           config['model'])(config, data_feature)
+        except AttributeError:
+            raise AttributeError('model is not found')
     else:
         raise AttributeError('task is not found')
 

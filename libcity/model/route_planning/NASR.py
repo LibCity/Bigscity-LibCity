@@ -372,6 +372,7 @@ class NASR(AbstractModel):
         self.discount_rate = config['discount_rate']
         self.road_gps = data_feature['road_gps']
         self.device = config['device']
+        self.adjacent_list = data_feature['adjacent_list']
         self.function_g = FunctionG(config, data_feature)
         self.function_h = FunctionH(config, data_feature)
 
@@ -425,7 +426,7 @@ class NASR(AbstractModel):
             open_set = PriorityQueue()  # unvisited node set
             close_set = set()  # visited node set
             rid2node = {}  # the dict key is rid, and value is corresponding search node
-            des_center_gps = self.road_gps[str(des_rid)]
+            des_center_gps = self.road_gps[des_rid]
             des = torch.LongTensor([des_rid]).to(self.device)
             # put l_s into open_set
             start_node = SearchNode(trace=[query_i[0], query_i[1], query_i[2]], rid=query_i[0],
@@ -446,7 +447,6 @@ class NASR(AbstractModel):
             # (history_len, hidden_size)
             history_trace_hidden = torch.cat(history_trace_hidden_list, dim=0)
             # find flag
-            find_flag = False
             best_trace = []
             best_score = 0
             default_len = 15
@@ -467,15 +467,14 @@ class NASR(AbstractModel):
                     trace_i = now_node.trace
                     best_trace = [x[0] for x in trace_i]
                     # finish search for query_i
-                    find_flag = True
                     break
                 else:
                     # search now's adjacent rid
-                    candidate_set = self.gat.adj_mx.getrow(now_rid).tolist()
+                    candidate_set = self.adjacent_list[now_rid]
                     if len(candidate_set) != 0:
                         candidate_dis = []
                         for c in candidate_set:
-                            candidate_gps = self.road_gps[str(c)]
+                            candidate_gps = self.road_gps[c]
                             d = distance.distance((des_center_gps[1], des_center_gps[0]),
                                                   (candidate_gps[1], candidate_gps[0])).kilometers * 1000
                             candidate_dis.append(distance_to_bin(d))

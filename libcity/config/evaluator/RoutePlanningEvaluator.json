@@ -1,0 +1,3 @@
+{
+  "metrics": ["Precision", "Recall", "F1", "EDT"]
+}

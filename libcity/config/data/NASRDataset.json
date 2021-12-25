@@ -1,0 +1,8 @@
+{
+  "train_rate": 0.7,
+  "eval_rate": 0.1,
+  "max_history_len": 5,
+  "cache_dataset": true,
+  "batch_size": 10,
+  "num_workers": 0
+}
