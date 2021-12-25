@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import weight_norm
-from torch_scatter import scatter  # NB : Install this package manually
+# from torch_scatter import scatter  # NB : Install this package manually
 
 from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
