@@ -156,7 +156,7 @@ class NASRDataset(AbstractDataset):
             'loc_num': self.road_num,
             'node_features': self.node_features,
             'adj_mx': self.adj_mx,
-            'distance_bin': 21,
+            'distance_bins': 21,
             'road_gps': self.road_gps,
             'adjacent_list': self.adjacent_list
         }
@@ -239,7 +239,6 @@ class NASRDataset(AbstractDataset):
         with open(os.path.join(self.data_path, self.dyna_filename), 'r') as f:
             # read head
             f.readline()
-            cnt = 1000
             for line in tqdm(f, desc='group dyna file by entity_id and traj_id'):
                 # dyna_id, type, timestamp, entity_id, traj_id, location id
                 items = line.split(',')
@@ -254,20 +253,19 @@ class NASRDataset(AbstractDataset):
                     user_traj[entity_id][traj_id] = [[location_id, weekday_index, hour_index]]
                 else:
                     user_traj[entity_id][traj_id].append([location_id, weekday_index, hour_index])
-                cnt -= 1
-                if cnt == 0:
-                    break
         # encode trajectory for each user
         train_data = []
         eval_data = []
         test_data = []
         self.uid_num = len(user_traj)
+        # encode uid
+        new_uid = 0
         for uid in tqdm(user_traj, total=len(user_traj), desc='encode traj for each user'):
-            sub_train_data, sub_eval_data, sub_test_data = self.encode_traj(int(uid), user_traj[uid])
+            sub_train_data, sub_eval_data, sub_test_data = self.encode_traj(new_uid, user_traj[uid])
             train_data.extend(sub_train_data)
             eval_data.extend(sub_eval_data)
             test_data.extend(sub_test_data)
-            break
+            new_uid += 1
         return train_data, eval_data, test_data
 
     def encode_traj(self, uid, trajectory):

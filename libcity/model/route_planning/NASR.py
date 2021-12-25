@@ -98,17 +98,17 @@ class FunctionG(nn.Module):
         moving_state = []
         # calculate function g for each step in trace
         uid = uid.unsqueeze(0)  # (1)
-        if history_trace_hidden is not None:
+        if history_trace_hidden is None:
             # encode history trace
             history_trace_hidden_list = []
             for history_j in range(len(history_trace)):
                 # (1, trace_len, 3)
                 history_trace_j = torch.LongTensor(history_trace[history_j]).to(self.device).unsqueeze(0)
-                history_trace_j_hidden = self.encode_trace(uid, history_trace_j)  # (hidden_size)
-                history_trace_hidden_list.append(history_trace_j_hidden.unsqueeze(0))
+                history_trace_j_hidden = self.encode_trace(uid, history_trace_j)  # (1, hidden_size)
+                history_trace_hidden_list.append(history_trace_j_hidden)
             # form list to tensor
-            # (history_len, hidden_size)
-            history_trace_hidden = torch.cat(history_trace_hidden_list, dim=0)
+            # (1, history_len, hidden_size)
+            history_trace_hidden = torch.cat(history_trace_hidden_list, dim=0).unsqueeze(0)
         for step_i in range(len(current_trace)):
             # calculate each candidate's hidden
             # append each candidate to current_trace
@@ -122,7 +122,7 @@ class FunctionG(nn.Module):
             # (candidate_size, 3)
             candidate_set_i = torch.cat([candidate_set_i.unsqueeze(1), candidate_set_i_time], dim=1)
             # (candidate_size, trace_len + 1, 3)
-            candidate_trace_i = torch.cat([current_trace_i, candidate_set_i], dim=1)
+            candidate_trace_i = torch.cat([current_trace_i, candidate_set_i.unsqueeze(1)], dim=1)
             # (candidate_size, hidden_size)
             candidate_trace_hidden = self.encode_trace(uid.repeat(candidate_trace_i.shape[0]), candidate_trace_i)
             # inter-trajectory attn for each candidate trace
@@ -131,7 +131,7 @@ class FunctionG(nn.Module):
             for candidate_j in range(candidate_trace_hidden.shape[0]):
                 inter_attn_candidate_j = self.inter_trajectory_attn(query=candidate_trace_hidden[
                                                                     candidate_j].unsqueeze(0),
-                                                                    key=history_trace_hidden.unsqueeze(0))
+                                                                    key=history_trace_hidden)
                 inter_attn_candidate_trace.append(inter_attn_candidate_j)
             # cat as tensor
             # (candidate_size, hidden_size)
@@ -155,15 +155,15 @@ class FunctionG(nn.Module):
         """
         # embed trace
         uid_emb = self.uid_emb(uid)  # (batch_size, uid_emb_size)
-        trace_loc_emb = self.loc_emb(trace[:, 0])  # (batch_size, trace_len, loc_emb_size)
-        trace_weekday_emb = self.weekday_emb(trace[:, 1])
-        trace_hour_emb = self.hour_emb(trace[:, 2])
+        trace_loc_emb = self.loc_emb(trace[:, :, 0])  # (batch_size, trace_len, loc_emb_size)
+        trace_weekday_emb = self.weekday_emb(trace[:, :, 1])
+        trace_hour_emb = self.hour_emb(trace[:, :, 2])
         # repeat uid_emb to trace_len
-        trace_len = trace_loc_emb.shape[0]
+        trace_len = trace_loc_emb.shape[1]
         uid_emb = uid_emb.unsqueeze(1).repeat(1, trace_len, 1)  # (batch_size, trace_len, uid_emb_size)
         # cat all embedding
         # (batch_size, trace_len, emb_feature_size)
-        trace_emb = torch.cat([uid_emb, trace_loc_emb, trace_weekday_emb, trace_hour_emb], dim=1)
+        trace_emb = torch.cat([uid_emb, trace_loc_emb, trace_weekday_emb, trace_hour_emb], dim=2)
         trace_hidden_state, hn = self.gru(trace_emb)
         intra_trace_hidden = self.intra_trajectory_attn(query=trace_hidden_state[:, -1, :], key=trace_hidden_state)
         return intra_trace_hidden
@@ -237,7 +237,7 @@ class ContextAwareGAT(GATLayerImp3):
         #
         # Step 1: Linear Projection + regularization
         #
-        in_nodes_features = self.node_features.clone()
+        in_nodes_features = torch.FloatTensor(self.node_features).to(self.device)
         edge_index = self.edge_index.clone()
         num_of_nodes = in_nodes_features.shape[self.nodes_dim]
         assert edge_index.shape[0] == 2, f'Expected edge index with shape=(2,E) got {edge_index.shape}'
@@ -258,7 +258,7 @@ class ContextAwareGAT(GATLayerImp3):
         scores_source = (nodes_features_proj * self.scoring_fn_source).sum(dim=-1)
         scores_target = (nodes_features_proj * self.scoring_fn_target).sum(dim=-1)
         # (1, NH)
-        scores_moving_sate = self.moving_state_w(data.unsqueeze(0))
+        scores_moving_state = self.moving_state_w(data.unsqueeze(0))
         # get edge weight (distance) from adj_mx
         # (E, 1)
         edge_weight = torch.tensor(self.adj_mx.data).unsqueeze(1).to(self.device)
@@ -266,7 +266,7 @@ class ContextAwareGAT(GATLayerImp3):
         # (E, distance_emb_size)
         edge_weight = self.distance_emb(edge_weight)
         # (E, NH)
-        edge_score = self.distance_w(edge_weight)
+        edge_score = self.distance_w(edge_weight).squeeze(1)
         # We simply copy (lift) the scores for source/target nodes based on the edge index. Instead of preparing all
         # the possible combinations of scores we just prepare those that will actually be used and those are defined
         # by the edge index.
@@ -275,7 +275,7 @@ class ContextAwareGAT(GATLayerImp3):
                                                                                            nodes_features_proj,
                                                                                            edge_index)
         # (E, NH)
-        scores_per_edge = self.leakyReLU(scores_source_lifted + scores_target_lifted + scores_moving_sate + edge_score)
+        scores_per_edge = self.leakyReLU(scores_source_lifted + scores_target_lifted + scores_moving_state + edge_score)
         # shape = (E, NH, 1)
         attentions_per_edge = self.neighborhood_aware_softmax(scores_per_edge, edge_index[self.trg_nodes_dim],
                                                               num_of_nodes)
@@ -313,7 +313,8 @@ class FunctionH(nn.Module):
         self.distance_bins = data_feature['distance_bins']
         self.gat = ContextAwareGAT(config, data_feature)
         self.distance_emb = nn.Embedding(num_embeddings=self.distance_bins, embedding_dim=self.distance_emb_size)
-        self.input_size = self.gat.num_out_features * 2 + self.hidden_size + self.distance_emb_size
+        self.input_size = self.gat.num_out_features * self.gat.num_of_heads * 2 + self.hidden_size
+        self.input_size += self.distance_emb_size
         # two layer linear layer -- MLP
         self.fc1 = nn.Linear(in_features=self.input_size, out_features=self.hidden_size)
         self.fc2 = nn.Linear(in_features=self.hidden_size, out_features=1)
@@ -331,9 +332,9 @@ class FunctionH(nn.Module):
             fc2_out (1): the heuristics cost of function h
         """
         node_emb_features = self.gat(moving_state)
-        li_emb = node_emb_features[li]
-        ld_emb = node_emb_features[ld]
-        distance_emb = self.distance_emb(distance)
+        li_emb = node_emb_features[li].squeeze(0)
+        ld_emb = node_emb_features[ld].squeeze(0)
+        distance_emb = self.distance_emb(distance).squeeze(0)
         input_feature = torch.cat([moving_state, li_emb, ld_emb, distance_emb], dim=0)
         fc1_out = torch.relu(self.fc1(input_feature))
         fc2_out = self.fc2(fc1_out)
@@ -392,8 +393,8 @@ class NASR(AbstractModel):
             f_cost: each candidate's f_cost
         """
         # calculate g prob
-        g_prob, moving_state = self.function_g.forward(uid=uid, current_trace=current_trace,
-                                                       candidate_set=candidate_set,
+        g_prob, moving_state = self.function_g.forward(uid=uid.squeeze(0), current_trace=[current_trace],
+                                                       candidate_set=[candidate_set],
                                                        history_trace=[], history_trace_hidden=history_hidden)
         # This step needs to be done because of the function_g forward interface
         g_prob = g_prob[0]
@@ -422,14 +423,14 @@ class NASR(AbstractModel):
             # parse query
             query_i = query[i]
             des_rid = query_i[3]
-            uid = torch.LongTensor(query_i[4]).to(self.device)
+            uid = torch.LongTensor([query_i[4]]).to(self.device)
             open_set = PriorityQueue()  # unvisited node set
             close_set = set()  # visited node set
             rid2node = {}  # the dict key is rid, and value is corresponding search node
             des_center_gps = self.road_gps[des_rid]
             des = torch.LongTensor([des_rid]).to(self.device)
             # put l_s into open_set
-            start_node = SearchNode(trace=[query_i[0], query_i[1], query_i[2]], rid=query_i[0],
+            start_node = SearchNode(trace=[[query_i[0], query_i[1], query_i[2]]], rid=query_i[0],
                                     date_time=query_i[2] * 60, log_prob=0.0)
             open_set.put((start_node.log_prob, start_node))
             rid2node[query_i[0]] = start_node
@@ -441,11 +442,11 @@ class NASR(AbstractModel):
             for history_j in range(len(history_trace_i)):
                 # (1, trace_len, 3)
                 history_trace_j = torch.LongTensor(history_trace_i[history_j]).to(self.device).unsqueeze(0)
-                history_trace_j_hidden = self.function_g.encode_trace(uid, history_trace_j)  # (hidden_size)
-                history_trace_hidden_list.append(history_trace_j_hidden.unsqueeze(0))
+                history_trace_j_hidden = self.function_g.encode_trace(uid, history_trace_j)  # (1, hidden_size)
+                history_trace_hidden_list.append(history_trace_j_hidden)
             # form list to tensor
-            # (history_len, hidden_size)
-            history_trace_hidden = torch.cat(history_trace_hidden_list, dim=0)
+            # (1, history_len, hidden_size)
+            history_trace_hidden = torch.cat(history_trace_hidden_list, dim=0).unsqueeze(0)
             # find flag
             best_trace = []
             best_score = 0
@@ -480,7 +481,7 @@ class NASR(AbstractModel):
                             candidate_dis.append(distance_to_bin(d))
                         trace = torch.LongTensor(now_node.trace).to(self.device)
                         candidate = torch.LongTensor(candidate_set).to(self.device)
-                        dis = torch.FloatTensor(candidate_dis).to(self.device)
+                        dis = torch.LongTensor(candidate_dis).to(self.device)
                         # 根据模型计算 f 函数值和 g 函数值
                         with torch.no_grad():
                             candidate_f_cost = self.forward(uid=uid, current_trace=trace,
@@ -527,7 +528,7 @@ class NASR(AbstractModel):
                                     best_trace = rid2node[c].trace
                                     best_score = candidate_score
                 step += 1
-            generate_trace.append((uid, best_trace))
+            generate_trace.append((uid.item(), best_trace))
         return generate_trace
 
     def calculate_loss(self, batch):
@@ -563,15 +564,16 @@ class NASR(AbstractModel):
                                                                              candidate_set[iter_i])
                 # select target's prob and moving state
                 des_index = target[iter_i][-1]
-                ld = candidate_set[iter_i][-1][des_index]
+                ld = torch.LongTensor([candidate_set[iter_i][-1][des_index]]).to(self.device)
                 for target_i in range(len(target[iter_i])):
                     # the last point do not need to learn
                     target_index = target[iter_i][target_i]
-                    li = torch.LongTensor([candidate_set[iter_i][target_i][target_index]])  # (1)
-                    distance_li_ld = torch.LongTensor([candidate_distance[iter_i][target_i]])  # (1)
+                    li = torch.LongTensor([candidate_set[iter_i][target_i][target_index]]).to(self.device)  # (1)
+                    distance_li_ld = torch.LongTensor([candidate_distance[iter_i][target_i][target_index]]).to(
+                        self.device)  # (1)
                     target_i_h_cost = self.function_h.forward(moving_state=moving_state[target_i][target_index], li=li,
                                                               ld=ld, distance=distance_li_ld)
-                    target_g_prob.append(candidate_g_prob[target_i][target_index])
+                    target_g_prob.append(candidate_g_prob[target_i][target_index].unsqueeze(0))
                     target_h_cost.append(target_i_h_cost)
                 # base on target_g_prob calculate function h's target
                 target_h_cost = torch.cat(target_h_cost, dim=0)  # (trace_len)
@@ -581,13 +583,12 @@ class NASR(AbstractModel):
                 n = min(self.time_diff_n, target_h_cost.shape[0] - 1)
                 pre_h_n = target_h_cost[:-n]
                 after_h_n = target_h_cost[n:]
-                discount_g = []
+                discount_g = torch.zeros((pre_h_n.shape[0])).to(self.device)
                 for i in range(pre_h_n.shape[0]):
-                    c_lj = target_g_cost[i+1].clone()
-                    for j in range(i+2, i+n):
-                        c_lj += self.discount_rate ** (j-i-1) * target_g_cost[j]
-                    discount_g.append(c_lj)
-                discount_g = torch.cat(discount_g, dim=0)
+                    c_lj = target_g_cost[i + 1].clone()
+                    for j in range(i + 2, i + n):
+                        c_lj += self.discount_rate ** (j - i - 1) * target_g_cost[j]
+                    discount_g[i] = c_lj
                 loss = torch.sum(torch.square(pre_h_n - self.discount_rate ** n * after_h_n - discount_g))
                 return loss
         else:
