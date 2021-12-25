@@ -200,3 +200,28 @@ class Align(nn.Module):
         if self.c_in < self.c_out:
             return F.pad(x, [0, 0, 0, 0, 0, self.c_out - self.c_in, 0, 0])
         return x  # return: (batch_size, c_out, input_length-1+1, num_nodes-1+1)
+
+# spatial matrixs based on shortest path algorithm
+def get_spatial_matrix(adj_mx):
+    h, w = adj_mx.shape
+    inf = float("inf")
+
+    S_near = np.zeros((h, w))
+    S_middle = np.zeros((h, w))
+    S_distant = np.zeros((h, w))
+
+    i = 0
+    for row in adj_mx:
+        L_min = np.min(row)
+        np.place(row, row == inf, [-1])
+        L_max = np.max(row)
+        eta = (L_max-L_min)/3
+        S_near[i] = np.logical_and(row >= L_min, row < L_min + eta)
+        S_middle[i] = np.logical_and(row >= L_min + eta, row < L_min + 2 * eta)
+        S_distant[i] = np.logical_and(row >= L_min + 2*eta, row < L_max)
+        i = i + 1
+
+    S_near = S_near.astype(np.float32)
+    S_middle = S_middle.astype(np.float32)
+    S_distant = S_distant.astype(np.float32)
+    return torch.tensor(S_near), torch.tensor(S_middle), torch.tensor(S_distant)

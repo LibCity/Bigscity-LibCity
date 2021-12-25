@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from Output.mlp import FC
 
 
@@ -52,3 +53,41 @@ class SpatialAttention(nn.Module):
         x = torch.cat(torch.split(x, x.size(0) // self.num_heads, dim=0), dim=-1)
         x = self.output_fc(x)  # (batch_size, num_steps, num_nodes, D)
         return x
+
+
+class SpatialAttentionLayer(nn.Module):
+    """
+    compute spatial attention scores,chebploy graph attention
+    """
+
+    def __init__(self, device, in_channels, num_of_vertices, num_of_timesteps):
+        super(SpatialAttentionLayer, self).__init__()
+        self.W1 = nn.Parameter(torch.FloatTensor(num_of_timesteps).to(device))
+        self.W2 = nn.Parameter(torch.FloatTensor(in_channels, num_of_timesteps).to(device))
+        self.W3 = nn.Parameter(torch.FloatTensor(in_channels).to(device))
+        self.bs = nn.Parameter(torch.FloatTensor(1, num_of_vertices, num_of_vertices).to(device))
+        self.Vs = nn.Parameter(torch.FloatTensor(num_of_vertices, num_of_vertices).to(device))
+
+    def forward(self, x):
+        """
+        Args:
+            x(torch.tensor): (B,T ,N, F_in)
+
+        Returns:
+            torch.tensor: (B,N,N)
+        """
+        # x --> (b n f t)
+        # x * W1 --> (B,N,F,T)(T)->(B,N,F)
+        # x * W1 * W2 --> (B,N,F)(F,T)->(B,N,T)
+        x=x.permute(0, 2, 3, 1)
+
+        lhs = torch.matmul(torch.matmul(x, self.W1), self.W2)
+        # (W3 * x) ^ T --> (F)(B,N,F,T)->(B,N,T)-->(B,T,N)
+        rhs = torch.matmul(self.W3, x).transpose(-1, -2)
+        # x = lhs * rhs --> (B,N,T)(B,T,N) -> (B, N, N)
+        product = torch.matmul(lhs, rhs)
+        # S = Vs * sig(x + bias) --> (N,N)(B,N,N)->(B,N,N)
+        s = torch.matmul(self.Vs, torch.sigmoid(product + self.bs))
+        # softmax (B,N,N)
+        s_normalized = F.softmax(s, dim=1)
+        return s_normalized

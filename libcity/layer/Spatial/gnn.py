@@ -8,6 +8,7 @@ import numpy as np
 from torch.autograd import Variable
 from torch.nn import Parameter
 
+from libcity.layer.Spatial.atten import SpatialAttentionLayer
 from libcity.layer.utils import calculate_scaled_laplacian, calculate_cheb_poly, calculate_first_approx, \
     calculate_random_walk_matrix
 from libcity.model.traffic_speed_prediction.STAGGCN import GATConv
@@ -435,3 +436,134 @@ class MixhopGCN(nn.Module):
     def forward(self, x):
         h_out = self.gcn1(x, self.adj) + self.gcn2(x, self.adj.transpose(1, 0))
         return h_out
+
+
+class ChebConvWithSAt(nn.Module):
+    """
+    K-order chebyshev graph convolution with spatial attention ASTGCN
+    """
+
+    def __init__(self, k, cheb_polynomials, in_channels, out_channels,num_nodes,num_timesteps):
+        """
+        Args:
+            k(int): K-order
+            cheb_polynomials: cheb_polynomials
+            in_channels(int): num of channels in the input sequence
+            out_channels(int): num of channels in the output sequence
+        """
+        super(ChebConvWithSAt, self).__init__()
+        self.K = k
+        self.cheb_polynomials = cheb_polynomials
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.DEVICE = cheb_polynomials[0].device
+        self.Theta = nn.ParameterList([nn.Parameter(torch.FloatTensor(in_channels, out_channels).
+                                                    to(self.DEVICE)) for _ in range(k)])
+        self.SAt = SpatialAttentionLayer(self.DEVICE, in_channels, num_nodes, num_timesteps)
+
+    def forward(self, x):
+        """
+        Chebyshev graph convolution operation
+
+        Args:
+            x: (batch_size, T, N, F_in)
+            spatial_attention: (batch_size, N, N)
+
+        Returns:
+            torch.tensor: (batch_size, T, N, F_out)
+        """
+        batch_size, num_of_timesteps, num_of_vertices, in_channels = x.shape
+
+        spatial_attention=self.SAt(x)
+        outputs = []
+
+        for time_step in range(num_of_timesteps):
+
+            graph_signal = x[:, time_step, :, :]  # (b, N, F_in)
+
+            output = torch.zeros(batch_size, num_of_vertices, self.out_channels).to(self.DEVICE)  # (b, N, F_out)
+
+            for k in range(self.K):
+
+                t_k = self.cheb_polynomials[k]  # (N,N)
+
+                t_k_with_at = t_k.mul(spatial_attention)   # (N,N)*(B,N,N) = (B,N,N) .mul->element-wise的乘法
+
+                theta_k = self.Theta[k]  # (in_channel, out_channel)
+
+                rhs = t_k_with_at.permute(0, 2, 1).matmul(graph_signal)  # (B, N, N)(B, N, F_in) = (B, N, F_in)
+
+                output = output + rhs.matmul(theta_k)  # (b, N, F_in)(F_in, F_out) = (b, N, F_out)
+
+            outputs.append(output.unsqueeze(1))  # (b, 1,N, F_out)
+
+        return F.relu(torch.cat(outputs, dim=1))  # (b, t, N, F_out)
+
+
+# adaptive gated gcn
+class AGGCN(nn.Module):
+    def __init__(self, node_num=524, seq_len=12, graph_dim=16, tcn_dim=[10],
+                 choice='sp', attn_head=2, input_dim=1, output_dim=1,num_layer=3,feat_dim=12):
+
+        super(AGGCN, self).__init__()
+
+        self.node_num = node_num
+        self.seq_len = seq_len
+        self.graph_dim = graph_dim
+        self.tcn_dim = tcn_dim
+        self.pred_len_raw = np.sum(choice) * graph_dim
+        self.choice = choice
+
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.in_features = seq_len * input_dim
+
+        self.seq_linear = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.input_dim * seq_len)
+
+        self.GATList=nn.ModuleList()
+        self.GATList.append(GATConv(self.input_dim * seq_len, self.output_dim * graph_dim, heads=3, concat=False))
+        for i in range(1,num_layer-1):
+            self.GATList.append(GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False))
+        if choice=='sp':
+            self.GATList.append(GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=1, concat=False))
+        else:
+            self.GATList.append(
+                GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False))
+
+        self.LinearList=nn.ModuleList()
+        self.LinearList.append(nn.Linear(self.input_dim * seq_len, self.output_dim * self.graph_dim))
+        for i in range(1,num_layer):
+            self.LinearList.append(nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim))
+
+        self.source_embedding=nn.Parameter(torch.Tensor(self.node_num, feat_dim))
+        self.target_embedding=nn.Parameter(torch.Tensor(feat_dim,self.node_num))
+
+        self.num_layer=num_layer
+
+        nn.init.xavier_uniform_(self.sp_source_embed)
+        nn.init.xavier_uniform_(self.sp_target_embed)
+
+    def forward(self,inputs,edge_index):
+        """
+
+        Args:
+            inputs: [batch_size, seq_len, num_nodes, input_dim]
+            edge_index:
+
+        Returns:
+
+        """
+        # [batch_size, num_nodes, input_dim*seq_len]
+        sp_gout_0 = inputs.permute(0, 2, 3, 1).reshape(-1, self.input_dim * self.seq_len).contiguous()
+        sp_gout_0 = self.seq_linear(sp_gout_0) + sp_gout_0
+
+        for i in range(self.num_layer):
+            h_out=self.GATList[i](sp_gout_0,edge_index)
+
+
+
+
+
+
+
