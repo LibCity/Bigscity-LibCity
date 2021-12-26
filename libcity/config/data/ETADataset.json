@@ -1,6 +1,7 @@
 {
   "batch_size": 10,
   "num_workers": 0,
+  "sort_by_traj_len": true,
   "cache_dataset": true,
   "train_rate": 0.7,
   "eval_rate": 0.1
