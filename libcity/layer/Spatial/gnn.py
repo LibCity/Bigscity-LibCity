@@ -443,7 +443,7 @@ class ChebConvWithSAt(nn.Module):
     K-order chebyshev graph convolution with spatial attention ASTGCN
     """
 
-    def __init__(self, k, cheb_polynomials, in_channels, out_channels,num_nodes,num_timesteps):
+    def __init__(self, k, cheb_polynomials, in_channels, out_channels, num_nodes, num_timesteps):
         """
         Args:
             k(int): K-order
@@ -474,7 +474,7 @@ class ChebConvWithSAt(nn.Module):
         """
         batch_size, num_of_timesteps, num_of_vertices, in_channels = x.shape
 
-        spatial_attention=self.SAt(x)
+        spatial_attention = self.SAt(x)
         outputs = []
 
         for time_step in range(num_of_timesteps):
@@ -484,10 +484,9 @@ class ChebConvWithSAt(nn.Module):
             output = torch.zeros(batch_size, num_of_vertices, self.out_channels).to(self.DEVICE)  # (b, N, F_out)
 
             for k in range(self.K):
-
                 t_k = self.cheb_polynomials[k]  # (N,N)
 
-                t_k_with_at = t_k.mul(spatial_attention)   # (N,N)*(B,N,N) = (B,N,N) .mul->element-wise的乘法
+                t_k_with_at = t_k.mul(spatial_attention)  # (N,N)*(B,N,N) = (B,N,N) .mul->element-wise的乘法
 
                 theta_k = self.Theta[k]  # (in_channel, out_channel)
 
@@ -503,7 +502,7 @@ class ChebConvWithSAt(nn.Module):
 # adaptive gated gcn
 class AGGCN(nn.Module):
     def __init__(self, node_num=524, seq_len=12, graph_dim=16, tcn_dim=[10],
-                 choice='sp', attn_head=2, input_dim=1, output_dim=1,num_layer=3,feat_dim=12):
+                 choice='sp', attn_head=2, input_dim=1, output_dim=1, num_layer=3, feat_dim=12):
 
         super(AGGCN, self).__init__()
 
@@ -514,56 +513,61 @@ class AGGCN(nn.Module):
         self.pred_len_raw = np.sum(choice) * graph_dim
         self.choice = choice
 
-
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.in_features = seq_len * input_dim
 
         self.seq_linear = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.input_dim * seq_len)
 
-        self.GATList=nn.ModuleList()
+        self.GATList = nn.ModuleList()
         self.GATList.append(GATConv(self.input_dim * seq_len, self.output_dim * graph_dim, heads=3, concat=False))
-        for i in range(1,num_layer-1):
-            self.GATList.append(GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False))
-        if choice=='sp':
-            self.GATList.append(GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=1, concat=False))
+        for i in range(1, num_layer - 1):
+            self.GATList.append(
+                GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False))
+        if choice == 'sp':
+            self.GATList.append(
+                GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=1, concat=False))
         else:
             self.GATList.append(
                 GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False))
 
-        self.LinearList=nn.ModuleList()
+        self.LinearList = nn.ModuleList()
         self.LinearList.append(nn.Linear(self.input_dim * seq_len, self.output_dim * self.graph_dim))
-        for i in range(1,num_layer):
+        for i in range(1, num_layer):
             self.LinearList.append(nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim))
 
-        self.source_embedding=nn.Parameter(torch.Tensor(self.node_num, feat_dim))
-        self.target_embedding=nn.Parameter(torch.Tensor(feat_dim,self.node_num))
+        self.source_embedding = nn.Parameter(torch.Tensor(self.node_num, feat_dim))
+        self.target_embedding = nn.Parameter(torch.Tensor(feat_dim, self.node_num))
 
-        self.num_layer=num_layer
+        self.num_layer = num_layer
 
         nn.init.xavier_uniform_(self.sp_source_embed)
         nn.init.xavier_uniform_(self.sp_target_embed)
 
-    def forward(self,inputs,edge_index):
+    def forward(self, inputs, edge_index):
         """
 
         Args:
             inputs: [batch_size, seq_len, num_nodes, input_dim]
-            edge_index:
+            edge_index: spatial
 
         Returns:
 
         """
+        batch_size = inputs.shape[0]
         # [batch_size, num_nodes, input_dim*seq_len]
-        sp_gout_0 = inputs.permute(0, 2, 3, 1).reshape(-1, self.input_dim * self.seq_len).contiguous()
-        sp_gout_0 = self.seq_linear(sp_gout_0) + sp_gout_0
+        h_out = inputs.permute(0, 2, 3, 1).reshape(-1, self.input_dim * self.seq_len).contiguous()
+        h_out = self.seq_linear(h_out) + h_out
+
+        sp_learned_matrix = F.softmax(F.relu(torch.mm(self.sp_source_embed, self.sp_target_embed)), dim=1)
 
         for i in range(self.num_layer):
-            h_out=self.GATList[i](sp_gout_0,edge_index)
+            h_out = self.GATList[i](h_out, edge_index)
+            adp_input = torch.reshape(h_out, (-1, self.node_num, self.input_dim * self.seq_len))
+            adp_out = self.sp_linear_1(sp_learned_matrix.matmul(F.dropout(adp_input, p=0.1)))
+            adp_out = torch.reshape(adp_out, (-1, self.output_dim * self.graph_dim))
+            sp_origin = self.sp_origin(h_out)
+            h_out = torch.tanh(h_out) * torch.sigmoid(adp_out) + sp_origin * (1 - torch.sigmoid(adp_out))
 
-
-
-
-
-
-
+        output = torch.reshape(h_out, (batch_size, self.node_num, self.output_dim, self.graph_dim))
+        return output
