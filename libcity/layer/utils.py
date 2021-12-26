@@ -225,3 +225,28 @@ def get_spatial_matrix(adj_mx):
     S_middle = S_middle.astype(np.float32)
     S_distant = S_distant.astype(np.float32)
     return torch.tensor(S_near), torch.tensor(S_middle), torch.tensor(S_distant)
+
+class decay_weight4TrajRnn(nn.Module):
+    def __init__(self,lambda_t,lambda_s):
+        '''
+            The hyper parameters to control spatial and temporal decay.
+        '''
+        self.lambda_s=lambda_s
+        self.lambda_t=lambda_t
+
+    def forward(self,delta_t,delta_s):
+        """
+        Location Prediction over Sparse User Mobility Traces using RNNs: Flashback in Hidden States! IJCAI'20
+        RNN output weight based on spatiotemporal context
+        Args:
+            delta_t: temporal distence float
+            delta_s: spatial distence float
+
+        Returns:
+            weight float
+        """
+        f_t = ((torch.cos(delta_t * 2 * np.pi / 86400) + 1) / 2) * torch.exp(
+            -(delta_t / 86400 * self.lambda_t))  # hover cosine + exp decay
+        f_s = torch.exp(-(delta_s * self.lambda_s))  # exp decay
+        w = f_t * f_s + 1e-10
+        return w

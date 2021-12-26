@@ -1,3 +1,5 @@
+import math
+
 import torch.nn as nn
 import torch
 from Output.mlp import FC
@@ -64,8 +66,39 @@ class TransformAttention(nn.Module):
         x = self.output_fc(x)  # (batch_size, output_length, num_nodes, D)
         return x
 
-# fixme
-# class LstmAttn(nn.Module):
-#     def __init__(self):
-#
 
+# fixme
+class RnnAttnOutput(nn.Module):
+    """ Attention 注意力机制模块, 对 Rnn 中间层输出做加权平均. """
+
+    def __init__(self, hidden_size,output_feats):
+        """ 初始化.
+        Args:
+            hidden_size (int): 中间层输出向量的大小
+        """
+
+        super(RnnAttnOutput, self).__init__()
+        self.sqrt_rec_size = 1. / math.sqrt(hidden_size)
+        self.output_feats=output_feats
+        # context vector
+        self.u = nn.Linear(in_features=hidden_size, out_features=output_feats, bias=False)
+        self.softmax = nn.Softmax(dim=2)
+
+    def forward(self, x):
+        """ 前向传播.
+        Args:
+            x (torch.tensor.Tensor): shape (batch, seq_len, hidden_size) or (batch,T,n,hidden_size)中间层输出序列
+        Returns:
+            (torch.tensor.Tensor): shape (batch, o,size) or (batch,o,n,hidden_size)
+        """
+        if len(x.shape) == 4:
+            batch = x.shape[0]
+            nodes = x.shape[2]
+            x = x.view(-1, nodes, x.shape[3]).contiguous()
+        w = self.u(x) * self.sqrt_rec_size
+        w = w.permute(0, 2, 1)
+        w = self.softmax(w)  # batch_size * o *seq_len
+        c = torch.bmm(w, x)
+        if len(x.shape) == 4:
+            c = c.view(batch, self.output_feats,nodes, -1)
+        return c
