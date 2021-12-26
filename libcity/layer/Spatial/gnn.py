@@ -501,23 +501,17 @@ class ChebConvWithSAt(nn.Module):
 
 # adaptive gated gcn
 class AGGCN(nn.Module):
-    def __init__(self, node_num=524, seq_len=12, graph_dim=16, tcn_dim=[10],
-                 choice='sp', attn_head=2, input_dim=1, output_dim=1, num_layer=3, feat_dim=12):
+    def __init__(self, node_num=524, seq_len=12, graph_dim=16,
+                 choice='sp', input_dim=1, output_dim=1, num_layer=3, feat_dim=12):
 
         super(AGGCN, self).__init__()
 
         self.node_num = node_num
         self.seq_len = seq_len
         self.graph_dim = graph_dim
-        self.tcn_dim = tcn_dim
-        self.pred_len_raw = np.sum(choice) * graph_dim
-        self.choice = choice
-
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.in_features = seq_len * input_dim
-
-        self.seq_linear = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.input_dim * seq_len)
+        self.choice = choice
 
         self.GATList = nn.ModuleList()
         self.GATList.append(GATConv(self.input_dim * seq_len, self.output_dim * graph_dim, heads=3, concat=False))
@@ -538,6 +532,7 @@ class AGGCN(nn.Module):
 
         self.source_embedding = nn.Parameter(torch.Tensor(self.node_num, feat_dim))
         self.target_embedding = nn.Parameter(torch.Tensor(feat_dim, self.node_num))
+        self.orgin_output = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.output_dim * graph_dim)
 
         self.num_layer = num_layer
 
@@ -559,15 +554,21 @@ class AGGCN(nn.Module):
         h_out = inputs.permute(0, 2, 3, 1).reshape(-1, self.input_dim * self.seq_len).contiguous()
         h_out = self.seq_linear(h_out) + h_out
 
-        sp_learned_matrix = F.softmax(F.relu(torch.mm(self.sp_source_embed, self.sp_target_embed)), dim=1)
+        learned_matrix = F.softmax(F.relu(torch.mm(self.sp_source_embed, self.sp_target_embed)), dim=1)
 
         for i in range(self.num_layer):
-            h_out = self.GATList[i](h_out, edge_index)
+            h_cur = self.GATList[i](h_out, edge_index)
             adp_input = torch.reshape(h_out, (-1, self.node_num, self.input_dim * self.seq_len))
-            adp_out = self.sp_linear_1(sp_learned_matrix.matmul(F.dropout(adp_input, p=0.1)))
+            adp_out = self.LinearList[i](learned_matrix.matmul(F.dropout(adp_input, p=0.1)))
             adp_out = torch.reshape(adp_out, (-1, self.output_dim * self.graph_dim))
-            sp_origin = self.sp_origin(h_out)
-            h_out = torch.tanh(h_out) * torch.sigmoid(adp_out) + sp_origin * (1 - torch.sigmoid(adp_out))
+
+            if i == 0:
+                origin = self.orgin_output(h_out)
+                h_out = torch.tanh(h_out) * torch.sigmoid(adp_out) + origin * (1 - torch.sigmoid(adp_out))
+            elif i == 1:
+                h_out = F.leaky_relu(h_cur) * torch.sigmoid(adp_out) + h_out * (1 - torch.sigmoid(adp_out))
+            else:
+                h_out = F.relu(h_cur) * torch.sigmoid(adp_out) + h_out * (1 - torch.sigmoid(adp_out))
 
         output = torch.reshape(h_out, (batch_size, self.node_num, self.output_dim, self.graph_dim))
         return output
