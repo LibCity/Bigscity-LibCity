@@ -333,7 +333,7 @@
         "GSNet": {
             "dataset_class": "GSNetDataset",
             "executor": "TrafficStateExecutor",
-            "evaluator": "TrafficStateEvaluator"
+            "evaluator": "TrafficAccidentEvaluator"
         },
         "CSTN": {
             "dataset_class": "CSTNDataset",
@@ -343,16 +343,22 @@
     },
     "eta": {
         "allowed_model": [
-            "DeepTTE"
+            "DeepTTE", "TTPNet"
         ],
         "allowed_dataset": [
-            "Chengdu_Taxi_Sample1"
+            "Chengdu_Taxi_Sample1", "Beijing_Taxi_Sample"
         ],
         "DeepTTE": {
             "dataset_class": "ETADataset",
             "executor": "ETAExecutor",
             "evaluator": "ETAEvaluator",
             "eta_encoder": "DeeptteEncoder"
+        },
+        "TTPNet": {
+            "dataset_class": "ETADataset",
+            "executor": "ETAExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "TtpnetEncoder"
         }
     },
     "map_matching": {
@@ -380,7 +386,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv", "LINE", "GeomGCN"
+            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk", "GeomGCN"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -398,6 +404,20 @@
         "GeomGCN": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        "GAT": {
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "Node2Vec": {
+            "dataset_class": "RoadNetWorkDataset",
+            "executor": "GensimExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "DeepWalk": {
+            "dataset_class": "RoadNetWorkDataset",
+            "executor": "GensimExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         }
     }

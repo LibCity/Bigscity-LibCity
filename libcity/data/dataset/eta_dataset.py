@@ -57,21 +57,21 @@ class ETADataset(AbstractDataset):
         self.dyna_feature_column = {col: i for i, col in enumerate(dyna_file)}
         res = dict()
         traj_id_set = set()
-        for index, row in dyna_file.iterrows():
-            traj_id = dyna_file.loc[index, "traj_id"]
+        for dyna in dyna_file.itertuples():
+            traj_id = getattr(dyna, "traj_id")
             if traj_id in traj_id_set:
                 continue
             traj_id_set.add(traj_id)
 
-            entity_id = dyna_file.loc[index, "entity_id"]
+            entity_id = getattr(dyna, "entity_id")
             if entity_id not in res:
                 res[entity_id] = []
             rows = dyna_file[dyna_file['traj_id'] == traj_id]
 
             traj = []
-            for index, row in rows.iterrows():
+            for _, row in rows.iterrows():
                 traj.append(row.tolist())
-            res[entity_id].append(traj)
+            res[entity_id].append(traj[:])
         return res
 
     def _encode_traj(self, data):
@@ -130,9 +130,17 @@ class ETADataset(AbstractDataset):
             eval_num = math.ceil(
                 traj_len * (train_rate + eval_rate))
             train_data += encoded_trajectories[:train_num]
-            eval_data += encoded_trajectories[train_num:eval_num]
+            eval_data += encoded_trajectories[train_num: eval_num]
             test_data += encoded_trajectories[eval_num:]
         return train_data, eval_data, test_data
+
+    def _sort_data(self, data, traj_len_idx, chunk_size):
+        chunks = (len(data) + chunk_size - 1) // chunk_size
+        # re-arrange indices to minimize the padding
+        for i in range(chunks):
+            data[i * chunk_size: (i + 1) * chunk_size] = sorted(
+                data[i * chunk_size: (i + 1) * chunk_size], key=lambda x: x[traj_len_idx], reverse=True)
+        return data
 
     def get_data(self):
         if self.data is None:
@@ -157,6 +165,20 @@ class ETADataset(AbstractDataset):
                     self._logger.info('Saved at ' + self.encoder.cache_file_name)
         # TODO: 可以按照uid来划分，也可以全部打乱划分
         train_data, eval_data, test_data = self._divide_data()
+        scalar_data_feature = self.encoder.gen_scalar_data_feature(train_data)
+        self.data["data_feature"].update(scalar_data_feature)
+        sort_by_traj_len = self.config["sort_by_traj_len"]
+        if sort_by_traj_len:
+            '''
+            Divide the data into chunks with size = batch_size * 100
+            sort by the length in one chunk
+            '''
+            traj_len_idx = self.data["data_feature"]["traj_len_idx"]
+            chunk_size = self.config['batch_size'] * 100
+
+            train_data = self._sort_data(train_data, traj_len_idx, chunk_size)
+            eval_data = self._sort_data(eval_data, traj_len_idx, chunk_size)
+            test_data = self._sort_data(test_data, traj_len_idx, chunk_size)
         self._logger.info("Number of train data: {}".format(len(train_data)))
         self._logger.info("Number of eval  data: {}".format(len(eval_data)))
         self._logger.info("Number of test  data: {}".format(len(test_data)))
@@ -165,6 +187,7 @@ class ETADataset(AbstractDataset):
             self.encoder.feature_dict,
             self.config['batch_size'],
             self.config['num_workers'], self.pad_item,
+            shuffle=not sort_by_traj_len,
         )
 
     def get_data_feature(self):

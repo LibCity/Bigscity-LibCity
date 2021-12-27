@@ -281,7 +281,9 @@ class GSNet(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super(GSNet, self).__init__(config, data_feature)
         self.device = config.get('device', 'cpu')
-
+        self._scaler = self.data_feature.get('scaler')
+        self.feature_dim = self.data_feature.get('feature_dim', 1)  # 输入维度
+        self.output_dim = self.data_feature.get('output_dim', 1)  # 输出维度
         self.graph_input_indices = data_feature.get('graph_input_indices', [])
         self.grid_in_channel = data_feature.get('feature_dim', 0)
         self.target_time_indices = data_feature.get('target_time_indices', [])
@@ -397,7 +399,8 @@ class GSNet(AbstractTrafficStateModel):
         # [batch_size, output_window, num_rows, num_cols, output_dim] ->
         # [batch_size, output_dim, num_rows, num_cols, output_window]
         y_true = batch['y'][..., :1].permute(0, 4, 2, 3, 1)
-
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_pred = self._scaler.inverse_transform(y_pred[..., :self.output_dim])
         risk_mask = self.risk_mask / self.risk_mask.mean()
         # [batch_size, output_dim, num_cols, num_rows, output_window]
         loss = (y_true - y_pred).mul(risk_mask).pow(2)

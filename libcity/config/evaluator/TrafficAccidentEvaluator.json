@@ -1,0 +1,7 @@
+{
+  "metrics": ["MAE", "MAPE", "MSE", "RMSE", "masked_MAE", "masked_MAPE", "masked_MSE", "masked_RMSE", "R2", "EVAR",
+    "Precision", "Recall", "F1-Score", "MAP", "PCC"],
+  "mode": "single",
+  "save_modes": ["csv"],
+  "topk": 10
+}

@@ -16,9 +16,9 @@
   "max_epoch": 100,
   "batch_size": 10,
   "learner": "adam",
-  "learning_rate": 0.001,
+  "learning_rate": 1e-3,
   "lr_decay": false,
   "clip_grad_norm": false,
-  "use_early_stop": true,
+  "use_early_stop": false,
   "patience": 20
 }

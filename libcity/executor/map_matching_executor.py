@@ -9,7 +9,9 @@ class MapMatchingExecutor(AbstractTraditionExecutor):
         self.model = model
         self.config = config
         self.evaluator = get_evaluator(config)
-        self.evaluate_res_dir = './libcity/cache/evaluate_cache'
+        self.exp_id = self.config.get('exp_id', None)
+        self.cache_dir = './libcity/cache/{}/model_cache'.format(self.exp_id)
+        self.evaluate_res_dir = './libcity/cache/{}/evaluate_cache'.format(self.exp_id)
         self._logger = getLogger()
 
     def evaluate(self, test_data):
