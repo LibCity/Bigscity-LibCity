@@ -12,6 +12,7 @@ from libcity.data.dataset.abstract_dataset import AbstractDataset
 from libcity.data.list_dataset import ListDataset
 from libcity.data.batch import Batch
 from torch.utils.data import DataLoader
+from libcity.utils.utils import ensure_dir
 
 parameter_list = ['dataset', 'train_rate', 'eval_rate', 'max_history_len']
 
@@ -60,6 +61,7 @@ class NASRDataset(AbstractDataset):
             else:
                 self.cache_filename += '_' + str(self.config[param])
         self.cache_filename += '.json'
+        self.cache_folder = './libcity/cache/dataset_cache/'
         self.data_path = './raw_data/{}/'.format(self.config['dataset'])
         self.dyna_filename = '{}.dyna'.format(self.config['dataset'])
         self.data = None
@@ -74,6 +76,7 @@ class NASRDataset(AbstractDataset):
                                    'candidate_set': 'no_tensor', 'target': 'no_tensor', 'distance': 'no_tensor'}
         self.test_feature_name = {'query': 'no_tensor', 'true_trace': 'no_tensor'}
         self._logger = getLogger()
+        ensure_dir(self.cache_folder)
 
     def get_data(self):
         """
