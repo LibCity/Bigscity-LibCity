@@ -434,7 +434,7 @@ class NASR(AbstractModel):
                                     date_time=query_i[2] * 60, log_prob=0.0)
             open_set.put((start_node.log_prob, start_node))
             rid2node[query_i[0]] = start_node
-            max_search_step = 500
+            max_search_step = 1000
             step = 0
             # encode history
             history_trace_i = query_i[5]
@@ -515,7 +515,7 @@ class NASR(AbstractModel):
                                     rid2node[c] = candidate_node
                                     if len(candidate_node.trace) == default_len and candidate_score > best_score:
                                         # give the default recommended trace
-                                        best_trace = candidate_node.trace
+                                        best_trace = [[x[0] for x in candidate_node.trace]]
                                         best_score = candidate_score
                                 elif c in rid2node and rid2node[c].log_prob > candidate_log_prob:
                                     # update search node
@@ -528,9 +528,11 @@ class NASR(AbstractModel):
                                     open_set.put((candidate_log_prob, rid2node[c]))
                                     if len(rid2node[c].trace) == default_len and candidate_score > best_score:
                                         # give the default recommended trace
-                                        best_trace = rid2node[c].trace
+                                        best_trace = [x[0] for x in rid2node[c].trace]
                                         best_score = candidate_score
                 step += 1
+            if best_trace is None:
+                best_trace = [query_i[0]]
             generate_trace.append((uid.item(), best_trace))
         return generate_trace
 
