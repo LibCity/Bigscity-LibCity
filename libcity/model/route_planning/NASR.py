@@ -360,6 +360,24 @@ class SearchNode(object):
         self.date_time = date_time
         self.log_prob = log_prob
 
+    def __ge__(self, other):
+        if not isinstance(other, SearchNode):
+            raise TypeError('>= require SearchNode')
+        else:
+            return self.log_prob >= other.log_prob
+
+    def __le__(self, other):
+        if not isinstance(other, SearchNode):
+            raise TypeError('<= require SearchNone')
+        else:
+            return self.log_prob <= other.log_prob
+
+    def __lt__(self, other):
+        if not isinstance(other, SearchNode):
+            raise TypeError('< require SearchNone')
+        else:
+            return self.log_prob < other.log_prob
+
 
 class NASR(AbstractModel):
     """
