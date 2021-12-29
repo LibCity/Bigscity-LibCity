@@ -471,62 +471,65 @@ class NASR(AbstractModel):
                     break
                 else:
                     # search now's adjacent rid
-                    candidate_set = self.adjacent_list[now_rid]
-                    if len(candidate_set) != 0:
-                        candidate_dis = []
-                        for c in candidate_set:
-                            candidate_gps = self.road_gps[c]
-                            d = distance.distance((des_center_gps[1], des_center_gps[0]),
-                                                  (candidate_gps[1], candidate_gps[0])).kilometers * 1000
-                            candidate_dis.append(distance_to_bin(d))
-                        trace = torch.LongTensor(now_node.trace).to(self.device)
-                        candidate = torch.LongTensor(candidate_set).to(self.device)
-                        dis = torch.LongTensor(candidate_dis).to(self.device)
-                        # 根据模型计算 f 函数值和 g 函数值
-                        with torch.no_grad():
-                            candidate_f_cost = self.forward(uid=uid, current_trace=trace,
-                                                            history_hidden=history_trace_hidden,
-                                                            candidate_set=candidate, candidate_distance=dis,
-                                                            des=des)
-                        # update each candidate's node
-                        # calculate next datetime
-                        now_datetime = now_node.date_time
-                        now_weekday = now_node.trace[-1][1]
-                        # add a fix time step
-                        next_datetime = now_datetime + 5
-                        if next_datetime >= 1440:
-                            # a new day
-                            # weekday from 0 to 6
-                            now_weekday = (now_weekday + 1) % 7
-                            next_datetime = next_datetime % 1440
-                        next_hourindex = next_datetime // 60
-                        for index, c in enumerate(candidate_set):
-                            candidate_log_prob = now_node.log_prob + candidate_f_cost[index].item()
-                            candidate_score = np.exp(-candidate_log_prob)
-                            if c not in rid2node and c not in close_set:
-                                # c has not been reached
-                                candidate_node = SearchNode(trace=now_node.trace + [[c, now_weekday, next_hourindex]],
-                                                            rid=c, date_time=next_datetime, log_prob=candidate_log_prob)
-                                # put c in open_set
-                                open_set.put((candidate_log_prob, candidate_node))
-                                rid2node[c] = candidate_node
-                                if len(candidate_node.trace) == default_len and candidate_score > best_score:
-                                    # give the default recommended trace
-                                    best_trace = candidate_node.trace
-                                    best_score = candidate_score
-                            elif c in rid2node and rid2node[c].log_prob > candidate_log_prob:
-                                # update search node
-                                rid2node[c].log_prob = candidate_log_prob
-                                rid2node[c].trace = now_node.trace + [[c, now_weekday, next_hourindex]]
-                                rid2node[c].date_time = next_datetime
-                                # there seems no way to update c in open_set, so just put c in open_set.
-                                # the higher priority c will be searched first.
-                                # so this is still work.
-                                open_set.put((candidate_log_prob, rid2node[c]))
-                                if len(rid2node[c].trace) == default_len and candidate_score > best_score:
-                                    # give the default recommended trace
-                                    best_trace = rid2node[c].trace
-                                    best_score = candidate_score
+                    if now_rid in self.adjacent_list:
+                        candidate_set = self.adjacent_list[now_rid]
+                        if len(candidate_set) != 0:
+                            candidate_dis = []
+                            for c in candidate_set:
+                                candidate_gps = self.road_gps[c]
+                                d = distance.distance((des_center_gps[1], des_center_gps[0]),
+                                                      (candidate_gps[1], candidate_gps[0])).kilometers * 1000
+                                candidate_dis.append(distance_to_bin(d))
+                            trace = torch.LongTensor(now_node.trace).to(self.device)
+                            candidate = torch.LongTensor(candidate_set).to(self.device)
+                            dis = torch.LongTensor(candidate_dis).to(self.device)
+                            # 根据模型计算 f 函数值和 g 函数值
+                            with torch.no_grad():
+                                candidate_f_cost = self.forward(uid=uid, current_trace=trace,
+                                                                history_hidden=history_trace_hidden,
+                                                                candidate_set=candidate, candidate_distance=dis,
+                                                                des=des)
+                            # update each candidate's node
+                            # calculate next datetime
+                            now_datetime = now_node.date_time
+                            now_weekday = now_node.trace[-1][1]
+                            # add a fix time step
+                            next_datetime = now_datetime + 5
+                            if next_datetime >= 1440:
+                                # a new day
+                                # weekday from 0 to 6
+                                now_weekday = (now_weekday + 1) % 7
+                                next_datetime = next_datetime % 1440
+                            next_hourindex = next_datetime // 60
+                            for index, c in enumerate(candidate_set):
+                                candidate_log_prob = now_node.log_prob + candidate_f_cost[index].item()
+                                candidate_score = np.exp(-candidate_log_prob)
+                                if c not in rid2node and c not in close_set:
+                                    # c has not been reached
+                                    candidate_node = SearchNode(trace=now_node.trace + [[c, now_weekday,
+                                                                                        next_hourindex]],
+                                                                rid=c, date_time=next_datetime,
+                                                                log_prob=candidate_log_prob)
+                                    # put c in open_set
+                                    open_set.put((candidate_log_prob, candidate_node))
+                                    rid2node[c] = candidate_node
+                                    if len(candidate_node.trace) == default_len and candidate_score > best_score:
+                                        # give the default recommended trace
+                                        best_trace = candidate_node.trace
+                                        best_score = candidate_score
+                                elif c in rid2node and rid2node[c].log_prob > candidate_log_prob:
+                                    # update search node
+                                    rid2node[c].log_prob = candidate_log_prob
+                                    rid2node[c].trace = now_node.trace + [[c, now_weekday, next_hourindex]]
+                                    rid2node[c].date_time = next_datetime
+                                    # there seems no way to update c in open_set, so just put c in open_set.
+                                    # the higher priority c will be searched first.
+                                    # so this is still work.
+                                    open_set.put((candidate_log_prob, rid2node[c]))
+                                    if len(rid2node[c].trace) == default_len and candidate_score > best_score:
+                                        # give the default recommended trace
+                                        best_trace = rid2node[c].trace
+                                        best_score = candidate_score
                 step += 1
             generate_trace.append((uid.item(), best_trace))
         return generate_trace
