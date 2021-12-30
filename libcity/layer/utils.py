@@ -8,6 +8,39 @@ from Output.mlp import FC
 import scipy.sparse as sp
 from scipy.sparse import linalg
 
+
+def cal_attention(Q, K, V, M, n_h):
+    """
+    equ (3), calculate the attention mechanism performed by the i-th attention head
+    Args:
+        Q: query, shape (N, h, L_q, d)
+        K: key, shape (N, h, L_k, d)
+        V: value, shape (N, h, L_k, d)
+        M: mask, shape (N, h, L_q, L_k)
+        n_h: number of attention head
+
+    Returns:
+        Att: shape # (N, h, L_q, d)
+    """
+
+    QK = torch.matmul(input=Q, other=K.transpose(-1, -2))  # (h, L_q, L_k)
+
+    d = K.shape[-1]
+    d_h = d / n_h  # the split dimensionality in n_h attention heads
+    QK_d_h = QK / np.sqrt(d_h)  # (h, L_q, L_k)
+
+    if M is not None:
+        M = M.unsqueeze(2)
+        M = M.repeat(QK_d_h.shape[0] // M.shape[0], 1, 1, 1, 1)
+        QK_d_h += (M * -1e9)
+
+    attention_weights = torch.softmax(input=QK_d_h, dim=-1)  # (h, L_q, L_k) softmax along key axis
+
+    output = torch.matmul(attention_weights, V)  # (h, L_q, d)
+
+    return output
+
+
 def cheb_polynomial(l_tilde, k):
     """
     compute a list of chebyshev polynomials from T_0 to T_{K-1}
@@ -78,6 +111,7 @@ class GatedFusion(nn.Module):
         H = self.output_fc(H)
         return H
 
+
 def calculate_normalized_laplacian(adj):
     """
     L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
@@ -146,7 +180,7 @@ def calculate_cheb_poly(lap, ks):
     if ks == 1:
         return np.asarray(lap_list[0:1])  # 1*n*n
     else:
-        return np.asarray(lap_list)       # Ks*n*n
+        return np.asarray(lap_list)  # Ks*n*n
 
 
 def calculate_first_approx(weight):
@@ -163,7 +197,7 @@ def calculate_first_approx(weight):
     # return np.array(sinvd * A * sinvd)
     sinvd = np.sqrt(np.linalg.inv(np.diag(d)))
     lap = np.matmul(np.matmul(sinvd, adj), sinvd)  # n*n
-    lap = np.expand_dims(lap, axis=0)              # 1*n*n
+    lap = np.expand_dims(lap, axis=0)  # 1*n*n
     return lap
 
 
@@ -201,6 +235,7 @@ class Align(nn.Module):
             return F.pad(x, [0, 0, 0, 0, 0, self.c_out - self.c_in, 0, 0])
         return x  # return: (batch_size, c_out, input_length-1+1, num_nodes-1+1)
 
+
 # spatial matrixs based on shortest path algorithm
 def get_spatial_matrix(adj_mx):
     h, w = adj_mx.shape
@@ -215,10 +250,10 @@ def get_spatial_matrix(adj_mx):
         L_min = np.min(row)
         np.place(row, row == inf, [-1])
         L_max = np.max(row)
-        eta = (L_max-L_min)/3
+        eta = (L_max - L_min) / 3
         S_near[i] = np.logical_and(row >= L_min, row < L_min + eta)
         S_middle[i] = np.logical_and(row >= L_min + eta, row < L_min + 2 * eta)
-        S_distant[i] = np.logical_and(row >= L_min + 2*eta, row < L_max)
+        S_distant[i] = np.logical_and(row >= L_min + 2 * eta, row < L_max)
         i = i + 1
 
     S_near = S_near.astype(np.float32)
@@ -226,15 +261,16 @@ def get_spatial_matrix(adj_mx):
     S_distant = S_distant.astype(np.float32)
     return torch.tensor(S_near), torch.tensor(S_middle), torch.tensor(S_distant)
 
+
 class decay_weight4TrajRnn(nn.Module):
-    def __init__(self,lambda_t,lambda_s):
+    def __init__(self, lambda_t, lambda_s):
         '''
             The hyper parameters to control spatial and temporal decay.
         '''
-        self.lambda_s=lambda_s
-        self.lambda_t=lambda_t
+        self.lambda_s = lambda_s
+        self.lambda_t = lambda_t
 
-    def forward(self,delta_t,delta_s):
+    def forward(self, delta_t, delta_s):
         """
         Location Prediction over Sparse User Mobility Traces using RNNs: Flashback in Hidden States! IJCAI'20
         RNN output weight based on spatiotemporal context

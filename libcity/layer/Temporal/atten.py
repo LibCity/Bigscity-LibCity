@@ -3,6 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from Output.mlp import FC
 
+
+# LSTM-attention
+from libcity.layer.utils import cal_attention
+
+
 class TemporalAttentionLayer(nn.Module):
     def __init__(self, device, in_channels, num_of_vertices, num_of_timesteps):
         super(TemporalAttentionLayer, self).__init__()
@@ -18,7 +23,7 @@ class TemporalAttentionLayer(nn.Module):
             x: (batch_size, N, F_in, T)
 
         Returns:
-            torch.tensor: (B, T, T)
+            torch.tensor: (B, T, N, F_out)
         """
 
         lhs = torch.matmul(torch.matmul(x.permute(0, 3, 2, 1), self.U1), self.U2)
@@ -101,3 +106,142 @@ class TemporalAttention(nn.Module):
         x = torch.cat(torch.split(x, x.size(0) // self.num_heads, dim=0), dim=-1)
         x = self.output_fc(x)  # (batch_size, output_length, num_nodes, D)
         return x
+
+class MSA(nn.Module):
+    """
+    Multi-space attention
+    """
+
+    def __init__(self, d, n_h, self_att=True):
+        """
+        Args:
+            d: d-dimension representations after B-layer CNN/FCN
+            n_h: num of head
+            self_att: whether use self attention
+        """
+        super(MSA, self).__init__()
+        self.d = d
+        self.n_h = n_h
+        self.d_h = d / n_h
+        self.self_att = self_att
+
+        assert d % n_h == 0
+        self.d_h = d // n_h
+
+        if self_att:
+            self.wx = nn.Linear(in_features=d, out_features=d * 3)
+        else:
+            self.wq = nn.Linear(in_features=d, out_features=d)
+            self.wkv = nn.Linear(in_features=d, out_features=d * 2)
+
+        self.wo = nn.Linear(in_features=d, out_features=d)
+
+    def split_heads(self, x):
+        """
+
+        Args:
+            x: shape == [batch_size, input_window, N, d]
+
+        Returns:
+                shape == [batch_size, input_window, n_h, N, d_h]
+        """
+        shape = x.shape
+        x = torch.reshape(x, [shape[0], shape[1], shape[2], self.n_h, self.d_h])
+        return x.permute([0, 1, 3, 2, 4])
+
+    def forward(self, V, K, Q, M):
+
+        # linear
+        if self.self_att:
+            wx_o = self.wx(Q)
+            Q, K, V = torch.split(tensor=wx_o, split_size_or_sections=wx_o.shape[-1] // 3, dim=-1)
+        else:
+            Q = self.wq(Q)
+            wkv_o = self.wkv(K)
+            K, V = torch.split(tensor=wkv_o, split_size_or_sections=wkv_o.shape[-1] // 2, dim=-1)
+
+        # split head
+        Q = self.split_heads(Q)
+        K = self.split_heads(K)
+        V = self.split_heads(V)
+
+        scaled_attention = cal_attention(Q=Q, K=K, V=V, M=M, n_h=self.n_h)
+
+        scaled_attention = scaled_attention.permute([0, 1, 3, 2, 4])
+
+        d_shape = scaled_attention.shape
+        concat_attention = torch.reshape(
+            scaled_attention, (d_shape[0], d_shape[1], d_shape[2], self.d))
+
+        output = self.wo(concat_attention)
+        return output
+
+
+class MSA(nn.Module):
+    """
+    Multi-space attention
+    """
+
+    def __init__(self, d, n_h, self_att=True):
+        """
+        Args:
+            d: d-dimension representations after B-layer CNN/FCN
+            n_h: num of head
+            self_att: whether use self attention
+        """
+        super(MSA, self).__init__()
+        self.d = d
+        self.n_h = n_h
+        self.d_h = d / n_h
+        self.self_att = self_att
+
+        assert d % n_h == 0
+        self.d_h = d // n_h
+
+        if self_att:
+            self.wx = nn.Linear(in_features=d, out_features=d * 3)
+        else:
+            self.wq = nn.Linear(in_features=d, out_features=d)
+            self.wkv = nn.Linear(in_features=d, out_features=d * 2)
+
+        self.wo = nn.Linear(in_features=d, out_features=d)
+
+    def split_heads(self, x):
+        """
+
+        Args:
+            x: shape == [batch_size, input_window, N, d]
+
+        Returns:
+                shape == [batch_size, input_window, n_h, N, d_h]
+        """
+        shape = x.shape
+        x = torch.reshape(x, [shape[0], shape[1], shape[2], self.n_h, self.d_h])
+        return x.permute([0, 1, 3, 2, 4])
+
+    def forward(self, V, K, Q, M):
+
+        # linear
+        if self.self_att:
+            wx_o = self.wx(Q)
+            Q, K, V = torch.split(tensor=wx_o, split_size_or_sections=wx_o.shape[-1] // 3, dim=-1)
+        else:
+            Q = self.wq(Q)
+            wkv_o = self.wkv(K)
+            K, V = torch.split(tensor=wkv_o, split_size_or_sections=wkv_o.shape[-1] // 2, dim=-1)
+
+        # split head
+        Q = self.split_heads(Q)
+        K = self.split_heads(K)
+        V = self.split_heads(V)
+
+        scaled_attention = cal_attention(Q=Q, K=K, V=V, M=M, n_h=self.n_h)
+
+        scaled_attention = scaled_attention.permute([0, 1, 3, 2, 4])
+
+        d_shape = scaled_attention.shape
+        concat_attention = torch.reshape(
+            scaled_attention, (d_shape[0], d_shape[1], d_shape[2], self.d))
+
+        output = self.wo(concat_attention)
+        return output
