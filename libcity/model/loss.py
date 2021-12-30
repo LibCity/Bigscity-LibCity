@@ -51,8 +51,11 @@ def quantile_loss(preds, labels, delta=0.25):
     return torch.mean(torch.where(condition, large_res, small_res))
 
 
-def masked_mape_torch(preds, labels, null_val=np.nan):
+def masked_mape_torch(preds, labels, null_val=np.nan, eps=0):
     labels[torch.abs(labels) < 1e-4] = 0
+    if np.isnan(null_val) and eps != 0:
+        loss = torch.abs((preds - labels) / (labels + eps))
+        return torch.mean(loss)
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
     else:

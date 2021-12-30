@@ -1,16 +1,16 @@
+import math
+from logging import getLogger
+from typing import Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import weight_norm
-# from torch_scatter import scatter
-from logging import getLogger
+# from torch_scatter import scatter  # NB : Install this package manually
+
 from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
-
-
-import numpy as np
-import math
-from typing import Optional
 
 
 def remove_self_loops(edge_index: torch.Tensor):
@@ -27,8 +27,8 @@ def maybe_num_nodes(edge_index: torch.Tensor, num_nodes: Optional[int] = None):
 def add_self_loops(edge_index: torch.Tensor, num_nodes: Optional[int] = None):
     return torch.cat((edge_index,
                       torch.arange(maybe_num_nodes(edge_index, num_nodes))
-                           .repeat(2, 1)
-                           .to(edge_index.device)), dim=1)
+                      .repeat(2, 1)
+                      .to(edge_index.device)), dim=1)
 
 
 def softmax(x: torch.Tensor, index: torch.Tensor, num_nodes: Optional[int] = None, dim: int = 0):
@@ -185,10 +185,10 @@ class TemporalConvNet(nn.Module):
         num_levels = len(num_channels)
         for i in range(num_levels):
             dilation_size = 2 ** i
-            in_channels = num_inputs if i == 0 else num_channels[i-1]
+            in_channels = num_inputs if i == 0 else num_channels[i - 1]
             out_channels = num_channels[i]
             layers += [TemporalBlock(in_channels, out_channels, kernel_size, stride=1, dilation=dilation_size,
-                                     padding=(kernel_size-1) * dilation_size, dropout=dropout)]
+                                     padding=(kernel_size - 1) * dilation_size, dropout=dropout)]
 
         self.network = nn.Sequential(*layers)
 
@@ -330,33 +330,33 @@ class STCell(nn.Module):
         self.output_dim = output_dim
         self.in_features = seq_len * input_dim
 
-        self.seq_linear = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.input_dim*seq_len)
+        self.seq_linear = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.input_dim * seq_len)
 
         if choice[0] == 1:
             print("[TCN]")
             print("node_num:", node_num, "\tattn_head:", attn_head)
             # one node of one input feature per embedding element
-            self.self_attn = nn.MultiheadAttention(embed_dim=node_num*input_dim, num_heads=attn_head)
+            self.self_attn = nn.MultiheadAttention(embed_dim=node_num * input_dim, num_heads=attn_head)
             # expand convolution output_dimension by output_dim
             self.tcn = TemporalConvNet(num_inputs=self.input_dim,
                                        num_channels=[x * self.output_dim for x in self.tcn_dim])
-            self.tlinear = nn.Linear(in_features=self.output_dim*self.tcn_dim[-1]*self.seq_len,
-                                     out_features=self.output_dim*self.graph_dim)
+            self.tlinear = nn.Linear(in_features=self.output_dim * self.tcn_dim[-1] * self.seq_len,
+                                     out_features=self.output_dim * self.graph_dim)
 
         if choice[1] == 1:
             print("[SP]")
-            self.sp_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
-            self.sp_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
-            self.sp_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
-            self.sp_gconv3 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
-            self.sp_gconv4 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=1, concat=False)
+            self.sp_origin = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.output_dim * graph_dim)
+            self.sp_gconv1 = GATConv(self.input_dim * seq_len, self.output_dim * graph_dim, heads=3, concat=False)
+            self.sp_gconv2 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False)
+            self.sp_gconv3 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False)
+            self.sp_gconv4 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=1, concat=False)
             # self.sp_gconv5 = GATConv(graph_dim, graph_dim, heads = 1, concat = False)
             self.sp_source_embed = nn.Parameter(torch.Tensor(self.node_num, 12))
             self.sp_target_embed = nn.Parameter(torch.Tensor(12, self.node_num))
-            self.sp_linear_1 = nn.Linear(self.input_dim*seq_len, self.output_dim*self.graph_dim)
-            self.sp_linear_2 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
-            self.sp_linear_3 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
-            self.sp_linear_4 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
+            self.sp_linear_1 = nn.Linear(self.input_dim * seq_len, self.output_dim * self.graph_dim)
+            self.sp_linear_2 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
+            self.sp_linear_3 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
+            self.sp_linear_4 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
             # self.sp_linear_5 = nn.Linear(self.graph_dim, self.graph_dim)
             # self.sp_jklayer = JumpingKnowledge("max")
 
@@ -365,18 +365,18 @@ class STCell(nn.Module):
 
         if choice[2] == 1:
             print("[DTW]")
-            self.dtw_origin = nn.Linear(in_features=self.input_dim*seq_len, out_features=self.output_dim*graph_dim)
-            self.dtw_gconv1 = GATConv(self.input_dim*seq_len, self.output_dim*graph_dim, heads=3, concat=False)
-            self.dtw_gconv2 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
-            self.dtw_gconv3 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
-            self.dtw_gconv4 = GATConv(self.output_dim*graph_dim, self.output_dim*graph_dim, heads=3, concat=False)
+            self.dtw_origin = nn.Linear(in_features=self.input_dim * seq_len, out_features=self.output_dim * graph_dim)
+            self.dtw_gconv1 = GATConv(self.input_dim * seq_len, self.output_dim * graph_dim, heads=3, concat=False)
+            self.dtw_gconv2 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False)
+            self.dtw_gconv3 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False)
+            self.dtw_gconv4 = GATConv(self.output_dim * graph_dim, self.output_dim * graph_dim, heads=3, concat=False)
             # self.dtw_gconv5 = GATConv(graph_dim, graph_dim, heads = 1, concat = False)
             self.dtw_source_embed = nn.Parameter(torch.Tensor(self.node_num, 12))
             self.dtw_target_embed = nn.Parameter(torch.Tensor(12, self.node_num))
-            self.dtw_linear_1 = nn.Linear(self.input_dim*self.seq_len, self.output_dim*self.graph_dim)
-            self.dtw_linear_2 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
-            self.dtw_linear_3 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
-            self.dtw_linear_4 = nn.Linear(self.output_dim*self.graph_dim, self.output_dim*self.graph_dim)
+            self.dtw_linear_1 = nn.Linear(self.input_dim * self.seq_len, self.output_dim * self.graph_dim)
+            self.dtw_linear_2 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
+            self.dtw_linear_3 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
+            self.dtw_linear_4 = nn.Linear(self.output_dim * self.graph_dim, self.output_dim * self.graph_dim)
             # self.dtw_linear_5 = nn.Linear(self.graph_dim, self.graph_dim)
             # self.dtw_jklayer = JumpingKnowledge("max")
 
@@ -398,8 +398,8 @@ class STCell(nn.Module):
             attn_output = torch.tanh(attn_output + attn_input)
             # [batch_size*num_nodes, input_dim, seq_len]
             attn_output = attn_output.reshape(self.seq_len, batch_size, self.input_dim, self.node_num) \
-                                     .permute(1, 3, 2, 0) \
-                                     .reshape(-1, self.input_dim, self.seq_len)
+                .permute(1, 3, 2, 0) \
+                .reshape(-1, self.input_dim, self.seq_len)
 
             # [batch_size*num_nodes, input_dim, seq_len]
             tcn_input = attn_output
@@ -407,7 +407,7 @@ class STCell(nn.Module):
             tcn_output = self.tcn(tcn_input)
             # [batch_size*num_nodes, output_dim*self.tcn_dim[-1]*seq_len]
             tcn_output = torch.reshape(tcn_output,
-                                       (-1, self.output_dim*self.tcn_dim[-1]*self.seq_len))
+                                       (-1, self.output_dim * self.tcn_dim[-1] * self.seq_len))
             # [batch_size*num_nodes, output_dim*self.graph_dim]
             tcn_output = self.tlinear(tcn_output)
             # [batch_size, num_nodes, output_dim, self.graph_dim]
@@ -417,7 +417,7 @@ class STCell(nn.Module):
 
         if self.choice[1] == 1 or self.choice[2] == 1:
             # [batch_size, num_nodes, input_dim*seq_len]
-            sp_gout_0 = x.permute(0, 2, 3, 1).reshape(-1, self.input_dim*self.seq_len).contiguous()
+            sp_gout_0 = x.permute(0, 2, 3, 1).reshape(-1, self.input_dim * self.seq_len).contiguous()
             dtw_gout_0 = sp_gout_0.detach().clone()
 
         if self.choice[1] == 1:
@@ -431,11 +431,11 @@ class STCell(nn.Module):
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_gout_1 = self.sp_gconv1(sp_gout_0, edge_index)
             # [batch_size, num_nodes, input_dim*seq_len]
-            adp_input_1 = torch.reshape(sp_gout_0, (-1, self.node_num, self.input_dim*self.seq_len))
+            adp_input_1 = torch.reshape(sp_gout_0, (-1, self.node_num, self.input_dim * self.seq_len))
             # [batch_size, num_nodes, output_dim*graph_dim]
             sp_adp_1 = self.sp_linear_1(sp_learned_matrix.matmul(F.dropout(adp_input_1, p=0.1)))
             # [batch_size*num_nodes, output_dim*graph_dim]
-            sp_adp_1 = torch.reshape(sp_adp_1, (-1, self.output_dim*self.graph_dim))
+            sp_adp_1 = torch.reshape(sp_adp_1, (-1, self.output_dim * self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_origin = self.sp_origin(sp_gout_0)
             # [batch_size*num_nodes, output_dim*graph_dim]
@@ -444,30 +444,30 @@ class STCell(nn.Module):
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_gout_2 = self.sp_gconv2(torch.tanh(sp_output_1), edge_index)
             # [batch_size, num_nodes, output_dim*graph_dim]
-            adp_input_2 = torch.reshape(torch.tanh(sp_output_1), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_2 = torch.reshape(torch.tanh(sp_output_1), (-1, self.node_num, self.output_dim * self.graph_dim))
             # [batch_size, num_nodes, output_dim*graph_dim]
             sp_adp_2 = self.sp_linear_2(sp_learned_matrix.matmul(F.dropout(adp_input_2, p=0.1)))
             # [batch_size*num_nodes, output_dim*graph_dim]
-            sp_adp_2 = torch.reshape(sp_adp_2, (-1, self.output_dim*self.graph_dim))
+            sp_adp_2 = torch.reshape(sp_adp_2, (-1, self.output_dim * self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_output_2 = F.leaky_relu(sp_gout_2) * torch.sigmoid(sp_adp_2) + \
-                sp_output_1 * (1 - torch.sigmoid(sp_adp_2))
+                          sp_output_1 * (1 - torch.sigmoid(sp_adp_2))
 
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_gout_3 = self.sp_gconv3(F.relu(sp_output_2), edge_index)
             # [batch_size, num_nodes, output_dim*graph_dim]
-            adp_input_3 = torch.reshape(F.relu(sp_output_2), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_3 = torch.reshape(F.relu(sp_output_2), (-1, self.node_num, self.output_dim * self.graph_dim))
             # [batch_size, num_nodes, output_dim*graph_dim]
             sp_adp_3 = self.sp_linear_3(sp_learned_matrix.matmul(F.dropout(adp_input_3, p=0.1)))
             # [batch_size*num_nodes, output_dim*graph_dim]
-            sp_adp_3 = torch.reshape(sp_adp_3, (-1, self.output_dim*self.graph_dim))
+            sp_adp_3 = torch.reshape(sp_adp_3, (-1, self.output_dim * self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_output_3 = F.relu(sp_gout_3) * torch.sigmoid(sp_adp_3) + sp_output_2 * (1 - torch.sigmoid(sp_adp_3))
 
             sp_gout_4 = self.sp_gconv4(F.relu(sp_output_3), edge_index)
-            adp_input_4 = torch.reshape(F.relu(sp_output_3), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_4 = torch.reshape(F.relu(sp_output_3), (-1, self.node_num, self.output_dim * self.graph_dim))
             sp_adp_4 = self.sp_linear_4(sp_learned_matrix.matmul(F.dropout(adp_input_4, p=0.1)))
-            sp_adp_4 = torch.reshape(sp_adp_4, (-1, self.output_dim*self.graph_dim))
+            sp_adp_4 = torch.reshape(sp_adp_4, (-1, self.output_dim * self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
             sp_output_4 = F.relu(sp_gout_4) * torch.sigmoid(sp_adp_4) + sp_output_3 * (1 - torch.sigmoid(sp_adp_4))
 
@@ -488,30 +488,30 @@ class STCell(nn.Module):
             dtw_learned_matrix = F.softmax(F.relu(torch.mm(self.dtw_source_embed, self.dtw_target_embed)), dim=1)
 
             dtw_gout_1 = self.dtw_gconv1(dtw_gout_0, dtw_edge_index)
-            adp_input_1 = torch.reshape(dtw_gout_0, (-1, self.node_num, self.input_dim*self.seq_len))
+            adp_input_1 = torch.reshape(dtw_gout_0, (-1, self.node_num, self.input_dim * self.seq_len))
             dtw_adp_1 = self.dtw_linear_1(dtw_learned_matrix.matmul(F.dropout(adp_input_1, p=0.1)))
-            dtw_adp_1 = torch.reshape(dtw_adp_1, (-1, self.output_dim*self.graph_dim))
+            dtw_adp_1 = torch.reshape(dtw_adp_1, (-1, self.output_dim * self.graph_dim))
             dtw_origin = self.dtw_origin(dtw_gout_0)
             dtw_output_1 = torch.tanh(dtw_gout_1) * torch.sigmoid(dtw_adp_1) + \
-                dtw_origin * (1 - torch.sigmoid(dtw_adp_1))
+                           dtw_origin * (1 - torch.sigmoid(dtw_adp_1))
 
             dtw_gout_2 = self.dtw_gconv2(torch.tanh(dtw_output_1), dtw_edge_index)
-            adp_input_2 = torch.reshape(torch.tanh(dtw_output_1), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_2 = torch.reshape(torch.tanh(dtw_output_1), (-1, self.node_num, self.output_dim * self.graph_dim))
             dtw_adp_2 = self.dtw_linear_2(dtw_learned_matrix.matmul(F.dropout(adp_input_2, p=0.1)))
-            dtw_adp_2 = torch.reshape(dtw_adp_2, (-1, self.output_dim*self.graph_dim))
+            dtw_adp_2 = torch.reshape(dtw_adp_2, (-1, self.output_dim * self.graph_dim))
             dtw_output_2 = F.leaky_relu(dtw_gout_2) * torch.sigmoid(dtw_adp_2) + \
-                dtw_output_1 * (1 - torch.sigmoid(dtw_adp_2))
+                           dtw_output_1 * (1 - torch.sigmoid(dtw_adp_2))
 
             dtw_gout_3 = self.dtw_gconv3(F.relu(dtw_output_2), dtw_edge_index)
-            adp_input_3 = torch.reshape(F.relu(dtw_output_2), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_3 = torch.reshape(F.relu(dtw_output_2), (-1, self.node_num, self.output_dim * self.graph_dim))
             dtw_adp_3 = self.dtw_linear_3(dtw_learned_matrix.matmul(F.dropout(adp_input_3, p=0.1)))
-            dtw_adp_3 = torch.reshape(dtw_adp_3, (-1, self.output_dim*self.graph_dim))
+            dtw_adp_3 = torch.reshape(dtw_adp_3, (-1, self.output_dim * self.graph_dim))
             dtw_output_3 = F.relu(dtw_gout_3) * torch.sigmoid(dtw_adp_3) + dtw_output_2 * (1 - torch.sigmoid(dtw_adp_3))
 
             dtw_gout_4 = self.dtw_gconv4(F.relu(dtw_output_3), dtw_edge_index)
-            adp_input_4 = torch.reshape(F.relu(dtw_output_3), (-1, self.node_num, self.output_dim*self.graph_dim))
+            adp_input_4 = torch.reshape(F.relu(dtw_output_3), (-1, self.node_num, self.output_dim * self.graph_dim))
             dtw_adp_4 = self.dtw_linear_4(dtw_learned_matrix.matmul(F.dropout(adp_input_4, p=0.1)))
-            dtw_adp_4 = torch.reshape(dtw_adp_4, (-1, self.output_dim*self.graph_dim))
+            dtw_adp_4 = torch.reshape(dtw_adp_4, (-1, self.output_dim * self.graph_dim))
             # [batch_size*num_nodes, output_dim*graph_dim]
             dtw_output_4 = F.relu(dtw_gout_4) * torch.sigmoid(dtw_adp_4) + dtw_output_3 * (1 - torch.sigmoid(dtw_adp_4))
 

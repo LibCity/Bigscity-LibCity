@@ -37,7 +37,7 @@ class FilterLinear(nn.Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, input):
-        return F.linear(input, self.filter_square_matrix.matmul(self.weight), self.bias)
+        return F.linear(input, self.filter_square_matrix.mul(self.weight), self.bias)
 
     def __repr__(self):
         return self.__class__.__name__ + '(' \
@@ -72,6 +72,7 @@ class DKFN(AbstractTrafficStateModel):
         A[A <= self._eps] = 0
         # normalization
         D_inverse = torch.diag(1 / torch.sum(A, 0))
+        D_inverse[D_inverse.isinf()] = 0
         norm_A = torch.matmul(D_inverse, A)
         A = norm_A
 

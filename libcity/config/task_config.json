@@ -1,6 +1,6 @@
 {
     "traj_loc_pred": {
-        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM","HSTLSTM", "STAN", "CARA", "GeoSAN"],
+        "allowed_model": ["DeepMove", "RNN", "LSTM", "GRU", "FPMC", "LSTPM", "STRNN", "SERM", "TemplateTLP", "ATSTLSTM", "HSTLSTM", "STAN", "CARA", "GeoSAN"],
         "allowed_dataset": ["foursquare_tky", "foursquare_nyc", "gowalla", "foursquare_serm"],
         "GeoSAN": {
             "dataset_class": "GeoSANDataset",
@@ -82,20 +82,23 @@
         }
     },
     "traffic_state_pred": {
-        "allowed_model": ["NewModel","DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
+        "allowed_model": [
+            "DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
-            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon","ToGCN", "CONVGCN", "STG2Seq",
+            "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
-            "GEML", "FNN"],
-        "allowed_dataset": ["METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
+            "GEML", "FNN", "GSNet", "CSTN"
+        ],
+        "allowed_dataset": [
+            "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
             "LOOP_SEATTLE", "LOS_LOOP", "LOS_LOOP_SMALL", "Q_TRAFFIC", "SZ_TAXI",
             "NYCBike20140409", "NYCBike20160708", "NYCBike20160809", "NYCTaxi20140112",
             "NYCTaxi20150103", "NYCTaxi20160102", "TAXIBJ", "T_DRIVE20150206",
             "BEIJING_SUBWAY_10MIN", "BEIJING_SUBWAY_15MIN", "BEIJING_SUBWAY_30MIN",
             "ROTTERDAM", "HZMETRO", "SHMETRO", "M_DENSE", "PORTO", "NYCTAXI_DYNA",
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
-            "BIKEDC", "BIKECHI"
+            "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
         "NewModel": {
             "dataset_class": "TrafficStatePointDataset",
@@ -167,12 +170,12 @@
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"LSTM": {
+        "LSTM": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"GRU": {
+        "GRU": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
@@ -232,7 +235,7 @@
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
-		"GMAN": {
+        "GMAN": {
             "dataset_class": "GMANDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
@@ -253,9 +256,9 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "STSGCN": {
-          "dataset_class": "TrafficStatePointDataset",
-          "executor": "TrafficStateExecutor",
-          "evaluator": "TrafficStateEvaluator"
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
         },
         "STAGGCN": {
             "dataset_class": "STAGGCNDataset",
@@ -331,6 +334,36 @@
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
+        },
+        "GSNet": {
+            "dataset_class": "GSNetDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficAccidentEvaluator"
+        },
+        "CSTN": {
+            "dataset_class": "CSTNDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        }
+    },
+    "eta": {
+        "allowed_model": [
+            "DeepTTE", "TTPNet"
+        ],
+        "allowed_dataset": [
+            "Chengdu_Taxi_Sample1", "Beijing_Taxi_Sample"
+        ],
+        "DeepTTE": {
+            "dataset_class": "ETADataset",
+            "executor": "ETAExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "DeeptteEncoder"
+        },
+        "TTPNet": {
+            "dataset_class": "ETADataset",
+            "executor": "ETAExecutor",
+            "evaluator": "ETAEvaluator",
+            "eta_encoder": "TtpnetEncoder"
         }
     },
     "map_matching": {
@@ -358,7 +391,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv"
+            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk","Metapath2vec"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -371,7 +404,27 @@
         "Metapath2vec":{
             "dataset_class": "Metapath2VecDataSet",
             "executor": "Metapath2vecExecutor",
-            "evaluator": "RoadRepresentationEvaluator"          
+            "evaluator": "RoadRepresentationEvaluator"     
+        },
+        "LINE": {
+            "dataset_class": "LINEDataset",
+            "executor": "LINEExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "GAT": {
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "Node2Vec": {
+            "dataset_class": "RoadNetWorkDataset",
+            "executor": "GensimExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
+        },
+        "DeepWalk": {
+            "dataset_class": "RoadNetWorkDataset",
+            "executor": "GensimExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
         }
     }
 }
