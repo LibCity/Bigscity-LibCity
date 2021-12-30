@@ -1,0 +1,9 @@
+{
+    "hidden_size": 64,
+    "num_layers": 1,
+    "dropout": 0,
+  
+    "max_epoch": 100,
+    "learner": "adam",
+    "learning_rate": 0.001
+  }

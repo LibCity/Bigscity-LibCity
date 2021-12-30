@@ -82,7 +82,7 @@
         }
     },
     "traffic_state_pred": {
-        "allowed_model": ["DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
+        "allowed_model": ["NewModel","DCRNN", "STGCN", "GWNET", "AGCRN", "TGCLSTM", "TGCN", "TemplateTSP",
             "ASTGCN", "MSTGCN", "MTGNN", "ACFM", "STResNet", "RNN", "LSTM", "GRU", "AutoEncoder", "Seq2Seq",
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon","ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
@@ -97,6 +97,11 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI"
         ],
+        "NewModel": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
         "DCRNN": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "DCRNNExecutor",
@@ -362,6 +367,11 @@
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
+        },
+        "Metapath2vec":{
+            "dataset_class": "Metapath2VecDataSet",
+            "executor": "Metapath2vecExecutor",
+            "evaluator": "RoadRepresentationEvaluator"          
         }
     }
 }

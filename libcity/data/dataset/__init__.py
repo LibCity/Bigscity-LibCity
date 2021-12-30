@@ -30,6 +30,7 @@ from libcity.data.dataset.ccrnn_dataset import CCRNNDataset
 from libcity.data.dataset.geosan_dataset import GeoSANDataset
 from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
 from libcity.data.dataset.chebconv_dataset import ChebConvDataset
+from libcity.data.dataset.metapath2vec_dataset import Metapath2VecDataSet
 
 __all__ = [
     "AbstractDataset",
@@ -59,5 +60,6 @@ __all__ = [
     "GeoSANDataset",
     "DMVSTNetDataset",
     "MapMatchingDataset",
-    'ChebConvDataset'
+    'ChebConvDataset',
+    'Metapath2VecDataSet'
 ]

@@ -1,0 +1,5 @@
+embeddings {
+tensor_name: "default:00000"
+tensor_path: "00000/default/tensors.tsv"
+metadata_path: "00000/default/metadata.tsv"
+}
