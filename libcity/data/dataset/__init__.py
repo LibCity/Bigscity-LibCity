@@ -69,5 +69,6 @@ __all__ = [
     "GSNetDataset",
     "LINEDataset",
     "CSTNDataset",
-    "RoadNetWorkDataset",'Metapath2VecDataSet'
+    "RoadNetWorkDataset",
+    "Metapath2VecDataSet"
 ]

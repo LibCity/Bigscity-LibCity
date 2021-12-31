@@ -10,7 +10,7 @@ from tensorboardX import SummaryWriter
 # 数据集负责将原始rel文件加载为邻接矩阵，测试训练验证数据均由model通过随机游走产生
 class Metapath2VecExecutor(AbstractExecutor):
     def __init__(self, config, model):
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = config['device']
         self.model = model.to(self.device)
         # 管道共享张量不在WINDOWS允许
         self.loader = model.loader(batch_size=64, shuffle=True, num_workers=0)

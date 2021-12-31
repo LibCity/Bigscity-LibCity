@@ -100,11 +100,6 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
-        "NewModel": {
-            "dataset_class": "TrafficStatePointDataset",
-            "executor": "TrafficStateExecutor",
-            "evaluator": "TrafficStateEvaluator"
-        },
         "DCRNN": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "DCRNNExecutor",
