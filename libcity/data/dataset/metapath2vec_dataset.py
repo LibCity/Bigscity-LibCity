@@ -25,6 +25,7 @@ def _getType(x):
 
 class Metapath2VecDataSet(AbstractDataset):
     def __init__(self, config) -> None:
+
         self.adj_dict = None
         self.edge_index_dict = None
         self.label_index_dict = None
@@ -37,7 +38,8 @@ class Metapath2VecDataSet(AbstractDataset):
     def get_data_feature(self) -> Dict:
         return {'adj_dict':self.adj_dict,'num_nodes_dict':self.num_nodes_dict}
 
-    def get_data(self) -> Dict: 
+    def get_data(self) -> Dict:
+
         return self.label_index_dict,self.label_index_dict,self.label_index_dict
 
     def _load_geo(self):

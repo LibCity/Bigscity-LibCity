@@ -12,6 +12,7 @@ from libcity.executor.chebconv_executor import ChebConvExecutor
 from libcity.executor.eta_executor import ETAExecutor
 from libcity.executor.gensim_executor import GensimExecutor
 from libcity.executor.metapath2vec_executor import Metapath2VecExecutor
+
 __all__ = [
     "TrajLocPredExecutor",
     "TrafficStateExecutor",

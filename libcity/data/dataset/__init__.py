@@ -36,6 +36,7 @@ from libcity.data.dataset.line_dataset import LINEDataset
 from libcity.data.dataset.cstn_dataset import CSTNDataset
 from libcity.data.dataset.roadnetwork_dataset import RoadNetWorkDataset
 from libcity.data.dataset.metapath2vec_dataset import Metapath2VecDataSet
+
 __all__ = [
     "AbstractDataset",
     "TrajectoryDataset",
