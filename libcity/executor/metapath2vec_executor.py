@@ -17,14 +17,22 @@ class Metapath2VecExecutor(AbstractExecutor):
         self.optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
         print('加载数据完成')
 
-    def evaluate(self, test_dataloader): # 测试集
-        acc = self._test(test_dataloader)
+    def evaluate(self, test_dataloader,train_ratio=0.2): # 测试集
+        self.model.eval()
+        z = self.model(node_type='road', batch=test_dataloader['road'].y_index)  # 调用forward返回embedding
+        y = test_dataloader['road'].y # 对应的标签
+        perm = torch.randperm(z.size(0))
+        train_perm = perm[:int(z.size(0) * train_ratio)]
+        test_perm = perm[int(z.size(0) * train_ratio):]
+        acc = self._test(z[train_perm], y[train_perm], z[test_perm], y[test_perm],
+                        max_iter=150)
         print((f'evaluate result: {acc:.4f}'))
+        return acc
 
     def train(self, train_dataloader, eval_dataloader): # 训练集 和 验证集
         for epoch in range(1, 10):
             self._valid_epoch(epoch,train_dataloader)
-            acc = self._test(eval_dataloader)
+            acc = self.evaluate(eval_dataloader)
             print(f'Epoch: {epoch}, Accuracy: {acc:.4f}')
         writer = SummaryWriter('runs/embedding_example')
         writer.add_embedding(mat=self.model('road', batch=train_dataloader['road'].y_index),metadata=train_dataloader['road'].y)
@@ -36,16 +44,18 @@ class Metapath2VecExecutor(AbstractExecutor):
         pass
     
     @torch.no_grad()
-    def _test(self, test_dataloader,train_ratio=0.1):
-        self.model.eval()
-        z = self.model(node_type='road', batch=test_dataloader['road'].y_index)  # 调用forward返回embedding
-        y = test_dataloader['road'].y # 对应的标签
-        perm = torch.randperm(z.size(0))
-        train_perm = perm[:int(z.size(0) * train_ratio)]
-        test_perm = perm[int(z.size(0) * train_ratio):]
+    def _test(self, train_z: Tensor, train_y: Tensor, test_z: Tensor,
+             test_y: Tensor, solver: str = "lbfgs", multi_class: str = "auto",
+             *args, **kwargs) -> float:
+        r"""下游逻辑回归任务"""
 
-        return self.model.test(z[train_perm], y[train_perm], z[test_perm], y[test_perm],
-                        max_iter=150)
+        from sklearn.linear_model import LogisticRegression
+        clf = LogisticRegression(solver=solver, multi_class=multi_class, *args,
+                                 **kwargs).fit(train_z.detach().cpu().numpy(),
+                                               train_y.detach().cpu().numpy())
+        return clf.score(test_z.detach().cpu().numpy(),
+                         test_y.detach().cpu().numpy())
+
 
     def _valid_epoch(self, epoch, train_dataloader,log_steps=100, eval_steps=2000):
         model = self.model
@@ -67,6 +77,4 @@ class Metapath2VecExecutor(AbstractExecutor):
                 total_loss = 0
 
             if (i + 1) % eval_steps == 0:
-                acc = self._test(train_dataloader)
-                print((f'Epoch: {epoch}, Step: {i + 1:05d}/{len(loader)}, '
-                    f'Acc: {acc:.4f}'))
+                self.evaluate(train_dataloader)

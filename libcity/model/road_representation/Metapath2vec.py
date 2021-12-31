@@ -5,7 +5,6 @@ from torch import Tensor
 from torch.nn import Embedding
 from torch.utils.data import DataLoader
 from torch_sparse import SparseTensor
-from sklearn.linear_model import LogisticRegression
 
 NodeType = str
 EdgeType = Tuple[str, str, str]
@@ -107,7 +106,7 @@ class Metapath2Vec(AbstractTrafficStateModel):
         for i in range(self.walk_length):
             keys = self.metapath[i % len(self.metapath)]  # 取一条metapath，如('author', 'writes', 'paper')
             adj = self.adj_dict[keys]  # 找到邻接矩阵
-            batch = sample(adj, batch, num_neighbors=1,
+            batch = self.sample(adj, batch, num_neighbors=1,
                            dummy_idx=self.dummy_idx).view(-1)  # 找到batch中所有结点的下一步
             rws.append(batch)  # 拼接下一步
 
@@ -174,36 +173,23 @@ class Metapath2Vec(AbstractTrafficStateModel):
 
         return pos_loss + neg_loss
 
-    def test(self, train_z: Tensor, train_y: Tensor, test_z: Tensor,
-             test_y: Tensor, solver: str = "lbfgs", multi_class: str = "auto",
-             *args, **kwargs) -> float:
-        r"""下游逻辑回归任务"""
+    def sample(self,src: SparseTensor, subset: Tensor, num_neighbors: int,
+               dummy_idx: int) -> Tensor:
+        # 掩码矩阵？
+        # subset = tensor([1,2,3,4])
+        mask = subset < dummy_idx  # 掩码，排除虚节点
+        rowcount = torch.zeros_like(subset)  # 下一步个数
+        rowcount[mask] = src.storage.rowcount()[subset[mask]]
+        mask = mask & (rowcount > 0)
+        offset = torch.zeros_like(subset)
+        offset[mask] = src.storage.rowptr()[subset[mask]]
 
-        clf = LogisticRegression(solver=solver, multi_class=multi_class, *args,
-                                 **kwargs).fit(train_z.detach().cpu().numpy(),
-                                               train_y.detach().cpu().numpy())
-        return clf.score(test_z.detach().cpu().numpy(),
-                         test_y.detach().cpu().numpy())
+        rand = torch.rand((rowcount.size(0), num_neighbors), device=subset.device)
+        rand.mul_(rowcount.to(rand.dtype).view(-1, 1))
+        rand = rand.to(torch.long)
+        rand.add_(offset.view(-1, 1))
 
-
-
-def sample(src: SparseTensor, subset: Tensor, num_neighbors: int,
-           dummy_idx: int) -> Tensor:
-    # 掩码矩阵？
-    # subset = tensor([1,2,3,4])
-    mask = subset < dummy_idx  # 掩码，排除虚节点
-    rowcount = torch.zeros_like(subset)  # 下一步个数
-    rowcount[mask] = src.storage.rowcount()[subset[mask]]
-    mask = mask & (rowcount > 0)
-    offset = torch.zeros_like(subset)
-    offset[mask] = src.storage.rowptr()[subset[mask]]
-
-    rand = torch.rand((rowcount.size(0), num_neighbors), device=subset.device)
-    rand.mul_(rowcount.to(rand.dtype).view(-1, 1))
-    rand = rand.to(torch.long)
-    rand.add_(offset.view(-1, 1))
-
-    col = src.storage.col()[rand]
-    col[~mask] = dummy_idx
-    return col
+        col = src.storage.col()[rand]
+        col[~mask] = dummy_idx
+        return col
 
