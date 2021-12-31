@@ -3,7 +3,7 @@ import torch
 
 
 
-class GCN(nn.Module):
+class GCNNet(nn.Module):
     def __init__(self, K:int, input_dim:int, hidden_dim:int, bias=True, activation=nn.ReLU):
         super().__init__()
         self.K = K
@@ -132,7 +132,7 @@ class Adj_Preprocessor(object):
 
 
 
-class CG_LSTM(nn.Module):
+class CG_LSTM_Net(nn.Module):
     def __init__(self, seq_len:int, n_nodes:int, input_dim:int,
                  lstm_hidden_dim: int, lstm_num_layers: int,
                  K:int, gconv_use_bias:bool, gconv_activation=nn.ReLU):
@@ -143,8 +143,8 @@ class CG_LSTM(nn.Module):
         self.lstm_hidden_dim = lstm_hidden_dim
         self.lstm_num_layers = lstm_num_layers
 
-        self.gconv_temporal_feats = GCN(K=K, input_dim=seq_len, hidden_dim=seq_len,
-                                        bias=gconv_use_bias, activation=gconv_activation)
+        self.gconv_temporal_feats = GCNNet(K=K, input_dim=seq_len, hidden_dim=seq_len,
+                                           bias=gconv_use_bias, activation=gconv_activation)
         self.fc = nn.Linear(in_features=seq_len, out_features=seq_len, bias=True)
         self.lstm = nn.LSTM(input_size=input_dim, hidden_size=lstm_hidden_dim,
                             num_layers=lstm_num_layers, batch_first=True)
@@ -190,7 +190,7 @@ class CG_LSTM(nn.Module):
 
 
 
-class ST_MGCN(nn.Module):
+class ST_MGCN_Net(nn.Module):
     def __init__(self, M:int, seq_len:int, n_nodes:int, input_dim:int, lstm_hidden_dim:int, lstm_num_layers:int,
                  gcn_hidden_dim:int, sta_kernel_config:dict, gconv_use_bias:bool, gconv_activation=nn.ReLU):
         super().__init__()
@@ -200,12 +200,12 @@ class ST_MGCN(nn.Module):
         # initiate one pair of CG_LSTM & GCN for each adj input
         self.rnn_list, self.gcn_list = nn.ModuleList(), nn.ModuleList()
         for m in range(self.M):
-            cglstm = CG_LSTM(seq_len=seq_len, n_nodes=n_nodes, input_dim=input_dim,
-                             lstm_hidden_dim=lstm_hidden_dim, lstm_num_layers=lstm_num_layers,
-                             K=self.sta_K, gconv_use_bias=gconv_use_bias, gconv_activation=gconv_activation)
+            cglstm = CG_LSTM_Net(seq_len=seq_len, n_nodes=n_nodes, input_dim=input_dim,
+                                 lstm_hidden_dim=lstm_hidden_dim, lstm_num_layers=lstm_num_layers,
+                                 K=self.sta_K, gconv_use_bias=gconv_use_bias, gconv_activation=gconv_activation)
             self.rnn_list.append(cglstm)
-            gcn = GCN(K=self.sta_K, input_dim=lstm_hidden_dim, hidden_dim=gcn_hidden_dim,
-                      bias=gconv_use_bias, activation=gconv_activation)
+            gcn = GCNNet(K=self.sta_K, input_dim=lstm_hidden_dim, hidden_dim=gcn_hidden_dim,
+                         bias=gconv_use_bias, activation=gconv_activation)
             self.gcn_list.append(gcn)
         self.fc = nn.Linear(in_features=gcn_hidden_dim, out_features=input_dim, bias=True)
 
@@ -249,4 +249,6 @@ class ST_MGCN(nn.Module):
 
         output = self.fc(feat_fusion)
         return output[:,:,0]
+
+
 
