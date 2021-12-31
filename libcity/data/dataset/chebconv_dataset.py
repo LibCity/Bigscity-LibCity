@@ -212,7 +212,7 @@ class ChebConvDataset(AbstractDataset):
         self.feature_dim = node_features.shape[-1]
         self.scaler = self._get_scalar(self.scaler_type, node_features)
         node_features = self.scaler.transform(node_features)
-        self.train_dataloader = {'node_features': node_features, 'mask': train_mask}
+        self.train_dataloader = {'node_features': node_features, 'mask': train_mask} 
         self.eval_dataloader = {'node_features': node_features, 'mask': valid_mask}
         self.test_dataloader = {'node_features': node_features, 'mask': test_mask}
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader

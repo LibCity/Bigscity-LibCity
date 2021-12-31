@@ -391,7 +391,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk","Metapath2vec"
+            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk","Metapath2Vec"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -401,9 +401,9 @@
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         },
-        "Metapath2vec":{
+        "Metapath2Vec":{
             "dataset_class": "Metapath2VecDataSet",
-            "executor": "Metapath2vecExecutor",
+            "executor": "Metapath2VecExecutor",
             "evaluator": "RoadRepresentationEvaluator"     
         },
         "LINE": {

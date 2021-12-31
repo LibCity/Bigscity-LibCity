@@ -12,7 +12,7 @@ EdgeType = Tuple[str, str, str]
 OptTensor = Optional[Tensor]
 EPS = 1E-15
 
-class Metapath2vec(AbstractTrafficStateModel):
+class Metapath2Vec(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
 
@@ -21,14 +21,22 @@ class Metapath2vec(AbstractTrafficStateModel):
         num_nodes_dict = data_feature['num_nodes_dict'] # 每种节点类型的节点个数
 
         # 此处需要从config文件中加载
-        metapath = config['metapath'] # 游走路径
-        embedding_dim = config['embedding_dim'] # 维度
-        walk_length = config['walk_length'] # 单次游走长度
-        context_size = config['context_size'] # 上下文窗口
-        walks_per_node = config['walks_per_node'] # 每个结点游走次数
-        num_negative_samples = config['num_negative_samples'] # 负采样个数
-        sparse = config['sparse'] # 是否使用稀疏
-
+        metapath =  [
+            ('road', 'r2r', 'road'),
+            ('road', 'r2l', 'link'),
+            ('link', 'l2l', 'link'),
+            ('link', 'l2r', 'road'),
+            ('road', 'r2r', 'road')
+        ]
+        
+        embedding_dim = config.get('embedding_dim') # 维度
+        walk_length = config.get('walk_length') # 单次游走长度
+        context_size = config.get('context_size') # 上下文窗口
+        walks_per_node = config.get('walks_per_node') # 每个结点游走次数
+        num_negative_samples = config.get('num_negative_samples') # 负采样个数
+        sparse = config.get('sparse') # 是否使用稀疏
+        
+        assert sparse == True 
         assert walk_length + 1 >= context_size  # 游走长度大于上下文窗口长度
         if walk_length > len(metapath) and metapath[0][0] != metapath[-1][-1]:  # 强制要求metapath起点终点节点类型一致
             raise AttributeError(

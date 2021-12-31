@@ -1,0 +1,8 @@
+{
+    "embedding_dim":64,
+    "walk_length":20,
+    "context_size":7,
+    "walks_per_node":5,
+    "num_negative_samples":3,
+    "sparse":true
+}

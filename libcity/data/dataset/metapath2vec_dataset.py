@@ -24,12 +24,12 @@ def _getType(x):
     return 'r2r'
 
 class Metapath2VecDataSet(AbstractDataset):
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         self.adj_dict = None
         self.edge_index_dict = None
         self.label_index_dict = None
         self.num_nodes_dict = None
-        self.raw_dir = "./raw_data/bj_roadmap_edge/"
+        self.raw_dir = "./raw_data/BJ_roadmap/"
         self._process_egdes()
         self._process_features()
 
@@ -38,7 +38,7 @@ class Metapath2VecDataSet(AbstractDataset):
         return {'adj_dict':self.adj_dict,'num_nodes_dict':self.num_nodes_dict}
 
     def get_data(self) -> Dict: 
-        return self.label_index_dict
+        return self.label_index_dict,self.label_index_dict,self.label_index_dict
 
     def _load_geo(self):
         # Get road labels.

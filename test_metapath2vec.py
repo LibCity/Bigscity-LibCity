@@ -3,7 +3,7 @@ import os.path as osp
 from numpy import mat
 import torch
 from libcity.data.dataset.metapath2vec_dataset import *
-from libcity.model.road_representation.Metapath2vec import *
+from model.road_representation.Metapath2Vec import *
 from tensorboardX import SummaryWriter
 
 dataset = Metapath2VecDataSet()
