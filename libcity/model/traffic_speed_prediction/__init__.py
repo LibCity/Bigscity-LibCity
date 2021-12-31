@@ -36,5 +36,5 @@ __all__ = [
     "STMGAT",
     "DKFN",
     "STTN",
-    "FNN",
+    "FNN"
 ]

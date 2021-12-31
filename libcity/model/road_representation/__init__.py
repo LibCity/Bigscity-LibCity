@@ -10,5 +10,5 @@ __all__ = [
     "GAT",
     "Node2Vec",
     "DeepWalk",
-    'Metapath2Vec'
+    "Metapath2Vec"
 ]
