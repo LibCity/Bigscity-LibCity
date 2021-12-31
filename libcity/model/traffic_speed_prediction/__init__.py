@@ -17,6 +17,7 @@ from libcity.model.traffic_speed_prediction.STMGAT import STMGAT
 from libcity.model.traffic_speed_prediction.DKFN import DKFN
 from libcity.model.traffic_speed_prediction.STTN import STTN
 from libcity.model.traffic_speed_prediction.FNN import FNN
+
 __all__ = [
     "DCRNN",
     "STGCN",
