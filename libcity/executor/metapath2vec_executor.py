@@ -17,6 +17,7 @@ class Metapath2VecExecutor(AbstractExecutor):
         self.optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
         print('加载数据完成')
 
+    @torch.no_grad()
     def evaluate(self, test_dataloader,train_ratio=0.2): # 测试集
         self.model.eval()
         z = self.model(node_type='road', batch=test_dataloader['road'].y_index)  # 调用forward返回embedding
@@ -43,7 +44,7 @@ class Metapath2VecExecutor(AbstractExecutor):
     def load_model(self, cache_name):
         pass
     
-    @torch.no_grad()
+
     def _test(self, train_z: Tensor, train_y: Tensor, test_z: Tensor,
              test_y: Tensor, solver: str = "lbfgs", multi_class: str = "auto",
              *args, **kwargs) -> float:
