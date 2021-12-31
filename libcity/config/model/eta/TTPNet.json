@@ -1,0 +1,18 @@
+{
+  "uid_emb_size": 8,
+  "weekid_emb_size": 3,
+  "timdid_emb_size": 8,
+  
+  "max_epoch": 50,
+  "batch_size": 10,
+  "learner": "adam",
+  "learning_rate": 1e-3,
+  "weight_decay": 1e-5,
+  "lr_decay": true,
+  "lr_scheduler": "StepLR",
+  "step_size": 10,
+  "lr_decay_ratio": 0.5,
+  "clip_grad_norm": false,
+  "use_early_stop": false,
+  "patience": 20
+}
