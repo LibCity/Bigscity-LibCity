@@ -1,6 +1,8 @@
 from torch import nn
 import torch
-
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libcity.model import loss
+from libcity.model import utils
 
 
 class GCNNet(nn.Module):
@@ -252,3 +254,34 @@ class ST_MGCN_Net(nn.Module):
 
 
 
+class STMGCN(AbstractTrafficStateModel):
+    def __init__(self, config, data_feature):
+        super().__init__(config, data_feature)
+        M_adj,obs_len, n_nodes, num_input_features, lstm_hidden_dim, lstm_hidden_layers, gcn_hidden_dim, sta_kernel_config, gconv_use_bias, gconv_activation, num_output_classes = self.get_input(config, data_feature)
+
+        model = ST_MGCN_Net(M=M_adj, seq_len=sum(obs_len), n_nodes=30, input_dim=1, lstm_hidden_dim=64, lstm_num_layers=3,
+                               gcn_hidden_dim=64, sta_kernel_config=sta_kernel_config, gconv_use_bias=True, gconv_activation=nn.ReLU)
+        self.device = config.get('device')
+        # model = model.to(self.device)
+
+
+    def get_input(self,config,data_feature):
+        M_adj = data_feature.get('M_adj',3)
+        obs_len = tuple(3,1,1)
+        n_nodes = data_feature.get('n_nodes',30)
+        num_input_features = data_feature.get('feature_dim', 1)
+        lstm_hidden_dim = data_feature.get("lstm_hidden_dim",64)
+        lstm_hidden_layers = data_feature.get("lstm_hidden_layers", 3)
+        gcn_hidden_dim = data_feature.get("gcn_hidden_dim",64)
+        sta_kernel_config = config.get("sta_kernel_config",{'kernel_type':'chebyshev', 'K':2})
+        gconv_use_bias = config.get("gconv_use_bias",True)
+        gconv_activation = config.get("gconv_activation",nn.ReLU)
+        num_output_classes = config.get('output_dim', 8)
+
+        return M_adj,obs_len,n_nodes,num_input_features,lstm_hidden_dim,lstm_hidden_layers,gcn_hidden_dim,sta_kernel_config,gconv_use_bias,gconv_activation,num_output_classes
+
+    def predict(self, batch):
+        pass
+
+    def calculate_loss(self, batch):
+        pass
