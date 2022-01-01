@@ -7,10 +7,10 @@ class AbstractRoadRepresentationModel(AbstractModel):
         self.config = config
         self.data_feature = data_feature
 
-    def forward(self, batch):
+    def forward(self, features):
         """
         Args:
-            batch: dict, need key 'node_features' contains tensor shape=(N, feature_dim)
+            features: tensor shape=(N, feature_dim)
 
         Returns:
             embedding (torch.tensor): shape=(N, output_dim), embedding of input

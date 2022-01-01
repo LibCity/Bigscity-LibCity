@@ -3,7 +3,7 @@
     "gpu": false,
     "hidden_dims": 608,
     "node_dims": 512,
-    "node_num": 16000,
+    "node_num": 38030,
     "cmt_num": 200,
     "cmt_dims": 256,
     "struct_cmt_num": 300,
@@ -42,7 +42,7 @@
     "dropout": 0.6,
 
     "lane_num": 6,
-    "length_num": 220,
+    "length_num": 2560,
     "type_num": 20,
     "lane_dims": 32,
     "length_dims": 32,

@@ -57,7 +57,10 @@ class HRNRDataset(TrafficStateDataset):
     def _transfer_files(self):
         """
         加载.geo .rel，生成HRNR所需的部分文件
-        .geo [geo_id, type, coordinates, lane, type, length, bridge]
+        .geo
+            [geo_id, type, coordinates, lane, type, length, bridge]
+            from
+            [geo_id, type, coordinates, highway, length, lanes, tunnel, bridge, maxspeed, width, alley, roundabout]
         .rel [rel_id, type, origin_id, destination_id]
         """
         self._logger.info("generating files...")
@@ -68,8 +71,8 @@ class HRNRDataset(TrafficStateDataset):
         self._logger.info("Geo_N is " + str(self.num_nodes))
         feature_dict = {}
         for geo_id in geo_ids:
-            feature_dict[geo_id] = [geo_id, "Point", None, geo["lane"][geo_id],
-                                    geo["roadtype"][geo_id], geo["length"][geo_id],
+            feature_dict[geo_id] = [geo_id, "Point", None, geo["lanes"][geo_id],
+                                    geo["highway"][geo_id], int(geo["length"][geo_id]),
                                     geo["bridge"][geo_id]]
 
         # node_features [[lane, type, length, id]]

@@ -28,24 +28,14 @@ class HRNR(AbstractRoadRepresentationModel):
 
         hparams = dict_to_object(config.config)
         self.graph_enc = GraphEncoderTL(hparams, self.struct_assign, self.fnc_assign, struct_adj, self.device)
-        self.node_feature = data_feature.get("node_feature")
-        self.type_feature = data_feature.get("type_feature")
-        self.length_feature = data_feature.get("length_feature")
-        self.lane_feature = data_feature.get("lane_feature")
 
         self.linear = torch.nn.Linear(hparams.hidden_dims * 2, hparams.label_num)
 
         self.linear_red_dim = torch.nn.Linear(hparams.hidden_dims, 100)
         self.node_emb, self.init_emb = None, None
 
-    def forward(self, input_bat):  # batch_size * length * dims
-        self.node_emb = self.graph_enc(self.node_feature, self.type_feature, self.length_feature, self.lane_feature,
-                                       self.adj)
-        self.init_emb = self.graph_enc.init_feat
-        output_state = torch.cat((self.node_emb[input_bat], self.init_emb[input_bat]), 1)
-        pred_tra = self.linear(output_state)
-
-        return pred_tra
+    def forward(self, x):
+        return self.graph_enc(x, self.adj)
 
 
 class GraphEncoderTL(Module):
