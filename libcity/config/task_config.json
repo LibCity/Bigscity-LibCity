@@ -386,7 +386,7 @@
     },
     "road_representation": {
         "allowed_model": [
-            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk"
+            "ChebConv", "LINE", "GAT", "Node2Vec", "DeepWalk", "GeomGCN"
         ],
         "allowed_dataset": [
             "BJ_roadmap"
@@ -401,6 +401,10 @@
             "executor": "LINEExecutor",
             "evaluator": "RoadRepresentationEvaluator"
         },
+        "GeomGCN": {
+            "dataset_class": "ChebConvDataset",
+            "executor": "ChebConvExecutor",
+            "evaluator": "RoadRepresentationEvaluator"
         "GAT": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
