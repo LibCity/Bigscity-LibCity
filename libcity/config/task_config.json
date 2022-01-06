@@ -405,6 +405,7 @@
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
             "evaluator": "RoadRepresentationEvaluator"
+        },
         "GAT": {
             "dataset_class": "ChebConvDataset",
             "executor": "ChebConvExecutor",
