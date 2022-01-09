@@ -95,10 +95,13 @@ class TransferProbability:
                 sum_ij += self.func(t, d, nodei)
 
         # add func values of all the trajectories starting from nodei
-        for col in range(len(self.edges)):
-            if self.edges[nodei][col] != -1:
-                for t in self.edges[nodei][col]:
-                    sum_i += self.func(t, d, nodei)
+        col_set = []
+        for edge in list(self.edges.keys()):
+            if edge[0] == nodei:
+                col_set.append(edge)
+        for col in col_set:
+            for t in self.edges[col]:
+                sum_i += self.func(t, d, nodei)
 
         if sum_i == 0:
             return 0
@@ -135,8 +138,7 @@ class TransferProbability:
         # trajectory traj has one edge at least
         elif len(traj_value[nodei_index_in_traj::]) >= 2:
             for index in range(nodei_index_in_traj, len(traj_value) - 1):
-                new_dist = self.get_dist(d, self.nodes[traj_value[index]],
-                                         self.nodes[traj_value[index + 1]])
+                new_dist = self.get_dist(d, traj_value[index],traj_value[index + 1])
                 if new_dist < dists:
                     dists = new_dist
                     flag = 1

@@ -10,6 +10,7 @@ class MPR(AbstractMachineLearningModel):
             data_feature (dict): the dict of data feature passed from Dataset.
         """
         super().__init__(config, data_feature)
+        self.data_feature = data_feature
         self.road_gps = self.data_feature.get('road_gps')
         self.road_num = self.data_feature.get('loc_num')
         self.traj_num = self.data_feature.get('traj_num')
@@ -50,5 +51,8 @@ class MPR(AbstractMachineLearningModel):
                     traj_set.add((f_id, t_id))
                     traj_dict[(f_id, t_id)] = [traj_id]
                 else:
-                    traj_dict[(f_id, t_id)].append(traj_id)
+                    if traj_id not in traj_dict[(f_id, t_id)]:
+                        traj_dict[(f_id, t_id)].append(traj_id)
+                    else:
+                        pass
         self.transferpro_mx = TransferProbability(self.road_gps, traj_dict, trajectories)
