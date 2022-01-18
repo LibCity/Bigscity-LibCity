@@ -216,8 +216,9 @@ class ContextAwareGAT(GATLayerImp3):
         self.node_features = data_feature['node_features']
         self.num_in_features = self.node_features.shape[1]
         self.adj_mx = data_feature['adj_mx']
-        self.edge_index = torch.LongTensor([self.adj_mx.row.tolist(), self.adj_mx.col.tolist()]).to(self.device)
         self.distance_bins = data_feature['distance_bins']
+        self.adjacent_list = data_feature['adjacent_list']
+        self.from_list = data_feature['from_list']
         super(ContextAwareGAT, self).__init__(self.num_in_features, self.gat_out_feature, self.num_of_heads,
                                               self.device, dropout_prob=self.dropout_p)
         # moving state W and distance W
@@ -238,7 +239,7 @@ class ContextAwareGAT(GATLayerImp3):
         # Step 1: Linear Projection + regularization
         #
         in_nodes_features = torch.FloatTensor(self.node_features).to(self.device)
-        edge_index = self.edge_index.clone()
+        edge_index = torch.LongTensor([self.adj_mx.row.tolist(), self.adj_mx.col.tolist()]).to(self.device)
         num_of_nodes = in_nodes_features.shape[self.nodes_dim]
         assert edge_index.shape[0] == 2, f'Expected edge index with shape=(2,E) got {edge_index.shape}'
         # shape = (N, FIN) where N - number of nodes in the graph, FIN - number of input features per node
@@ -297,6 +298,113 @@ class ContextAwareGAT(GATLayerImp3):
         out_nodes_features = self.skip_concat_bias(attentions_per_edge, in_nodes_features, out_nodes_features)
         return out_nodes_features
 
+    def forward_subgraph(self, moving_state, node):
+        """
+        只对 node 节点邻居构成的子图进行 forward
+        Args:
+            moving_state:
+            node:
+
+        Returns:
+            node_emb
+        """
+        #
+        # Step 1: Linear Projection + regularization
+        #
+        subgraph_node_feature = []
+        subgraph_node_recode = {}  # 子图需要重新编号
+        node_code = 0
+        subgraph_row = []
+        subgraph_col = []
+        subgraph_data = []
+        # 先把当前节点放到子图里
+        subgraph_node_feature.append(self.node_features[node].tolist())
+        subgraph_node_recode[node] = node_code
+        node_code += 1
+        # 当前节点可到的节点
+        if node in self.adjacent_list:
+            to_node = self.adjacent_list[node]
+            for sub_node in to_node:
+                if sub_node not in subgraph_node_recode:
+                    subgraph_node_recode[sub_node] = node_code
+                    node_code += 1
+                    subgraph_node_feature.append(self.node_features[sub_node].tolist())
+                sub_node_code = subgraph_node_recode[sub_node]
+                subgraph_row.append(0)
+                subgraph_col.append(sub_node_code)
+                subgraph_data.append(self.adj_mx.getrow(node).getcol(sub_node).toarray()[0, 0])
+        # 到当前节点的节点
+        if node in self.from_list:
+            from_node = self.from_list[node]
+            for sub_node in from_node:
+                if sub_node not in subgraph_node_recode:
+                    subgraph_node_recode[sub_node] = node_code
+                    node_code += 1
+                    subgraph_node_feature.append(self.node_features[sub_node].tolist())
+                sub_node_code = subgraph_node_recode[sub_node]
+                subgraph_row.append(sub_node_code)
+                subgraph_col.append(0)
+                subgraph_data.append(self.adj_mx.getrow(sub_node).getcol(node).toarray()[0, 0])
+        in_nodes_features = torch.FloatTensor(subgraph_node_feature).to(self.device)
+        edge_index = torch.LongTensor([subgraph_row, subgraph_col]).to(self.device)
+        num_of_nodes = in_nodes_features.shape[self.nodes_dim]
+        assert edge_index.shape[0] == 2, f'Expected edge index with shape=(2,E) got {edge_index.shape}'
+        # shape = (N, FIN) where N - number of nodes in the graph, FIN - number of input features per node
+        # We apply the dropout to all of the input node features (as mentioned in the paper)
+        # Note: for Cora features are already super sparse so it's questionable how much this actually helps
+        in_nodes_features = self.dropout(in_nodes_features)
+        # shape = (N, FIN) * (FIN, NH*FOUT) -> (N, NH, FOUT) where NH - number of heads, FOUT - num of output features
+        # We project the input node features into NH independent output features (one for each attention head)
+        nodes_features_proj = self.linear_proj(in_nodes_features).view(-1, self.num_of_heads, self.num_out_features)
+        nodes_features_proj = self.dropout(nodes_features_proj)  # in the official GAT imp they did dropout here as well
+        #
+        # Step 2: Edge attention calculation
+        #
+        # Apply the scoring function (* represents element-wise (a.k.a. Hadamard) product)
+        # shape = (N, NH, FOUT) * (1, NH, FOUT) -> (N, NH, 1) -> (N, NH) because sum squeezes the last dimension
+        # Optimization note: torch.sum() is as performant as .sum() in my experiments
+        scores_source = (nodes_features_proj * self.scoring_fn_source).sum(dim=-1)
+        scores_target = (nodes_features_proj * self.scoring_fn_target).sum(dim=-1)
+        # (1, NH)
+        scores_moving_state = self.moving_state_w(moving_state.unsqueeze(0))
+        # get edge weight (distance) from adj_mx
+        # (E, 1)
+        edge_weight = torch.tensor(subgraph_data).unsqueeze(1).to(self.device)
+        # edge embedding
+        # (E, distance_emb_size)
+        edge_weight = self.distance_emb(edge_weight)
+        # (E, NH)
+        edge_score = self.distance_w(edge_weight).squeeze(1)
+        # We simply copy (lift) the scores for source/target nodes based on the edge index. Instead of preparing all
+        # the possible combinations of scores we just prepare those that will actually be used and those are defined
+        # by the edge index.
+        # scores shape = (E, NH), nodes_features_proj_lifted shape = (E, NH, FOUT), E - number of edges in the graph
+        scores_source_lifted, scores_target_lifted, nodes_features_proj_lifted = self.lift(scores_source, scores_target,
+                                                                                           nodes_features_proj,
+                                                                                           edge_index)
+        # (E, NH)
+        scores_per_edge = self.leakyReLU(scores_source_lifted + scores_target_lifted + scores_moving_state + edge_score)
+        # shape = (E, NH, 1)
+        attentions_per_edge = self.neighborhood_aware_softmax(scores_per_edge, edge_index[self.trg_nodes_dim],
+                                                              num_of_nodes)
+        # Add stochasticity to neighborhood aggregation
+        attentions_per_edge = self.dropout(attentions_per_edge)
+        #
+        # Step 3: Neighborhood aggregation
+        #
+        # Element-wise (aka Hadamard) product. Operator * does the same thing as torch.mul
+        # shape = (E, NH, FOUT) * (E, NH, 1) -> (E, NH, FOUT), 1 gets broadcast into FOUT
+        nodes_features_proj_lifted_weighted = nodes_features_proj_lifted * attentions_per_edge
+        # This part sums up weighted and projected neighborhood feature vectors for every target node
+        # shape = (N, NH, FOUT)
+        out_nodes_features = self.aggregate_neighbors(nodes_features_proj_lifted_weighted, edge_index,
+                                                      in_nodes_features, num_of_nodes)
+        #
+        # Step 4: Residual/skip connections, concat and bias
+        #
+        out_nodes_features = self.skip_concat_bias(attentions_per_edge, in_nodes_features, out_nodes_features)
+        return out_nodes_features[0]
+
 
 class FunctionH(nn.Module):
     """
@@ -331,9 +439,8 @@ class FunctionH(nn.Module):
         Returns:
             fc2_out (1): the heuristics cost of function h
         """
-        node_emb_features = self.gat(moving_state)
-        li_emb = node_emb_features[li].squeeze(0)
-        ld_emb = node_emb_features[ld].squeeze(0)
+        li_emb = self.gat.forward_subgraph(moving_state, li)
+        ld_emb = self.gat.forward_subgraph(moving_state, ld)
         distance_emb = self.distance_emb(distance).squeeze(0)
         input_feature = torch.cat([moving_state, li_emb, ld_emb, distance_emb], dim=0)
         fc1_out = torch.relu(self.fc1(input_feature))

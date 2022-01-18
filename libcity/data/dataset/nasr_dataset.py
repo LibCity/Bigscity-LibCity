@@ -67,6 +67,7 @@ class NASRDataset(AbstractDataset):
         self.data = None
         self.adj_mx = None
         self.adjacent_list = None
+        self.from_list = None
         self.node_features = None
         self.road_gps = None
         self.max_history_len = self.config['max_history_len']
@@ -161,7 +162,8 @@ class NASRDataset(AbstractDataset):
             'adj_mx': self.adj_mx,
             'distance_bins': 21,
             'road_gps': self.road_gps,
-            'adjacent_list': self.adjacent_list
+            'adjacent_list': self.adjacent_list,
+            'from_list': self.from_list
         }
 
     def load_roadmap(self):
@@ -214,6 +216,7 @@ class NASRDataset(AbstractDataset):
         adj_data = []
         adj_set = set()
         self.adjacent_list = {}
+        self.from_list = {}
         for index, row in tqdm(road_rel.iterrows(), total=road_rel.shape[0], desc='cal adj mx'):
             f_id = row['origin_id']
             t_id = row['destination_id']
@@ -229,6 +232,10 @@ class NASRDataset(AbstractDataset):
                     self.adjacent_list[f_id] = [t_id]
                 else:
                     self.adjacent_list[f_id].append(t_id)
+                if t_id not in self.from_list:
+                    self.from_list[t_id] = [f_id]
+                else:
+                    self.from_list[t_id].append(f_id)
         self.adj_mx = sp.coo_matrix((adj_data, (adj_row, adj_col)), shape=(self.road_num, self.road_num), dtype=int)
 
     def load_dyna(self):
