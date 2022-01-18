@@ -311,6 +311,7 @@ class ContextAwareGAT(GATLayerImp3):
         #
         # Step 1: Linear Projection + regularization
         #
+        node = node.item()
         subgraph_node_feature = []
         subgraph_node_recode = {}  # 子图需要重新编号
         node_code = 0
