@@ -344,7 +344,7 @@ class ContextAwareGAT(GATLayerImp3):
                 sub_node_code = subgraph_node_recode[sub_node]
                 subgraph_row.append(sub_node_code)
                 subgraph_col.append(0)
-                subgraph_data.append(self.adj_mx.getrow(sub_node).getcol(node).toarray()[0, 0])
+                subgraph_data.append(int(self.adj_mx.getrow(sub_node).getcol(node).toarray()[0, 0]))
         in_nodes_features = torch.FloatTensor(subgraph_node_feature).to(self.device)
         edge_index = torch.LongTensor([subgraph_row, subgraph_col]).to(self.device)
         num_of_nodes = in_nodes_features.shape[self.nodes_dim]
