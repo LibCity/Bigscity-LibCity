@@ -332,7 +332,7 @@ class ContextAwareGAT(GATLayerImp3):
                 sub_node_code = subgraph_node_recode[sub_node]
                 subgraph_row.append(0)
                 subgraph_col.append(sub_node_code)
-                subgraph_data.append(self.adj_mx.getrow(node).getcol(sub_node).toarray()[0, 0])
+                subgraph_data.append(int(self.adj_mx.getrow(node).getcol(sub_node).toarray()[0, 0]))
         # 到当前节点的节点
         if node in self.from_list:
             from_node = self.from_list[node]
@@ -369,7 +369,7 @@ class ContextAwareGAT(GATLayerImp3):
         scores_moving_state = self.moving_state_w(moving_state.unsqueeze(0))
         # get edge weight (distance) from adj_mx
         # (E, 1)
-        edge_weight = torch.tensor(subgraph_data).unsqueeze(1).to(self.device)
+        edge_weight = torch.LongTensor(subgraph_data).unsqueeze(1).to(self.device)
         # edge embedding
         # (E, distance_emb_size)
         edge_weight = self.distance_emb(edge_weight)
