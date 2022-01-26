@@ -118,6 +118,9 @@ class SermEncoder(AbstractTrajectoryEncoder):
 
     def load_wordvec(self, vecpath=WORD_VEC_PATH):
         word_vec = {}
+        if not os.path.exists(vecpath):
+            raise FileNotFoundError('SERM need Glove word vectors. Please download serm_glove_word_vec.zip from'
+                                    ' BaiduDisk or Google Drive, and unzip it to raw_data directory')
         with open(vecpath, 'r', encoding='utf-8') as f:
             for l in f:
                 vec = []
