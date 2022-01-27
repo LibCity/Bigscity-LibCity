@@ -1,6 +1,5 @@
 import math
 import sys
-import numpy as np
 import scipy as sp
 
 
@@ -12,11 +11,65 @@ def check_node_absorbing(nodes, edges, node):
     return True
 
 
+def check_coomatrix_value(i, j, row, col, data):
+    for n in range(len(row)):
+        if row[n] == i and col[n] == j:
+            return data[n]
+        else:
+            return 0
+
+
+def SparseMatrixAdd(A, B):
+    row = []
+    col = []
+    data = []
+    data_set = set()
+    for i in range(A.data):
+        row.append(A.row[i])
+        col.append(A.col[i])
+        data_set.add((A.row[i], A.col[i]))
+        data.append(A.data[i])
+    for i in range(B.data):
+        if (B.row[i], B.col[i]) not in data_set:
+            row.append(B.row[i])
+            col.append(B.col[i])
+            data.append(A.data[i])
+        else:
+            m = zip(row, col)
+            n = m.index((B.row[i], B.col[i]))
+            data[n] += B.data[i]
+    mx = sp.coo_matrix((data, (row, col)), shape=(len(A.row), len(B.col)), dtype=int)
+    return mx
+
+
+def SparseMatrixMultiply(A, B):
+    row = []
+    col = []
+    data = []
+    data_set = set()
+    data_dict = dict()
+    for i in range(A.col):
+        for j in range(B.row):
+            if A.col[i] == B.row[j]:
+                if (A.row[i], B.col[j]) not in data_set:
+                    data_set.add((A.row[i], B.col[j]))
+                    data_dict[(A.row[i], B.col[j])] = A.data[i] * B.data[j]
+                else:
+                    data_dict[(A.row[i], B.col[j])] += A.data[i] * B.data[j]
+    for key in data_dict.keys():
+        row.append(key[0])
+        col.append(key[1])
+        data.append(data_dict[key])
+    mx = sp.coo_matrix((data, (row, col)), shape=(len(A.row), len(B.col)), dtype=int)
+    return mx
+
+
 class TransferProbability:
     def __init__(self, nodes, edges, trajectories):
         self.nodes = nodes
         self.edges = edges
         self.trajectories = trajectories
+        self.vector = None
         self.p = None
         self.q = None
         self.s = None
@@ -27,10 +80,11 @@ class TransferProbability:
         Derive matrix P ,matrix Q ,matrix S and column vector V of each node.
 
         """
+        self.vector = []
         for node in self.nodes:
             self.p = self.create_transition_matrix(node)
-            self.q, self.s = self.reorganize(self.p, node)
-            node.vector = self.cal_vector(node, self.p, self.q)
+            self.q = self.reorganize(self.p, node)
+            self.vector[node] = self.cal_vector(node, self.p, self.q)
 
     def create_transition_matrix(self, d):
         """
@@ -90,13 +144,13 @@ class TransferProbability:
         sum_ij, sum_i = 0, 0
 
         # add func values of all the trajectories on (nodei,nodej)
-        if (nodei, nodej) in list(self.edges.keys()):
+        if (nodei, nodej) in self.edges:
             for t in self.edges[(nodei, nodej)]:
                 sum_ij += self.func(t, d, nodei)
 
         # add func values of all the trajectories starting from nodei
         col_set = []
-        for edge in list(self.edges.keys()):
+        for edge in self.edges:
             if edge[0] == nodei:
                 col_set.append(edge)
         for col in col_set:
@@ -138,7 +192,7 @@ class TransferProbability:
         # trajectory traj has one edge at least
         elif len(traj_value[nodei_index_in_traj::]) >= 2:
             for index in range(nodei_index_in_traj, len(traj_value) - 1):
-                new_dist = self.get_dist(d, traj_value[index],traj_value[index + 1])
+                new_dist = self.get_dist(d, traj_value[index], traj_value[index + 1])
                 if new_dist < dists:
                     dists = new_dist
                     flag = 1
@@ -195,12 +249,21 @@ class TransferProbability:
             else:
                 TR.append(node)
 
-        p_left_top = p[np.ix_(TR, TR)]
-        p_left_bottom = p[np.ix_(ABS, TR)]
-        p_right_top = p[np.ix_(TR, ABS)]
-        p_right_bottom = p[np.ix_(ABS, ABS)]
-
-        return p_left_top, p_right_top
+        m = zip(p.row, p.col)
+        row = []
+        col = []
+        data = []
+        for i in range(len(TR)):
+            for j in range(len(TR)):
+                if (TR[i], TR[j]) in m:
+                    n = m.index((TR[i], TR[j]))
+                    row.append(TR[i])
+                    col.append(TR[j])
+                    data.append(p.data[n])
+                else:
+                    continue
+        p_left_top = sp.coo_matrix((data, (row, col)), shape=(len(TR), len(TR)), dtype=int)
+        return p_left_top
 
     def matrix_multiply(self, a, n):
         """
@@ -211,9 +274,11 @@ class TransferProbability:
         :return: matrix result
 
         """
-        result = np.identity(a.shape[0])
+        result = sp.coo_matrix(
+            ([1 for i in range(len(a.data))], ([i for i in range(len(a.data))], [i for i in range(len(a.data))])),
+            shape=(len(a.row), len(a.col)), dtype=int)
         for i in range(n):
-            result = np.dot(result, a)
+            result = SparseMatrixMultiply(result, a)
         return result
 
     def step_t(self):
@@ -224,20 +289,35 @@ class TransferProbability:
 
         """
         edge_matrix_len = len(self.edges)
-        weight = [[sys.maxsize for j in range(edge_matrix_len)]
-                  for i in range(edge_matrix_len)]
+        weight_row = []
+        weight_col = []
+        weight_data = []
+        weight_set = ()
         for i in range(edge_matrix_len):
-            weight[i][i] = 0
             for j in range(edge_matrix_len):
-                if self.edges[i][j] != -1 and i != j:
-                    weight[i][j] = 1
-
+                if (i, j) in list(self.edges.keys()) and (i, j) not in weight_set and i != j:
+                    weight_set.add((i, j))
+                    weight_row.append(i)
+                    weight_col.append(j)
+                    weight_data.append(1)
         for k in range(edge_matrix_len):
             for i in range(edge_matrix_len):
                 for j in range(edge_matrix_len):
-                    if weight[i][j] > weight[i][k] + weight[k][j]:
-                        weight[i][j] = weight[i][k] + weight[k][j]
-        return max(max(weight))
+                    if check_coomatrix_value(i, j, weight_row, weight_col, weight_data) \
+                            > check_coomatrix_value(i, k, weight_row, weight_col, weight_data) + \
+                            check_coomatrix_value(k, j, weight_row, weight_col, weight_data):
+                        if (i, j) not in weight_set:
+                            weight_set.add((i, j))
+                            weight_row.append(i)
+                            weight_col.append(j)
+                            weight_data.append(check_coomatrix_value(i, k, weight_row, weight_col, weight_data) + \
+                                               check_coomatrix_value(k, j, weight_row, weight_col, weight_data))
+                        else:
+                            for n in range(len(weight_row)):
+                                if weight_row[n] == i and weight_col[n] == j:
+                                    weight_data[n] = check_coomatrix_value(i, k, weight_row, weight_col, weight_data) + \
+                                                     check_coomatrix_value(k, j, weight_row, weight_col, weight_data)
+        return max(weight_data)
 
     def cal_vector(self, d, p, q):
         """
@@ -250,16 +330,28 @@ class TransferProbability:
 
         """
         TR = []
-        absorbing_state = [-1 for j in range(len(self.edges))]
 
         # D=S[*,d]
-        for node in list(self.nodes.keys()):
+        for node in self.nodes:
             if not (node == d or check_node_absorbing(self.nodes, self.edges, node) == True):
                 TR.append(node)
-        D = p[np.ix_(TR, d)]
+
+        m = zip(p.row, p.col)
+        row = []
+        col = []
+        data = []
+        for i in range(len(TR)):
+            if (TR[i], d) in m:
+                n = m.index((TR[i], d))
+                row.append(TR[i])
+                col.append(d)
+                data.append(p.data[n])
+            else:
+                continue
+        D = sp.coo_matrix((data, (row, col)), shape=(len(TR), 1), dtype=int)
 
         # V=D+Q·D+Q^2·D+...+Q^(t-1)·D
-        v = np.zeros(D.shape)
+        v = sp.coo_matrix(([], ([], [])), shape=(len(TR), 1), dtype=int)
         for j in range(0, self.step_t()):
-            v = v + np.dot(self.matrix_multiply(q, j), D)
+            v = SparseMatrixAdd(v, SparseMatrixMultiply(self.matrix_multiply(q, j), D))
         return v
