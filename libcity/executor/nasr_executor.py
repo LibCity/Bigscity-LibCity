@@ -49,7 +49,7 @@ class NASRExecutor(AbstractExecutor):
             self._logger.info('==>Train G Function Epoch:{:4d} Train Loss:{:.5f}, Val Loss:{:.5f} learning_rate:{}'.
                               format(epoch, train_loss, eval_loss, lr))
             metrics['loss'].append(eval_loss)
-            save_name_tmp = 'ep_' + str(epoch) + '.pt'
+            save_name_tmp = 'ep_g_' + str(epoch) + '.pt'
             torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
             self.scheduler.step(eval_loss)
             lr = self.optimizer.param_groups[0]['lr']
@@ -58,17 +58,22 @@ class NASRExecutor(AbstractExecutor):
                 break
         if self.config['load_best_epoch']:
             best = np.argmin(metrics['loss'])
-            load_name_tmp = 'ep_' + str(best) + '.pt'
+            load_name_tmp = 'ep_g_' + str(best) + '.pt'
             self.model.load_state_dict(
                 torch.load(self.tmp_path + load_name_tmp))
         # train h function
+        # reset metrics
+        metrics = {'loss': []}
+        # rebuild optimizer and scheduler
+        self.optimizer = self._build_optimizer()
+        self.scheduler = self._build_scheduler()
         for epoch in range(self.max_epoch):
             train_loss = self._train_epoch(train_dataloader, 'h_loss')
             eval_loss = self._valid_epoch(eval_dataloader, 'h_loss')
             self._logger.info('==>Train H Function Epoch:{:4d} Train Loss:{:.5f}, Val Loss:{:.5f} learning_rate:{}'.
                               format(epoch, train_loss, eval_loss, lr))
             metrics['loss'].append(eval_loss)
-            save_name_tmp = 'ep_' + str(epoch) + '.pt'
+            save_name_tmp = 'ep_h_' + str(epoch) + '.pt'
             torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
             self.scheduler.step(eval_loss)
             lr = self.optimizer.param_groups[0]['lr']
@@ -77,7 +82,7 @@ class NASRExecutor(AbstractExecutor):
                 break
         if self.config['load_best_epoch']:
             best = np.argmin(metrics['loss'])
-            load_name_tmp = 'ep_' + str(best) + '.pt'
+            load_name_tmp = 'ep_h_' + str(best) + '.pt'
             self.model.load_state_dict(
                 torch.load(self.tmp_path + load_name_tmp))
         # remove temp folder
