@@ -540,7 +540,7 @@ class NASR(AbstractModel):
             batch (Batch): a batch of queries. A query is composed of (l_s, weekday_s, hour_s, l_d, uid, history_trace)
 
         Returns:
-            generate_trace (list): list of NASR recommend traces, only contains road list and uid. (uid, generate_trace)
+            generate_trace (list): list of NASR recommend traces, only contains road list.
         """
         # use A* search
         query = batch['query']
@@ -641,7 +641,7 @@ class NASR(AbstractModel):
                                     rid2node[c] = candidate_node
                                     if len(candidate_node.trace) == default_len and candidate_score > best_score:
                                         # give the default recommended trace
-                                        best_trace = [[x[0] for x in candidate_node.trace]]
+                                        best_trace = [x[0] for x in candidate_node.trace]
                                         best_score = candidate_score
                                 elif c in rid2node and rid2node[c].log_prob > candidate_log_prob:
                                     # update search node
@@ -659,7 +659,7 @@ class NASR(AbstractModel):
                 step += 1
             if best_trace is None:
                 best_trace = [query_i[0]]
-            generate_trace.append((uid.item(), best_trace))
+            generate_trace.append(best_trace)
         return generate_trace
 
     def calculate_loss(self, batch):

@@ -42,7 +42,7 @@ class RoutePlanningEvaluator(AbstractEvaluator):
         total = len(batch['true_trace'])
         self.intermediate_result['total_trace'] += total
         for i in range(total):
-            generate_trace_i = [x[0] for x in batch['generate_trace'][i][1]]
+            generate_trace_i = batch['generate_trace'][i]
             true_trace_i = batch['true_trace'][i]
             self.intermediate_result['true_trace_len'] += len(true_trace_i)
             self.intermediate_result['gen_trace_len'] += len(generate_trace_i)
