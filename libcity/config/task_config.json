@@ -402,12 +402,17 @@
         }
     },
     "route_planning": {
-        "allowed_model": ["NASR"],
+        "allowed_model": ["NASR", "MPR"],
         "allowed_dataset": ["BJTaxi_201511"],
         "NASR": {
             "dataset_class": "NASRDataset",
             "executor": "NASRExecutor",
             "evaluator": "RoutePlanningEvaluator"
+        },
+        "MPR": {
+            "dataset_class": "MPRDataset ",
+            "executor" : "MPRExecutor",
+            "evaluator" : "RoutePlanningEvaluator"
         }
     }
 }
