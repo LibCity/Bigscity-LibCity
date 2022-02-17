@@ -43,6 +43,7 @@ class TtpnetEncoder(AbstractETAEncoder):
             'holiday': 'int',
             'time': 'float',
             'traj_len': 'int',
+            'traj_id': 'int',
         }
         self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
@@ -93,7 +94,7 @@ class TtpnetEncoder(AbstractETAEncoder):
                 holiday = 1
 
             traj_len = len(traj)
-
+            traj_id = int(traj[-1][dyna_feature_column["traj_id"]])
             for point in traj:
                 coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
@@ -143,6 +144,7 @@ class TtpnetEncoder(AbstractETAEncoder):
                 [holiday],
                 [time],
                 [traj_len],
+                [traj_id],
             ])
         return encoded_trajectories
 
