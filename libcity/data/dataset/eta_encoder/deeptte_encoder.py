@@ -40,6 +40,7 @@ class DeeptteEncoder(AbstractETAEncoder):
             'dist': 'float',
             'time': 'float',
             'traj_len': 'int',
+            'traj_id': 'int',
         }
         self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
@@ -67,6 +68,7 @@ class DeeptteEncoder(AbstractETAEncoder):
             timeid = int(begin_time.strftime('%H')) * 60 + int(begin_time.strftime('%M'))
             time = (end_time - begin_time).seconds
             traj_len = len(traj)
+            traj_id = int(traj[-1][dyna_feature_column["traj_id"]])
             for point in traj:
                 coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
@@ -99,6 +101,7 @@ class DeeptteEncoder(AbstractETAEncoder):
                 [dist],
                 [time],
                 [traj_len],
+                [traj_id],
             ])
         return encoded_trajectories
 

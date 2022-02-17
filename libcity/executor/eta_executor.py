@@ -76,16 +76,20 @@ class ETAExecutor(TrafficStateExecutor):
             self.model.eval()
             y_truths = []
             y_preds = []
+            traj_ids = []
             for batch in test_dataloader:
                 batch.to_tensor(self.device)
                 output = self.model.predict(batch)
                 y_true = batch['time']
                 y_pred = output
+                traj_id = batch['traj_id']
                 y_truths.append(y_true.cpu().numpy())
                 y_preds.append(y_pred.cpu().numpy())
+                traj_ids.append(traj_id.cpu().long().numpy())
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)  # concatenate on batch
-            outputs = {'prediction': y_preds, 'truth': y_truths}
+            traj_ids = np.concatenate(traj_ids, axis=0)
+            outputs = {'traj_id': traj_ids, 'prediction': y_preds, 'truth': y_truths}
             filename = \
                 time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
                 + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
