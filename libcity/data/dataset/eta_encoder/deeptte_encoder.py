@@ -7,8 +7,10 @@ from libcity.data.dataset.eta_encoder.abstract_eta_encoder import AbstractETAEnc
 
 
 parameter_list = [
-    'dataset',
-    'eta_encoder'
+    'dataset', 'eta_encoder',
+]
+parameter_list_cut = [
+    'dataset', 'eta_encoder', 'cut_method', 'min_session_len', 'max_session_len', 'min_sessions', 'window_size',
 ]
 
 
@@ -41,9 +43,12 @@ class DeeptteEncoder(AbstractETAEncoder):
             'time': 'float',
             'traj_len': 'int',
             'traj_id': 'int',
+            'start_timestamp': 'int',
         }
         self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
+        need_cut = self.config.get("need_cut", False)
+        parameter_list = parameter_list if need_cut else parameter_list_cut
         for key in parameter_list:
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
@@ -61,7 +66,6 @@ class DeeptteEncoder(AbstractETAEncoder):
             current_tim = []
             current_dis = []
             current_state = []
-            dist = traj[-1][dyna_feature_column["current_dis"]] - traj[0][dyna_feature_column["current_dis"]]
             begin_time = datetime.strptime(traj[0][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             end_time = datetime.strptime(traj[-1][dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
             weekid = int(begin_time.weekday())
@@ -69,6 +73,8 @@ class DeeptteEncoder(AbstractETAEncoder):
             time = (end_time - begin_time).seconds
             traj_len = len(traj)
             traj_id = int(traj[-1][dyna_feature_column["traj_id"]])
+            start_timestamp = datetime.timestamp(begin_time)
+            last_dis = 0
             for point in traj:
                 coordinate = eval(point[dyna_feature_column["coordinates"]])
                 longi, lati = float(coordinate[0]), float(coordinate[1])
@@ -81,6 +87,7 @@ class DeeptteEncoder(AbstractETAEncoder):
                     dis = 0
                 else:
                     dis = geo_distance(current_longi[-2], current_lati[-2], longi, lati) + last_dis
+                    last_dis = dis
                 current_dis.append(dis)
 
                 tim = datetime.strptime(point[dyna_feature_column["time"]], '%Y-%m-%dT%H:%M:%SZ')
@@ -91,6 +98,10 @@ class DeeptteEncoder(AbstractETAEncoder):
                 else:
                     state = 0
                 current_state.append(state)
+            if "current_dis" in dyna_feature_column:
+                dist = traj[-1][dyna_feature_column["current_dis"]] - traj[0][dyna_feature_column["current_dis"]]
+            else:
+                dist = last_dis
             encoded_trajectories.append([
                 current_longi[:], current_lati[:],
                 current_tim[:], current_dis[:],
@@ -102,6 +113,7 @@ class DeeptteEncoder(AbstractETAEncoder):
                 [time],
                 [traj_len],
                 [traj_id],
+                [start_timestamp],
             ])
         return encoded_trajectories
 
