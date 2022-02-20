@@ -8,7 +8,7 @@ from libcity.model.road_representation.DeepWalk import DeepWalk
 __all__ = [
     "ChebConv",
     "LINE",
-    "GeomGCN"，
+    "GeomGCN",
     "GAT",
     "Node2Vec",
     "DeepWalk"
