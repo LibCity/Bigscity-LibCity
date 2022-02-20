@@ -1,8 +1,9 @@
-import os
-import pandas as pd
-import numpy as np
 import datetime
+import os
 from logging import getLogger
+
+import numpy as np
+import pandas as pd
 
 from libcity.data.dataset import AbstractDataset
 from libcity.data.utils import generate_dataloader
@@ -251,9 +252,9 @@ class TrafficStateDataset(AbstractDataset):
         len_time = len(self.timesolts)
         data = []
         for i in range(0, df.shape[0], len_time):
-            data.append(df[i:i+len_time].values)
+            data.append(df[i:i + len_time].values)
         data = np.array(data, dtype=np.float)  # (len(self.geo_ids), len_time, feature_dim)
-        data = data.swapaxes(0, 1)             # (len_time, len(self.geo_ids), feature_dim)
+        data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
         self._logger.info("Loaded file " + filename + '.dyna' + ', shape=' + str(data.shape))
         return data
 
@@ -299,7 +300,7 @@ class TrafficStateDataset(AbstractDataset):
         for i in range(0, df.shape[0], len_time):
             data.append(df[i:i + len_time].values)
         data = np.array(data, dtype=np.float)  # (len(self.geo_ids), len_time, feature_dim)
-        data = data.swapaxes(0, 1)             # (len_time, len(self.geo_ids), feature_dim)
+        data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
         self._logger.info("Loaded file " + filename + '.grid' + ', shape=' + str(data.shape))
         return data
 
@@ -348,7 +349,7 @@ class TrafficStateDataset(AbstractDataset):
                 index = (i * self.len_column + j) * len_time
                 tmp.append(df[index:index + len_time].values)
             data.append(tmp)
-        data = np.array(data, dtype=np.float)      # (len_row, len_column, len_time, feature_dim)
+        data = np.array(data, dtype=np.float)  # (len_row, len_column, len_time, feature_dim)
         data = data.swapaxes(2, 0).swapaxes(1, 2)  # (len_time, len_row, len_column, feature_dim)
         self._logger.info("Loaded file " + filename + '.grid' + ', shape=' + str(data.shape))
         return data
@@ -674,7 +675,7 @@ class TrafficStateDataset(AbstractDataset):
         data_list = [df]
         if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
-            time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]).\
+            time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]). \
                 transpose((5, 1, 2, 3, 4, 0))
             data_list.append(time_in_day)
         if self.add_day_in_week and not is_time_nan:
