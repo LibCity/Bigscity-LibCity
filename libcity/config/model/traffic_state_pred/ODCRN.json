@@ -1,0 +1,24 @@
+{
+    "kernel_type": "random_walk_diffusion",
+    "cheby_order": 2,
+    "num_layers": 2,
+    "hidden_dim": 32,
+    "use_DGC": true,
+
+    "scaler": "minmax01",
+    "load_external": false,
+    "normal_external": false,
+    "ext_scaler": "none",
+    "add_time_in_day": true,
+    "add_day_in_week": false,
+    "use_row_column": false,
+
+    "max_epoch": 100,
+    "learner": "adam",
+    "learning_rate": 1e-3,
+    "weight_decay": 1e-6,
+    "lr_decay": false,
+    "clip_grad_norm": false,
+    "use_early_stop": true,
+    "patience": 50
+}
