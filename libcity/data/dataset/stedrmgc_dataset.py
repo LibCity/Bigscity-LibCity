@@ -1,4 +1,7 @@
+import os
+
 import numpy as np
+from tqdm import tqdm
 
 from libcity.data.dataset import TrafficStateOdDataset
 
@@ -14,22 +17,59 @@ class STEDRMGCDataset(TrafficStateOdDataset):
         self.num_nodes = self.adj_mx.shape[0]
         self.adj_mx = self.generate_neighborhood_matrix(self.adj_mx)
         self.adj_mx.append(np.eye(self.num_nodes * self.num_nodes))
+        self.adj_mx.append(self.generate_corr_matrix())
+        pass
+
+    def generate_corr_matrix(self):
+        self._logger.info("Generating corr matrix for od pairs, this might take a long time.")
+        # 处理多数据文件问题
+        if isinstance(self.data_files, list):
+            data_files = self.data_files.copy()
+        else:  # str
+            data_files = [self.data_files].copy()
+        # 加载外部数据
+        if self.load_external and os.path.exists(self.data_path + self.ext_file + '.ext'):  # 外部数据集
+            ext_data = self._load_ext()
+        else:
+            ext_data = None
+        x_list, y_list = [], []
+        df_ = []
+        for filename in data_files:
+            df_.append(self._load_dyna(filename))
+
+        df = np.concatenate(df_, axis=1)
+        df = df.transpose((1, 2, 0, 3))
+        try:
+            df = df.squeeze(axis=-1)
+        except:
+            print("feature dim must be 1")
+
+        num_nodes = df.shape[1]
+        matrix = np.zeros((num_nodes * num_nodes, num_nodes * num_nodes))
+
+        for o_1 in tqdm(range(num_nodes)):
+            for d_1 in range(num_nodes):
+                for o_2 in range(num_nodes):
+                    for d_2 in range(num_nodes):
+                        matrix[o_1 * num_nodes + d_1, o_2 * num_nodes + d_2] = \
+                            np.corrcoef(df[o_1, d_1], df[o_2, d_2])[0][1]
+        return matrix
 
     def generate_neighborhood_matrix(self, geo_matrix):
         num_nodes = geo_matrix.shape[0]
         origin_matrix = np.zeros((num_nodes * num_nodes, num_nodes * num_nodes))
-        for o_i in range(num_nodes):
-            for o_j in range(num_nodes):
-                for d_i in range(num_nodes):
-                    for d_j in range(num_nodes):
-                        origin_matrix[o_i * num_nodes + o_j, d_i * num_nodes + d_j] = geo_matrix[o_i][d_i]
+        for o_1 in range(num_nodes):
+            for d_1 in range(num_nodes):
+                for o_2 in range(num_nodes):
+                    for d_2 in range(num_nodes):
+                        origin_matrix[o_1 * num_nodes + d_1, o_2 * num_nodes + d_2] = geo_matrix[o_1][o_2]
 
         destination_matrix = np.zeros((num_nodes * num_nodes, num_nodes * num_nodes))
-        for o_i in range(num_nodes):
-            for o_j in range(num_nodes):
-                for d_i in range(num_nodes):
-                    for d_j in range(num_nodes):
-                        destination_matrix[o_i * num_nodes + o_j, d_i * num_nodes + d_j] = geo_matrix[d_i][d_i]
+        for o_1 in range(num_nodes):
+            for d_1 in range(num_nodes):
+                for o_2 in range(num_nodes):
+                    for d_2 in range(num_nodes):
+                        destination_matrix[o_1 * num_nodes + d_1, o_2 * num_nodes + d_2] = geo_matrix[o_2][o_2]
         return [origin_matrix, destination_matrix]
 
     def _generate_input_data(self, df):
