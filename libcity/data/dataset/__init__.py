@@ -35,7 +35,7 @@ from libcity.data.dataset.gsnet_dataset import GSNetDataset
 from libcity.data.dataset.line_dataset import LINEDataset
 from libcity.data.dataset.cstn_dataset import CSTNDataset
 from libcity.data.dataset.roadnetwork_dataset import RoadNetWorkDataset
-from libcity.data.dataset.stedgcn_dataset import STEDGCNDataset
+from libcity.data.dataset.stedrmgc_dataset import STEDRMGCDataset
 
 __all__ = [
     "AbstractDataset",
@@ -71,5 +71,5 @@ __all__ = [
     "LINEDataset",
     "CSTNDataset",
     "RoadNetWorkDataset",
-    "STEDGCNDataset"
+    "STEDRMGCDataset"
 ]
