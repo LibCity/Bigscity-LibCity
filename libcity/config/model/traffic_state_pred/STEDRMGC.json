@@ -4,12 +4,12 @@
 
     "encode_conv_dims": [32, 32, 128],
     "lstm_dims": [128, 64],
-    "spatial_emb_dim": 90,
-    "temporal_emb_dim": 30,
+    "spatial_emb_dim": 900,
+    "temporal_emb_dim": 300,
 
     "decode_conv_dims": [32, 32, 128],
 
-    "batch_size": 16,
+    "batch_size": 32,
     "scaler": "minmax01",
     "load_external": true,
     "normal_external": false,
@@ -18,7 +18,7 @@
 
     "max_epoch": 100,
     "learner": "adam",
-    "learning_rate": 0.001,
+    "learning_rate": 5e-5,
     "weight_decay": 1e-6,
     "lr_decay": false,
     "clip_grad_norm": false,
