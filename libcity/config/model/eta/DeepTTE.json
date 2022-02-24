@@ -5,7 +5,7 @@
   "kernel_size": 3,
   "num_filter": 32,
   "pooling_method": "attention",
-  "num_final_fcs": 3,
+  "num_final_fcs": 4,
   "final_fc_size": 128,
   "alpha": 0.1,
 
@@ -14,7 +14,7 @@
   "hidden_size": 128,
 
   "max_epoch": 100,
-  "batch_size": 10,
+  "batch_size": 400,
   "learner": "adam",
   "learning_rate": 1e-3,
   "lr_decay": false,

@@ -69,16 +69,17 @@ class ETADataset(AbstractDataset):
         res = dict()
         if self.need_cut:
             user_set = pd.unique(dyna_file['entity_id'])
-            min_session_len = self.config.get('min_session_len', 5)
-            max_session_len = self.config.get('max_session_len', 50)
-            min_sessions = self.config.get('min_sessions', 0)
-            window_size = self.config.get('window_size', 12)
-            cut_method = self.config.get('cut_method', "time_interval")
+            min_session_len = self.config['min_session_len']
+            max_session_len = self.config['max_session_len']
+            min_sessions = self.config['min_sessions']
+            window_size = self.config['window_size']
+            cut_method = self.config['cut_method']
             if cut_method == 'time_interval':
                 # 按照时间窗口进行切割
                 for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                    usr_traj = traj[traj['entity_id'] == uid]
+                    usr_traj = dyna_file[dyna_file['entity_id'] == uid]
                     usr_traj = usr_traj.sort_values(by='time')
+                    usr_traj = usr_traj.reset_index(drop=True)
                     sessions = []  # 存放该用户所有的 session
                     traj_id = 0
                     session = []  # 单条轨迹
@@ -86,18 +87,18 @@ class ETADataset(AbstractDataset):
                         row['traj_id'] = traj_id
                         now_time = parse_time(row['time'])
                         if index == 0:
-                            session.append(row.tolist().append(traj_id))
+                            session.append(row.tolist())
                             prev_time = now_time
                         else:
                             time_off = cal_timeoff(now_time, prev_time)
                             if time_off < window_size and time_off >= 0 and len(session) < max_session_len:
-                                session.append(row.tolist().append(traj_id))
+                                session.append(row.tolist())
                             else:
                                 if len(session) >= min_session_len:
                                     sessions.append(session)
                                     traj_id += 1
                                 session = []
-                                session.append(row.tolist().append(traj_id))
+                                session.append(row.tolist())
                         prev_time = now_time
                     if len(session) >= min_session_len:
                         sessions.append(session)
@@ -107,8 +108,9 @@ class ETADataset(AbstractDataset):
             elif cut_method == 'same_date':
                 # 将同一天的 check-in 划为一条轨迹
                 for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                    usr_traj = traj[traj['entity_id'] == uid]
+                    usr_traj = dyna_file[dyna_file['entity_id'] == uid]
                     usr_traj = usr_traj.sort_values(by='time')
+                    usr_traj = usr_traj.reset_index(drop=True)
                     sessions = []  # 存放该用户所有的 session
                     traj_id = 0
                     session = []  # 单条轨迹
@@ -121,7 +123,6 @@ class ETADataset(AbstractDataset):
                             session.append(row.tolist().append())
                         else:
                             if prev_date == now_date and len(session) < max_session_len:
-                                # 还是同一天
                                 session.append(row.tolist())
                             else:
                                 if len(session) >= min_session_len:
@@ -140,8 +141,9 @@ class ETADataset(AbstractDataset):
                 if max_session_len != window_size:
                     raise ValueError('the fixed length window is not equal to max_session_len')
                 for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                    usr_traj = traj[traj['entity_id'] == uid]
+                    usr_traj = dyna_file[dyna_file['entity_id'] == uid]
                     usr_traj = usr_traj.sort_values(by='time')
+                    usr_traj = usr_traj.reset_index(drop=True)
                     sessions = []  # 存放该用户所有的 session
                     traj_id = 0
                     session = []  # 单条轨迹
@@ -258,6 +260,9 @@ class ETADataset(AbstractDataset):
             else:
                 self._logger.info("Dataset created")
                 if self.need_cut and os.path.exists(self.cut_data_cache):
+                    dyna_file = pd.read_csv(os.path.join(
+                        self.data_path, '{}.dyna'.format(self.config['dataset'])))
+                    self.dyna_feature_column = {col: i for i, col in enumerate(dyna_file)}
                     f = open(self.cut_data_cache, 'r')
                     dyna_data = json.load(f)
                     self._logger.info("Loading file " + self.cut_data_cache)

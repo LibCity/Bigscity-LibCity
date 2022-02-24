@@ -11,7 +11,7 @@ from functools import partial
 class ETAExecutor(TrafficStateExecutor):
     def __init__(self, config, model):
         super().__init__(config, model)
-        self.output_test_pred = config.get("output_test_pred", True)
+        self.output_pred = config.get("output_pred", True)
         self.output_dim = None
         self._scalar = None
 
@@ -86,28 +86,28 @@ class ETAExecutor(TrafficStateExecutor):
                 y_pred = output
                 y_truths.append(y_true.cpu().numpy())
                 y_preds.append(y_pred.cpu().numpy())
-                if self.output_test_pred:
-                    uid = batch['usr_id'].cpu().long().numpy()
-                    if uid not in test_pred:
-                        test_pred[str(uid)] = {}
-                    traj_id = batch['traj_id'].cpu().long().numpy()
-                    outputs = {}
-                    current_longi = batch['current_longi'].cpu().numpy()
-                    current_lati = batch['current_lati'].cpu().numpy()
-                    coordinates = []
-                    for longi, lati in zip(current_longi, current_lati):
-                        coordinates.append((longi, lati))
-                    traj_len = batch['traj_len'].cpu().long().numpy()
-                    start_timestamp = batch['start_timestamp'].cpu().long().numpy()
-                    outputs['coordinates'] = coordinates
-                    outputs['traj_len'] = traj_len
-                    outputs['start_time'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(start_timestamp))
-                    outputs['truth'] = y_true.cpu().numpy()
-                    outputs['prediction'] = y_pred.cpu().numpy()
-                    test_pred[str(uid)][str(traj_id)] = outputs
+                if self.output_pred:
+                    for i in range(y_pred.shape[0]):
+                        uid = batch['uid'][i].cpu().long().numpy()[0]
+                        if uid not in test_pred:
+                            test_pred[str(uid)] = {}
+                        traj_id = batch['traj_id'][i].cpu().long().numpy()[0]
+                        current_longi = batch['current_longi'][i].cpu().numpy()
+                        current_lati = batch['current_lati'][i].cpu().numpy()
+                        coordinates = []
+                        for longi, lati in zip(current_longi, current_lati):
+                            coordinates.append((float(longi), float(lati)))
+                        traj_len = batch['traj_len'][i].cpu().long().numpy()[0]
+                        start_timestamp = batch['start_timestamp'][i].cpu().long().numpy()[0]
+                        outputs = {}
+                        outputs['coordinates'] = coordinates[:traj_len]
+                        outputs['start_time'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(start_timestamp))
+                        outputs['truth'] = float(y_true[i].cpu().numpy()[0])
+                        outputs['prediction'] = float(y_pred[i].cpu().numpy()[0])
+                        test_pred[str(uid)][str(traj_id)] = outputs
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)  # concatenate on batch
-            if self.output_test_pred:
+            if self.output_pred:
                 filename = \
                     time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
                     + self.config['model'] + '_' + self.config['dataset'] + '_predictions.json'

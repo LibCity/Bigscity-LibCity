@@ -48,7 +48,8 @@ class DeeptteEncoder(AbstractETAEncoder):
         self.traj_len_idx = len(self.feature_dict) - 1
         parameters_str = ''
         need_cut = self.config.get("need_cut", False)
-        parameter_list = parameter_list if need_cut else parameter_list_cut
+        if need_cut:
+            parameter_list = parameter_list_cut
         for key in parameter_list:
             if key in self.config:
                 parameters_str += '_' + str(self.config[key])
