@@ -324,7 +324,7 @@ class HSTLSTM(AbstractModel):
         final_out_index = final_out_index.repeat(1, 1, self.hidden_size).to(self.device)
         out = torch.gather(hidden_out, 1, final_out_index).squeeze(1)  # batch_size * hidden_size
         linear_out = self.linear(out)
-        return F.softmax(linear_out, dim=1)
+        return F.log_softmax(linear_out, dim=1)
 
     def predict(self, batch):
         """
