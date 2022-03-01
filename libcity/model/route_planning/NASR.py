@@ -519,8 +519,8 @@ class NASR(AbstractModel):
             f_cost: each candidate's f_cost
         """
         # calculate g prob
-        g_prob, moving_state = self.function_g.forward(uid=uid.squeeze(0), current_trace=[current_trace],
-                                                       candidate_set=[candidate_set],
+        g_prob, moving_state = self.function_g.forward(uid=uid.squeeze(0), current_trace=[current_trace.cpu()],
+                                                       candidate_set=[candidate_set.cpu()],
                                                        history_trace=[], history_trace_hidden=history_hidden)
         # This step needs to be done because of the function_g forward interface
         g_prob = g_prob[0]
