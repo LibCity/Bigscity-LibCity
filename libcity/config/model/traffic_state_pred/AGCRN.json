@@ -3,6 +3,7 @@
   "rnn_units": 64,
   "num_layers": 2,
   "cheb_order": 2,
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": false,

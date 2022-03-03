@@ -3,6 +3,7 @@
   "tcn_dim": [10],
   "atten_head": 3,
   "choice": [1,1,1],
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": false,

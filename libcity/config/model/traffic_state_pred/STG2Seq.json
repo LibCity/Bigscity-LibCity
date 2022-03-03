@@ -2,6 +2,7 @@
   "window": 3,
   "dim_out": 32,
   "ks": 3,
+  "bidir_adj_mx": true,
 
   "scaler": "minmax01",
   "load_external": true,
