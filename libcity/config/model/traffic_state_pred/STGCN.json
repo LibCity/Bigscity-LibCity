@@ -5,6 +5,7 @@
   "dropout": 0,
   "graph_conv_type": "chebconv",
   "stgcn_train_mode": "quick",
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": false,

@@ -3,6 +3,7 @@
   "K": 3,
   "nb_chev_filter": 64,
   "nb_time_filter": 64,
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": false,

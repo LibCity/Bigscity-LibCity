@@ -12,6 +12,7 @@
     [64, 64, 64]
   ],
   "rho": 1,
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": true,

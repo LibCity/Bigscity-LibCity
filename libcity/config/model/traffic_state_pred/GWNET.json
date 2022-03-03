@@ -5,6 +5,7 @@
   "gcn_bool": true,
   "addaptadj": true,
   "adjtype": "doubletransition",
+  "bidir_adj_mx": false,
   "randomadj": true,
   "aptonly": true,
   "kernel_size": 2,

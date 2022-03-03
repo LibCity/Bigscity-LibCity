@@ -2,6 +2,7 @@
   "hidden_size": 128,
   "decoder_t": 3,
   "teacher_forcing_ratio": 0.5,
+  "bidir_adj_mx": true,
 
   "scaler": "standard",
   "load_external": true,

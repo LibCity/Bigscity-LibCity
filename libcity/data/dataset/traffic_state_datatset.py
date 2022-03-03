@@ -60,6 +60,7 @@ class TrafficStateDataset(AbstractDataset):
         self.time_intervals = self.config.get('time_intervals', 300)  # s
         self.init_weight_inf_or_zero = self.config.get('init_weight_inf_or_zero', 'inf')
         self.set_weight_link_or_dist = self.config.get('set_weight_link_or_dist', 'dist')
+        self.bidir_adj_mx = self.config.get('bidir_adj_mx', False)
         self.calculate_weight_adj = self.config.get('calculate_weight_adj', False)
         self.weight_adj_epsilon = self.config.get('weight_adj_epsilon', 0.1)
         # 初始化
@@ -117,9 +118,18 @@ class TrafficStateDataset(AbstractDataset):
     def _load_rel(self):
         """
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)],
-        生成N*N的矩阵，其中权重所在的列名用全局参数`weight_col`来指定,
-        全局参数`calculate_weight_adj`表示是否需要对加载的.rel的默认权重进行进一步计算,
-        如果需要，则调用函数self._calculate_adjacency_matrix()进行计算
+        生成N*N的邻接矩阵，计算逻辑如下：
+        (1) 权重所对应的列名用全局参数`weight_col`来指定, \
+        (2) 若没有指定该参数, \
+            (2.1) rel只有4列，则认为rel中的每一行代表一条邻接边，权重为1。其余边权重为0，代表不邻接。 \
+            (2.2) rel只有5列，则默认最后一列为`weight_col` \
+            (2.3) 否则报错 \
+        (3) 根据得到的权重列`weight_col`计算邻接矩阵 \
+            (3.1) 参数`bidir_adj_mx`=True代表构造无向图，=False为有向图 \
+            (3.2) 参数`set_weight_link_or_dist`为`link`代表构造01矩阵，为`dist`代表构造权重矩阵（非01） \
+            (3.3) 参数`init_weight_inf_or_zero`为`zero`代表矩阵初始化为全0，`inf`代表矩阵初始化成全inf，初始化值也就是rel文件中不存在的边的权值 \
+            (3.4) 参数`calculate_weight_adj`=True表示对权重矩阵应用带阈值的高斯核函数进行稀疏化，对01矩阵不做处理，=False不进行稀疏化，
+            修改函数self._calculate_adjacency_matrix()可以构造其他方法替换全阈值高斯核的稀疏化方法 \
 
         Returns:
             np.ndarray: self.adj_mx, N*N的邻接矩阵
@@ -155,11 +165,15 @@ class TrafficStateDataset(AbstractDataset):
                 continue
             if self.set_weight_link_or_dist.lower() == 'dist':  # 保留原始的距离数值
                 self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = row[2]
+                if self.bidir_adj_mx:
+                    self.adj_mx[self.geo_to_ind[row[1]], self.geo_to_ind[row[0]]] = row[2]
             else:  # self.set_weight_link_or_dist.lower()=='link' 只保留01的邻接性
                 self.adj_mx[self.geo_to_ind[row[0]], self.geo_to_ind[row[1]]] = 1
+                if self.bidir_adj_mx:
+                    self.adj_mx[self.geo_to_ind[row[1]], self.geo_to_ind[row[0]]] = 1
         self._logger.info("Loaded file " + self.rel_file + '.rel, shape=' + str(self.adj_mx.shape))
         # 计算权重
-        if self.calculate_weight_adj:
+        if self.calculate_weight_adj and self.set_weight_link_or_dist.lower() != 'link':
             self._calculate_adjacency_matrix()
 
     def _load_grid_rel(self):

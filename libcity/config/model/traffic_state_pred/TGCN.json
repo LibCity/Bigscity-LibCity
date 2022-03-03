@@ -1,6 +1,7 @@
 {
   "rnn_units": 100,
   "lambda": 0.0015,
+  "bidir_adj_mx": true,
 
   "scaler": "normal",
   "load_external": false,

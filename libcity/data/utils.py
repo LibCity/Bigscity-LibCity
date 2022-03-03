@@ -21,7 +21,11 @@ def get_dataset(config):
         return getattr(importlib.import_module('libcity.data.dataset'),
                        config['dataset_class'])(config)
     except AttributeError:
-        raise AttributeError('dataset_class is not found')
+        try:
+            return getattr(importlib.import_module('libcity.data.dataset.dataset_subclass'),
+                           config['dataset_class'])(config)
+        except AttributeError:
+            raise AttributeError('dataset_class is not found')
 
 
 def generate_dataloader(train_data, eval_data, test_data, feature_name,

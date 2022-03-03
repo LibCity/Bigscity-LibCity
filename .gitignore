@@ -9,4 +9,4 @@
 /.idea
 /libcity/log/*
 /libcity/model/*/__pycache__
-/libcity/data/dataset/trajectory_encoder/__pycache__
+/libcity/data/dataset/*/__pycache__
