@@ -1,6 +1,12 @@
 {
   "batch_size": 10,
   "num_workers": 0,
+  "min_session_len": 5,
+  "max_session_len": 50,
+  "min_sessions": 0,
+  "window_size": 1,
+  "cut_method": "time_interval",
+  "pad_with_last_sample": true,
   "sort_by_traj_len": true,
   "cache_dataset": true,
   "train_rate": 0.7,
