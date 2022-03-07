@@ -84,9 +84,9 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             target_tim = current_tim[-1]
             current_loc = current_loc[:-1]
             current_tim = current_tim[:-1]
-            lati = self.geo_coord[self.location2id[current_points[-1]]][0]
+            lati = self.geo_coord[current_points[-1]][0]
             lati = np.array([lati for i in range(len(current_loc))])
-            longi = self.geo_coord[self.location2id[current_points[-1]]][1]
+            longi = self.geo_coord[current_points[-1]][1]
             longi = np.array([longi for i in range(len(current_loc))])
             current_dis = euclidean_dist(lati - current_lati[:-1], longi - current_longi[:-1])
             trace.append(current_loc)
