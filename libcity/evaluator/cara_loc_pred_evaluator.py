@@ -83,7 +83,7 @@ class CARALocPredEvaluator(AbstractEvaluator):
     def save_result(self, save_path, filename=None):
         self.evaluate()
         if not os.path.exists(save_path):
-            os.mkdir(save_path)
+            os.makedirs(save_path)
         if filename is None:
             # 使用时间戳
             filename = time.strftime(
