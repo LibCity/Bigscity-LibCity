@@ -5,6 +5,7 @@ from .serm_encoder import SermEncoder
 from .stan_encoder import StanEncoder
 from .hstlstm_encoder import HstlstmEncoder
 from .strnn_encoder import StrnnEncoder
+from .cara_encoder import CARATrajectoryEncoder
 
 __all__ = [
     "StandardTrajectoryEncoder",
@@ -13,5 +14,6 @@ __all__ = [
     "SermEncoder",
     "StanEncoder",
     "HstlstmEncoder",
-    "StrnnEncoder"
+    "StrnnEncoder",
+    "CARATrajectoryEncoder"
 ]

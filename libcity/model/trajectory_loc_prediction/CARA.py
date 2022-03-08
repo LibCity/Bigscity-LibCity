@@ -18,13 +18,13 @@ def identity_loss(y_true, y_pred):
 class CARA1(nn.Module):
 
     def hard_sigmoid(self, x):
-        x = torch.tensor(x / 6 + 0.5)
+        x = x / 6 + 0.5
         x = F.threshold(-x, -1, -1)
         x = F.threshold(-x, 0, 0)
         return x
 
     def __init__(self, output_dim, input_dim,
-                 init='glorot_uniform', inner_init='orthogonal',
+                 init='glorot_uniform', inner_init='orthogonal', device=None,
                  **kwargs):
         super(CARA1, self).__init__()
         self.output_dim = output_dim
@@ -32,6 +32,7 @@ class CARA1(nn.Module):
         self.inner_init = inner_init
         self.activation = self.hard_sigmoid
         self.inner_activation = nn.Tanh()
+        self.device = device
         self.build(input_dim)
 
     def add_weight(self, shape, initializer):
@@ -98,7 +99,7 @@ class CARA1(nn.Module):
         X : batch * timeLen * dims(有拓展)
         """
         tlen = x.shape[1]
-        output = torch.zeros((x.shape[0], self.output_dim))
+        output = torch.zeros((x.shape[0], self.output_dim)).to(self.device)
         for i in range(tlen):
             output = self.step(x[:, i, :], output)
         return output
@@ -168,10 +169,11 @@ def bpr_triplet_loss(x):
 
 
 class Recommender(nn.Module):
-    def __init__(self, num_users, num_items, num_times, latent_dim, maxvenue=5):
+    def __init__(self, num_users, num_items, num_times, latent_dim, maxvenue=5, device=None):
         super(Recommender, self).__init__()
         self.maxVenue = maxvenue
         self.latent_dim = latent_dim
+        self.device = device
         # num * maxVenue * dim
         self.U_Embedding = nn.Embedding(num_users, latent_dim)
         self.V_Embedding = nn.Embedding(num_items, latent_dim)
@@ -180,7 +182,9 @@ class Recommender(nn.Module):
         torch.nn.init.uniform_(self.V_Embedding.weight)
         torch.nn.init.uniform_(self.T_Embedding.weight)
         self.rnn = nn.Sequential(
-            CARA1(latent_dim, latent_dim, input_shape=(self.maxVenue, (self.latent_dim * 2) + 2,), unroll=True))
+            CARA1(latent_dim, latent_dim, device=self.device, input_shape=(self.maxVenue, (self.latent_dim * 2) + 2,),
+                  unroll=True,
+                  ))
         #       latent_dim * 2 + 2 = v_embedding + t_embedding + time_gap + distance
 
     def forward(self, x):
@@ -189,13 +193,13 @@ class Recommender(nn.Module):
         #          self.neg_checkins_input]
         # pass
         #       User latent factor
-        user_input = torch.tensor(x[0])
-        time_input = torch.tensor(x[1])
-        gap_time_input = torch.tensor(x[2], dtype=torch.float32)
-        pos_distance_input = torch.tensor(x[3], dtype=torch.float32)
-        neg_distance_input = torch.tensor(x[4], dtype=torch.float32)
-        checkins_input = torch.tensor(x[5])
-        neg_checkins_input = torch.tensor(x[6])
+        user_input = x[0]
+        time_input = x[1]
+        gap_time_input = x[2]
+        pos_distance_input = x[3]
+        neg_distance_input = x[4]
+        checkins_input = x[5]
+        neg_checkins_input = x[6]
 
         self.u_latent = self.U_Embedding(user_input)
         self.t_latent = self.T_Embedding(time_input)
@@ -235,8 +239,8 @@ class Recommender(nn.Module):
         hist_time_gap = hist_time_gap.reshape(h, w, 1)
         h, w = hist_distances.shape
         hist_distances = hist_distances.reshape(h, w, 1)
-        rnn_input = torch.cat([t_latent, torch.tensor(hist_time_gap, dtype=torch.float32)], dim=-1)
-        rnn_input = torch.cat([rnn_input, torch.tensor(hist_distances, dtype=torch.float32)], dim=-1)
+        rnn_input = torch.cat([t_latent, torch.FloatTensor(hist_time_gap).to(self.device)], dim=-1)
+        rnn_input = torch.cat([rnn_input, torch.FloatTensor(hist_distances).to(self.device)], dim=-1)
 
         rnn_input = torch.cat([v_latent, rnn_input], dim=-1)
 
@@ -254,15 +258,15 @@ class CARA(AbstractModel):
         self.loc_size = data_feature['loc_size']
         self.tim_size = data_feature['tim_size']
         self.uid_size = data_feature['uid_size']
-        self.poi_profile = data_feature['poi_profile']
         self.id2locid = data_feature['id2locid']
         self.id2loc = []
+        self.device = config['device']
         for i in range(self.loc_size - 1):
             self.id2loc.append(self.id2locid[str(i)])
         self.id2loc.append(self.loc_size)
         self.id2loc = np.array(self.id2loc)
-        self.coor = self.poi_profile['coordinates'].apply(eval)
-        self.rec = Recommender(self.uid_size, self.loc_size, self.tim_size, 10)
+        self.coor = data_feature['poi_coor']
+        self.rec = Recommender(self.uid_size, self.loc_size, self.tim_size, 10, device=self.device)
 
     def get_time_interval(self, x):
         y = x[:, :-1]
@@ -275,7 +279,6 @@ class CARA(AbstractModel):
         return x - y
 
     def get_pos_distance(self, x):
-        x = np.array(x.tolist())
         y = np.concatenate([x[:, 0, None, :], x[:, :-1, :]], axis=1)
         r = 6373.0
         rx = np.radians(x)
@@ -327,38 +330,42 @@ class CARA(AbstractModel):
             tmp = visits[:].copy()
             tmp[-1] = j
             x_res.append(tmp)
-            j1 = self.coor[self.id2loc[visits[-1]]]
-            j = self.coor[self.id2loc[j]]
+            j1 = self.coor[str(self.id2loc[visits[-1]])]
+            j = self.coor[str(self.id2loc[j])]
             x_res_distance[i, -1] = self.get_distance(j1[0], j1[1], j[0], j[1])
         return x_res, x_res_distance
 
     def forward(self, batch):
-        hloc = np.array(batch['current_loc'])[:, :5]
-        target = np.array(batch['target'])
+        hloc = np.array(batch['current_loc'].cpu())[:, :5]
+        target = np.array(batch['target'].cpu())
         h = target.shape
         target = target.reshape((*h, 1))
         hloc = np.concatenate([hloc, target], axis=1)
         hloc1 = self.id2loc[hloc]
-        tloc = np.array(batch['current_tim'])[:, :5]
-        target_tim = np.array(batch['target_tim'])
+        tloc = np.array(batch['current_tim'].cpu())[:, :5]
+        target_tim = np.array(batch['target_tim'].cpu())
         h = target_tim.shape
         target_tim = target_tim.reshape((*h, 1))
         tloc = np.concatenate([tloc, target_tim], axis=1)
         x_users = batch['uid']
         t_interval = self.get_time_interval(tloc)
 
-        titude = self.coor[hloc1.reshape(-1)].to_numpy().reshape(hloc.shape)
+        titude = []
+        for i in hloc1.reshape(-1):
+            titude.append(self.coor[str(i)])
+        titude = np.array(titude).reshape((hloc.shape[0], hloc.shape[1], 2))
         pos_distance = self.get_pos_distance(titude)
-        x_neg_checkins, x_neg_distance = self.get_neg_checkins(np.array(batch['current_loc']), hloc, pos_distance)
-
-        x = [torch.tensor(x_users), torch.tensor(tloc), torch.tensor(t_interval),
-             torch.tensor(pos_distance), torch.tensor(x_neg_distance), torch.tensor(hloc),
-             torch.tensor(x_neg_checkins)]
+        x_neg_checkins, x_neg_distance = self.get_neg_checkins(np.array(batch['current_loc'].cpu()), hloc, pos_distance)
+        x_neg_checkins = np.array(x_neg_checkins)
+        x = [x_users, torch.tensor(tloc).to(self.device),
+             torch.FloatTensor(t_interval).to(self.device), torch.FloatTensor(pos_distance).to(self.device),
+             torch.FloatTensor(x_neg_distance).to(self.device), torch.tensor(hloc).to(self.device),
+             torch.tensor(x_neg_checkins).to(self.device)]
         return self.rec(x)
 
     def predict(self, batch):
-        hloc = np.array(batch['current_loc'])[:, :5]
-        tloc = np.array(batch['current_tim'])[:, :5]
+        hloc = np.array(batch['current_loc'].cpu())[:, :5]
+        tloc = np.array(batch['current_tim'].cpu())[:, :5]
         x_users = batch['uid']
         my_true = batch['target']
         my_true_tim = batch['target_tim']
@@ -369,8 +376,8 @@ class CARA(AbstractModel):
             users = []
             t_intervals = []
             distances = []
-            target = my_true[id]
-            target_tim = my_true_tim[id]
+            target = my_true[id].item()
+            target_tim = my_true_tim[id].item()
             mu = x_users[id]
             mh, mt = hloc[id], tloc[id].copy()
             mt = np.append(mt, target_tim)
@@ -380,7 +387,10 @@ class CARA(AbstractModel):
                 if i == 0:
                     mh = np.append(mh, target)
                     tmh = self.id2loc[mh]
-                    mtt = self.coor[tmh.reshape(-1)].to_numpy().reshape(tmh.shape)
+                    mtt = []
+                    for i in tmh.reshape(-1):
+                        mtt.append(self.coor[str(i)])
+                    mtt = np.array(mtt).reshape((tmh.shape[0], 2))
                     md = self.get_pos_distance2(mtt)
                 else:
                     j = target
@@ -388,17 +398,21 @@ class CARA(AbstractModel):
                         j = np.random.randint(0, self.loc_size - 1)
                     mh = np.append(mh, j)
                     tmh = self.id2loc[mh]
-                    mtt = self.coor[tmh.reshape(-1)].to_numpy().reshape(tmh.shape)
+                    mtt = []
+                    for i in tmh.reshape(-1):
+                        mtt.append(self.coor[str(i)])
+                    mtt = np.array(mtt).reshape((tmh.shape[0], 2))
                     md = self.get_pos_distance2(mtt)
 
                 hlocs.append(mh)
                 tlocs.append(mt)
-                users.append(mu)
+                users.append(mu.item())
                 t_intervals.append(mi)
                 distances.append(md)
             output.append(self.rec.rank(np.array(users), np.array(hlocs), np.array(tlocs), np.array(t_intervals),
                                         np.array(distances)).cpu().detach().numpy())
-        return torch.tensor(output)
+        output = np.array(output)
+        return torch.tensor(output).to(self.device)
 
     def calculate_loss(self, batch):
         return torch.mean(self.forward(batch))

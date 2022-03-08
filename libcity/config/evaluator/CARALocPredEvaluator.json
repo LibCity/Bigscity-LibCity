@@ -1,0 +1,5 @@
+{
+  "metrics": ["NDCG"],
+  "topk": 10,
+  "evaluate_method": "popularity"
+}
