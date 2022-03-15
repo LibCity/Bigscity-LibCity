@@ -98,7 +98,9 @@ def historical_average(data):
             inds = [j for j in range(i % lag[j], int(t * (train_rate + eval_rate)), lag[j])]
             history = data[inds, :, :]
             # 对得到的history数据去除空值后求平均
-            y_pred_i += weight[j] * np.mean(data[inds, :, :], axis=0, where=history != null_value)
+            null_mask = (history == null_value)
+            history[null_mask] = np.nan
+            y_pred_i += weight[j] * np.nanmean(history, axis=0)
             y_pred_i[np.isnan(y_pred_i)] = 0
         y_pred.append(y_pred_i)  # (N, F)
 
