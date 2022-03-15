@@ -19,8 +19,10 @@ class VisHelper:
             self.type = 'state'
         elif 'grid' in self.data_config and ['state'] == self.data_config['grid']['including_types']:
             self.type = 'grid'
-        else:
+        elif 'dyna' in self.data_config and ['trajectory'] == self.data_config['dyna']['including_types']:
             self.type = 'trajectory'
+        else:
+            self.type = 'geo'
         # get geo and dyna files
         all_files = os.listdir(self.raw_path + self.dataset)
         self.geo_file = []
@@ -37,8 +39,6 @@ class VisHelper:
             if file.split('.')[1] == 'grid':
                 self.grid_file.append(file)
 
-        assert len(self.geo_file) == 1
-
         # reserved columns
         self.geo_reserved_lst = ['type', 'coordinates']
         self.dyna_reserved_lst = ['dyna_id', 'type', 'time', 'entity_id', 'traj_id', 'coordinates']
@@ -47,8 +47,9 @@ class VisHelper:
     def visualize(self):
         if self.type == 'trajectory':
             # geo
-            self.geo_path = self.raw_path + self.dataset + '/' + self.geo_file[0]
-            self._visualize_geo()
+            if len(self.geo_file) > 0:
+                self.geo_path = self.raw_path + self.dataset + '/' + self.geo_file[0]
+                self._visualize_geo()
 
             # dyna
             for dyna_file in self.dyna_file:
@@ -65,6 +66,10 @@ class VisHelper:
             for grid_file in self.grid_file:
                 self.grid_path = self.raw_path + self.dataset + '/' + grid_file
                 self._visualize_grid()
+        elif self.type == 'geo':
+            # geo
+            self.geo_path = self.raw_path + self.dataset + '/' + self.geo_file[0]
+            self._visualize_geo()
 
     def _visualize_state(self):
         geo_file = pd.read_csv(self.geo_path, index_col=None)
@@ -95,6 +100,7 @@ class VisHelper:
 
         ensure_dir(self.save_path)
         save_name = "_".join(self.dyna_path.split('/')[-1].split('.')) + '.json'
+        print(f"visualization file saved at {save_name}")
         json.dump(geojson_obj, open(self.save_path + '/' + save_name, 'w',
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
@@ -128,6 +134,7 @@ class VisHelper:
 
         ensure_dir(self.save_path)
         save_name = "_".join(self.grid_path.split('/')[-1].split('.')) + '.json'
+        print(f"visualization file saved at {save_name}")
         json.dump(geojson_obj, open(self.save_path + '/' + save_name, 'w',
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
@@ -148,6 +155,7 @@ class VisHelper:
 
         ensure_dir(self.save_path)
         save_name = "_".join(self.geo_path.split('/')[-1].split('.')) + '.json'
+        print(f"visualization file saved at {save_name}")
         json.dump(geojson_obj, open(self.save_path + '/' + save_name, 'w',
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
@@ -208,6 +216,7 @@ class VisHelper:
 
         ensure_dir(self.save_path)
         save_name = "_".join(self.dyna_path.split('/')[-1].split('.')) + '.json'
+        print(f"visualization file saved at {save_name}")
         json.dump(geojson_obj, open(self.save_path + '/' + save_name, 'w',
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
