@@ -5,22 +5,7 @@
 import argparse
 
 from libcity.pipeline import hyper_parameter
-from libcity.utils import hyper_arguments, str2bool, str2float
-
-
-def add_other_args(parser):
-    for arg in hyper_arguments:
-        if hyper_arguments[arg]['type'] == 'int':
-            parser.add_argument('--{}'.format(arg), type=int, default=hyper_arguments[arg]['default'],
-                                help=hyper_arguments[arg]['help'])
-        elif hyper_arguments[arg] == 'bool':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2bool, default=hyper_arguments[arg]['default'],
-                                help=hyper_arguments[arg]['help'])
-        elif hyper_arguments[arg] == 'float':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2float, default=hyper_arguments[arg]['default'],
-                                help=hyper_arguments[arg]['help'])
+from libcity.utils import add_hyper_args
 
 
 if __name__ == '__main__':
@@ -51,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--exp_id', type=str, default=None, help='id of experiment')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     # 增加其他可选的参数
-    add_other_args(parser)
+    add_hyper_args(parser)
     # 解析参数
     args = parser.parse_args()
     dict_args = vars(args)

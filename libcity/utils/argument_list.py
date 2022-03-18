@@ -4,13 +4,56 @@ store the arguments can be modified by the user
 import argparse
 
 general_arguments = {
-    "gpu": "bool",
-    "batch_size": "int",
-    "train_rate": "float",
-    "eval_rate": "float",
-    "learning_rate": "float",
-    "max_epoch": "int",
-    "gpu_id": "int"
+    "gpu": {
+        "type": "bool",
+        "default": None,
+        "help": "whether use gpu"
+    },
+    "gpu_id": {
+        "type": "int",
+        "default": None,
+        "help": "the gpu id to use"
+    },
+    "train_rate": {
+        "type": "float",
+        "default": None,
+        "help": "the train set rate"
+    },
+    "eval_rate": {
+        "type": "float",
+        "default": None,
+        "help": "the validation set rate"
+    },
+    "batch_size": {
+        "type": "int",
+        "default": None,
+        "help": "the batch size"
+    },
+    "learning_rate": {
+        "type": "float",
+        "default": None,
+        "help": "learning rate"
+    },
+    "max_epoch": {
+        "type": "int",
+        "default": None,
+        "help": "the maximum epoch"
+    },
+    "dataset_class": {
+        "type": "str",
+        "default": None,
+        "help": "the dataset class name"
+    },
+    "executor": {
+        "type": "str",
+        "default": None,
+        "help": "the executor class name"
+    },
+    "evaluator": {
+        "type": "str",
+        "default": None,
+        "help": "the evaluator class name"
+    },
 }
 
 hyper_arguments = {
@@ -66,16 +109,37 @@ def str2float(s):
 def add_general_args(parser):
     for arg in general_arguments:
         if general_arguments[arg] == 'int':
-            parser.add_argument('--{}'.format(arg), type=int, default=None)
+            parser.add_argument('--{}'.format(arg), type=int,
+                                default=general_arguments[arg]['default'], help=general_arguments[arg]['help'])
         elif general_arguments[arg] == 'bool':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2bool, default=None)
+            parser.add_argument('--{}'.format(arg), type=str2bool,
+                                default=general_arguments[arg]['default'], help=general_arguments[arg]['help'])
         elif general_arguments[arg] == 'float':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2float, default=None)
+            parser.add_argument('--{}'.format(arg), type=str2float,
+                                default=general_arguments[arg]['default'], help=general_arguments[arg]['help'])
         elif general_arguments[arg] == 'str':
-            parser.add_argument('--{}'.format(arg),
-                                type=str, default=None)
+            parser.add_argument('--{}'.format(arg), type=str,
+                                default=general_arguments[arg]['default'], help=general_arguments[arg]['help'])
         elif general_arguments[arg] == 'list of int':
-            parser.add_argument('--{}'.format(arg), nargs='+',
-                                type=int, default=None)
+            parser.add_argument('--{}'.format(arg), nargs='+', type=int,
+                                default=general_arguments[arg]['default'], help=general_arguments[arg]['help'])
+
+
+def add_hyper_args(parser):
+    for arg in hyper_arguments:
+        if hyper_arguments[arg]['type'] == 'int':
+            parser.add_argument('--{}'.format(arg), type=int,
+                                default=hyper_arguments[arg]['default'], help=hyper_arguments[arg]['help'])
+        elif hyper_arguments[arg] == 'bool':
+            parser.add_argument('--{}'.format(arg), type=str2bool,
+                                default=hyper_arguments[arg]['default'], help=hyper_arguments[arg]['help'])
+        elif hyper_arguments[arg] == 'float':
+            parser.add_argument('--{}'.format(arg), type=str2float,
+                                default=hyper_arguments[arg]['default'], help=hyper_arguments[arg]['help'])
+        elif hyper_arguments[arg] == 'str':
+            parser.add_argument('--{}'.format(arg), type=str,
+                                default=hyper_arguments[arg]['default'], help=hyper_arguments[arg]['help'])
+        elif hyper_arguments[arg] == 'list of int':
+            parser.add_argument('--{}'.format(arg), nargs='+', type=int,
+                                default=hyper_arguments[arg]['default'], help=hyper_arguments[arg]['help'])
+
