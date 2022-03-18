@@ -48,6 +48,8 @@ if __name__ == '__main__':
                         default=1, help='the number of cpu which per trial will allocate')
     parser.add_argument('--gpu_per_trial', type=int,
                         default=1, help='the number of gpu which per trial will allocate')
+    parser.add_argument('--exp_id', type=str, default=None, help='id of experiment')
+    parser.add_argument('--seed', type=int, default=0, help='random seed')
     # 增加其他可选的参数
     add_other_args(parser)
     # 解析参数
