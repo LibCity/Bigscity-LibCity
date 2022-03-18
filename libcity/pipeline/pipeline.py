@@ -173,7 +173,7 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
         # load model
         model = get_model(experiment_config, data_feature)
         # load executor
-        executor = get_executor(experiment_config, model)
+        executor = get_executor(experiment_config, model, data_feature)
         # checkpoint by ray tune
         if checkpoint_dir:
             checkpoint = os.path.join(checkpoint_dir, 'checkpoint')
@@ -230,7 +230,7 @@ def objective_function(task=None, model_name=None, dataset_name=None, config_fil
     data_feature = dataset.get_data_feature()
 
     model = get_model(config, data_feature)
-    executor = get_executor(config, model)
+    executor = get_executor(config, model, data_feature)
     best_valid_score = executor.train(train_data, valid_data)
     test_result = executor.evaluate(test_data)
 
