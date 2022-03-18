@@ -4,6 +4,8 @@ import datetime
 import os
 import sys
 import numpy as np
+import random
+import torch
 
 
 def get_executor(config, model):
@@ -236,3 +238,17 @@ def preprocess_data(data, config):
     testx = x[train_size:x.shape[0]]  # (test_size, in, ...)
     testy = y[train_size:x.shape[0]]  # (test_size, out, ...)
     return trainx, trainy, testx, testy
+
+
+def set_random_seed(seed):
+    """
+    重置随机数种子
+
+    Args:
+        seed(int): 种子数
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True

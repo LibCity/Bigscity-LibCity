@@ -6,19 +6,7 @@ import argparse
 
 from libcity.pipeline import objective_function
 from libcity.executor import HyperTuning
-from libcity.utils import general_arguments, str2bool, str2float, get_logger
-
-
-def add_other_args(parser):
-    for arg in general_arguments:
-        if general_arguments[arg] == 'int':
-            parser.add_argument('--{}'.format(arg), type=int, default=None)
-        elif general_arguments[arg] == 'bool':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2bool, default=None)
-        elif general_arguments[arg] == 'float':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2float, default=None)
+from libcity.utils import str2bool, get_logger, set_random_seed, add_general_args
 
 
 if __name__ == '__main__':
@@ -45,8 +33,10 @@ if __name__ == '__main__':
     parser.add_argument('--max_evals', type=int,
                         default=100, help='Allow up to this many function \
                              evaluations before returning.')
+    parser.add_argument('--exp_id', type=str, default=None, help='id of experiment')
+    parser.add_argument('--seed', type=int, default=0, help='random seed')
     # 增加其他可选的参数
-    add_other_args(parser)
+    add_general_args(parser)
     # 解析参数
     args = parser.parse_args()
     dict_args = vars(args)
@@ -55,6 +45,9 @@ if __name__ == '__main__':
         'params_file', 'hyper_algo'] and val is not None}
 
     logger = get_logger({'model': args.model, 'dataset': args.dataset})
+    # seed
+    seed = dict_args.get('seed', 0)
+    set_random_seed(seed)
     hp = HyperTuning(objective_function, params_file=args.params_file, algo=args.hyper_algo,
                      max_evals=args.max_evals, task=args.task, model_name=args.model,
                      dataset_name=args.dataset, config_file=args.config_file,
