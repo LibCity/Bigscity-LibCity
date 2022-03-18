@@ -3,7 +3,7 @@ from libcity.executor.abstract_executor import AbstractExecutor
 
 
 class GensimExecutor(AbstractExecutor):
-    def __init__(self, config, model):
+    def __init__(self, config, model, data_feature):
         self.evaluator = get_evaluator(config)
         self.config = config
         self.model = model

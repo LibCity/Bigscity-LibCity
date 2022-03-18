@@ -12,9 +12,10 @@ from functools import partial
 
 
 class TrafficStateExecutor(AbstractExecutor):
-    def __init__(self, config, model):
+    def __init__(self, config, model, data_feature):
         self.evaluator = get_evaluator(config)
         self.config = config
+        self.data_feature = data_feature
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model.to(self.device)
         self.exp_id = self.config.get('exp_id', None)
@@ -28,7 +29,7 @@ class TrafficStateExecutor(AbstractExecutor):
 
         self._writer = SummaryWriter(self.summary_writer_dir)
         self._logger = getLogger()
-        self._scaler = self.model.get_data_feature().get('scaler')
+        self._scaler = self.data_feature.get('scaler')
         self._logger.info(self.model)
         for name, param in self.model.named_parameters():
             self._logger.info(str(name) + '\t' + str(param.shape) + '\t' +
@@ -66,7 +67,6 @@ class TrafficStateExecutor(AbstractExecutor):
         self.load_best_epoch = self.config.get('load_best_epoch', True)
         self.hyper_tune = self.config.get('hyper_tune', False)
 
-        # self.output_dim = self.model.get_data_feature().get('output_dim', 1)
         self.output_dim = self.config.get('output_dim', 1)
         self.optimizer = self._build_optimizer()
         self.lr_scheduler = self._build_lr_scheduler()

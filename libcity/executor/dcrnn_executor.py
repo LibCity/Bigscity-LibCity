@@ -9,8 +9,8 @@ from libcity.executor.traffic_state_executor import TrafficStateExecutor
 
 
 class DCRNNExecutor(TrafficStateExecutor):
-    def __init__(self, config, model):
-        TrafficStateExecutor.__init__(self, config, model)
+    def __init__(self, config, model, data_feature):
+        TrafficStateExecutor.__init__(self, config, model, data_feature)
 
     def _build_train_loss(self):
         """

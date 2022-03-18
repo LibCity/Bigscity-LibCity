@@ -5,7 +5,7 @@ from libcity.utils import get_evaluator
 
 class MapMatchingExecutor(AbstractTraditionExecutor):
 
-    def __init__(self, config, model):
+    def __init__(self, config, model, data_feature):
         self.model = model
         self.config = config
         self.evaluator = get_evaluator(config)

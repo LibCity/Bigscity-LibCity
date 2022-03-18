@@ -509,7 +509,7 @@ class MTGNN(AbstractTrafficStateModel):
 
     def calculate_loss(self, batch, idx=None, batches_seen=None):
         if idx is not None:
-            idx = torch.tensor(idx).to(self.device)
+            idx = torch.LongTensor(idx).to(self.device)
             tx = batch['X'][:, :, idx, :].clone()  # 避免batch[X]被修改 下一次idx索引就不对了
             y_true = batch['y'][:, :, idx, :]
             batch_new = {'X': tx}

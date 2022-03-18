@@ -9,8 +9,8 @@ from functools import partial
 
 
 class ETAExecutor(TrafficStateExecutor):
-    def __init__(self, config, model):
-        super().__init__(config, model)
+    def __init__(self, config, model, data_feature):
+        super().__init__(config, model, data_feature)
         self.output_pred = config.get("output_pred", True)
         self.output_dim = None
         self._scalar = None

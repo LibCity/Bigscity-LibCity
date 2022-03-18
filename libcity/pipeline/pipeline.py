@@ -51,7 +51,7 @@ def run_model(task=None, model_name=None, dataset_name=None, config_file=None,
     model_cache_file = './libcity/cache/{}/model_cache/{}_{}.m'.format(
         exp_id, model_name, dataset_name)
     model = get_model(config, data_feature)
-    executor = get_executor(config, model)
+    executor = get_executor(config, model, data_feature)
     # 训练
     if train or not os.path.exists(model_cache_file):
         executor.train(train_data, valid_data)
