@@ -8,9 +8,10 @@ import os
 
 
 class AbstractTraditionExecutor(AbstractExecutor):
-    def __init__(self, config, model):
+    def __init__(self, config, model, data_feature):
         self.evaluator = get_evaluator(config)
         self.config = config
+        self.data_feature = data_feature
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model
         self.exp_id = self.config.get('exp_id', None)
@@ -22,7 +23,7 @@ class AbstractTraditionExecutor(AbstractExecutor):
         ensure_dir(self.evaluate_res_dir)
 
         self._logger = getLogger()
-        self._scaler = self.model.get_data_feature().get('scaler')
+        self._scaler = self.data_feature.get('scaler')
 
         self.output_dim = self.config.get('output_dim', 1)
 

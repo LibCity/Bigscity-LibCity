@@ -10,8 +10,8 @@ from libcity.model import loss
 
 
 class GEMLExecutor(TrafficStateExecutor):
-    def __init__(self, config, model):
-        TrafficStateExecutor.__init__(self, config, model)
+    def __init__(self, config, model, data_feature):
+        TrafficStateExecutor.__init__(self, config, model, data_feature)
         self.loss_p0 = config.get("loss_p0", 0.5)
         self.loss_p1 = config.get("loss_p1", 0.25)
         self.loss_p2 = config.get("loss_p2", 0.25)

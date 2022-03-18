@@ -7,8 +7,8 @@ from libcity.executor.traffic_state_executor import TrafficStateExecutor
 
 
 class ChebConvExecutor(TrafficStateExecutor):
-    def __init__(self, config, model):
-        TrafficStateExecutor.__init__(self, config, model)
+    def __init__(self, config, model, data_feature):
+        TrafficStateExecutor.__init__(self, config, model, data_feature)
         self.loss_func = None
 
     def evaluate(self, test_dataloader):

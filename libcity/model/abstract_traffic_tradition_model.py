@@ -11,6 +11,3 @@ class AbstractTraditionModel:
         Returns:
             output of tradition model
         """
-
-    def get_data_feature(self):
-        return self.data_feature

@@ -11,7 +11,7 @@ from libcity.utils import get_evaluator
 
 class GeoSANExecutor(AbstractExecutor):
 
-    def __init__(self, config, model):
+    def __init__(self, config, model, data_feature):
         self.config = config
         self.device = self.config.get('device', torch.device('cpu'))
         self.model = model.to(self.device)

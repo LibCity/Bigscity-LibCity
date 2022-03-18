@@ -8,7 +8,7 @@ import random
 import torch
 
 
-def get_executor(config, model):
+def get_executor(config, model, data_feature):
     """
     according the config['executor'] to create the executor
 
@@ -21,7 +21,7 @@ def get_executor(config, model):
     """
     try:
         return getattr(importlib.import_module('libcity.executor'),
-                       config['executor'])(config, model)
+                       config['executor'])(config, model, data_feature)
     except AttributeError:
         raise AttributeError('executor is not found')
 
