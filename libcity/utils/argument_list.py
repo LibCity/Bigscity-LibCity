@@ -61,3 +61,21 @@ def str2float(s):
     except ValueError:
         raise argparse.ArgumentTypeError('float value expected.')
     return x
+
+
+def add_general_args(parser):
+    for arg in general_arguments:
+        if general_arguments[arg] == 'int':
+            parser.add_argument('--{}'.format(arg), type=int, default=None)
+        elif general_arguments[arg] == 'bool':
+            parser.add_argument('--{}'.format(arg),
+                                type=str2bool, default=None)
+        elif general_arguments[arg] == 'float':
+            parser.add_argument('--{}'.format(arg),
+                                type=str2float, default=None)
+        elif general_arguments[arg] == 'str':
+            parser.add_argument('--{}'.format(arg),
+                                type=str, default=None)
+        elif general_arguments[arg] == 'list of int':
+            parser.add_argument('--{}'.format(arg), nargs='+',
+                                type=int, default=None)

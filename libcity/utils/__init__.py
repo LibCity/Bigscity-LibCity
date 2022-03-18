@@ -4,7 +4,7 @@ from libcity.utils.dataset import parse_time, cal_basetime, cal_timeoff, \
     caculate_time_sim, parse_coordinate, string2timestamp, timestamp2array, \
     timestamp2vec_origin
 from libcity.utils.argument_list import general_arguments, str2bool, \
-    str2float, hyper_arguments
+    str2float, hyper_arguments, add_general_args
 from libcity.utils.normalization import Scaler, NoneScaler, NormalScaler, \
     StandardScaler, MinMax01Scaler, MinMax11Scaler, LogScaler
 
@@ -36,5 +36,6 @@ __all__ = [
     "MinMax01Scaler",
     "MinMax11Scaler",
     "LogScaler",
-    "set_random_seed"
+    "set_random_seed",
+    "add_general_args"
 ]

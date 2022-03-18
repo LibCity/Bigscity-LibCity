@@ -6,19 +6,7 @@ import argparse
 
 from libcity.pipeline import objective_function
 from libcity.executor import HyperTuning
-from libcity.utils import general_arguments, str2bool, str2float, get_logger, set_random_seed
-
-
-def add_other_args(parser):
-    for arg in general_arguments:
-        if general_arguments[arg] == 'int':
-            parser.add_argument('--{}'.format(arg), type=int, default=None)
-        elif general_arguments[arg] == 'bool':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2bool, default=None)
-        elif general_arguments[arg] == 'float':
-            parser.add_argument('--{}'.format(arg),
-                                type=str2float, default=None)
+from libcity.utils import str2bool, get_logger, set_random_seed, add_general_args
 
 
 if __name__ == '__main__':
@@ -48,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--exp_id', type=str, default=None, help='id of experiment')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     # 增加其他可选的参数
-    add_other_args(parser)
+    add_general_args(parser)
     # 解析参数
     args = parser.parse_args()
     dict_args = vars(args)
