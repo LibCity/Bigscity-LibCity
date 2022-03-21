@@ -6,12 +6,12 @@ import argparse
 general_arguments = {
     "gpu": {
         "type": "bool",
-        "default": True,
+        "default": None,
         "help": "whether use gpu"
     },
     "gpu_id": {
         "type": "int",
-        "default": 0,
+        "default": None,
         "help": "the gpu id to use"
     },
     "train_rate": {
