@@ -10,7 +10,8 @@ general_arguments = {
     "eval_rate": "float",
     "learning_rate": "float",
     "max_epoch": "int",
-    "gpu_id": "int"
+    "gpu_id": "int",
+    "downstream": "string"
 }
 
 hyper_arguments = {

@@ -8,7 +8,8 @@ from libcity.data.dataset.traffic_state_grid_od_dataset import TrafficStateGridO
 from libcity.data.dataset.traffic_state_od_dataset import TrafficStateOdDataset
 from libcity.data.dataset.eta_dataset import ETADataset
 from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
-from libcity.data.dataset.roadnetwork_dataset import RoadNetWorkDataset
+from libcity.data.dataset.road_representation_dataset import RoadRepresentationDataset
+from libcity.data.dataset.HRNR_dataset import HRNRDataset
 
 __all__ = [
     "AbstractDataset",
@@ -21,5 +22,6 @@ __all__ = [
     "TrafficStateGridOdDataset",
     "ETADataset",
     "MapMatchingDataset",
-    "RoadNetWorkDataset"
+    'RoadRepresentationDataset',
+    "HRNRDataset"
 ]

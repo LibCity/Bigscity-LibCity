@@ -18,6 +18,9 @@ def add_other_args(parser):
         elif general_arguments[arg] == 'float':
             parser.add_argument('--{}'.format(arg),
                                 type=str2float, default=None)
+        elif general_arguments[arg] == 'string':
+            parser.add_argument('--{}'.format(arg),
+                                type=str, default=None)
 
 
 if __name__ == '__main__':
