@@ -1,6 +1,7 @@
 import os
 import time
 
+import pandas as pd
 import torch
 from ray import tune
 
@@ -51,7 +52,8 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
         node_features = model(batch['node_features'])
         mask = batch['mask']
         predict_labels = self.linear(node_features[mask])
-        return torch.nn.CrossEntropyLoss()(labels[mask], predict_labels)
+        self._logger.info("labels {}, predict {}".format(labels[mask].shape, predict_labels.shape))
+        return torch.nn.CrossEntropyLoss()(predict_labels, labels[mask])
 
     def evaluate(self, test_dataloader):
         """
@@ -59,16 +61,18 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
         """
         self.evaluator.evaluate()
         node_features = torch.FloatTensor(test_dataloader['node_features']).to(self.device)
+        node_labels = None
 
         if self.downstream == "self_regression":
             node_labels = node_features.clone()
         elif self.downstream == "label_prediction":
-            node_labels = test_dataloader['node_labels']
+            node_labels = torch.LongTensor(pd.get_dummies(test_dataloader['node_labels']).values)
 
         test_mask = test_dataloader['mask']
 
         self._logger.info('Start evaluating ...')
         node_labels = self._scaler.inverse_transform(node_labels)
+        self._logger.info('node_labels {}'.format(node_labels.shape))
 
         if self.downstream == "self_regression":
             with torch.no_grad():
@@ -79,7 +83,9 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
         elif self.downstream == "label_prediction":
             with torch.no_grad():
                 self.model.eval()
-                output = self.linear(node_features)
+                output = self.model.predict({'node_features': node_features})
+                output = self.linear(output)
+                self._logger.info("output {}".format(output.shape))
                 output = self._scaler.inverse_transform(output)
 
         rmse = loss.masked_rmse_torch(output[test_mask], node_labels[test_mask])
@@ -167,7 +173,7 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
             float: 训练集的损失值
         """
         node_features = torch.FloatTensor(train_dataloader['node_features']).to(self.device)
-        node_labels = torch.FloatTensor(train_dataloader['node_labels']).to(self.device)
+        node_labels = torch.LongTensor(train_dataloader['node_labels']).to(self.device)
         train_mask = train_dataloader['mask']
 
         self.model.train()
@@ -193,7 +199,7 @@ class RoadRepresentationExecutor(TrafficStateExecutor):
             float: 验证集的损失值
         """
         node_features = torch.FloatTensor(eval_dataloader['node_features']).to(self.device)
-        node_labels = node_features.clone()
+        node_labels = torch.LongTensor(eval_dataloader['node_labels']).to(self.device)
         valid_mask = eval_dataloader['mask']
 
         with torch.no_grad():

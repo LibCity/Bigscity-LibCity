@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import torch
 import scipy.sparse as sp
 from logging import getLogger
 
@@ -90,7 +91,7 @@ class RoadRepresentationDataset(AbstractDataset):
         获取路网原子文件中的节点属性信息，并返回
         Returns:
             node_features: N \times F 特征矩阵
-            node_labels: N \times (highway classes) 的 01 矩阵，路段分类
+            node_labels: N 的标签信息，路段分类
             train_mask, valid_mask, test_mask: 下标的 list，分别表示选中训练、验证、测试的节点下标
         """
         # TODO: 这里进行规范化，相关内容抽象成函数，通过外部设置参数确定对哪些列进行数据预处理，即可统一
@@ -120,11 +121,11 @@ class RoadRepresentationDataset(AbstractDataset):
         # 对部分列进行独热编码
         onehot_list = ['lanes', 'highway']
         for col in onehot_list:
+            if col == "highway":
+                node_labels = torch.LongTensor(node_features[col])
             dum_col = pd.get_dummies(node_features[col], col)
             node_features = node_features.drop(col, axis=1)
             node_features = pd.concat([node_features, dum_col], axis=1)
-            if col == "highway":
-                node_labels = dum_col.values
 
         node_features = node_features.values
         np.save(self.cache_file_folder + '{}_node_features.npy'.format(self.dataset), node_features)
