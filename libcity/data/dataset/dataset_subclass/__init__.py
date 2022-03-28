@@ -16,6 +16,10 @@ from libcity.data.dataset.dataset_subclass.multi_stgcnet_dataset import MultiSTG
 from libcity.data.dataset.dataset_subclass.crann_dataset import CRANNDataset
 from libcity.data.dataset.dataset_subclass.ccrnn_dataset import CCRNNDataset
 from libcity.data.dataset.dataset_subclass.chebconv_dataset import ChebConvDataset
+from libcity.data.dataset.dataset_subclass.cstn_dataset import CSTNDataset
+from libcity.data.dataset.dataset_subclass.geosan_dataset import GeoSANDataset
+from libcity.data.dataset.dataset_subclass.gsnet_dataset import GSNetDataset
+from libcity.data.dataset.dataset_subclass.line_dataset import LINEDataset
 
 __all__ = [
     "ACFMDataset",
@@ -36,4 +40,8 @@ __all__ = [
     "CCRNNDataset",
     "DMVSTNetDataset",
     'ChebConvDataset',
+    "CSTNDataset",
+    "GeoSANDataset",
+    "GSNetDataset",
+    "LINEDataset",
 ]
