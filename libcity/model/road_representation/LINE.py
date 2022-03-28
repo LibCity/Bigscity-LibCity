@@ -91,5 +91,5 @@ class LINE(AbstractTrafficStateModel):
         """
         np.save('./libcity/cache/{}/evaluate_cache/embedding_{}_{}_{}.npy'
                 .format(self.exp_id, self.model, self.dataset, self.output_dim),
-                self.embed.get_embeddings())
+                self.embed.get_embeddings().cpu().numpy())
         return self.embed(I, J)
