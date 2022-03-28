@@ -1,6 +1,8 @@
 import math
 import sys
-import scipy as sp
+import scipy.sparse as sp
+import numpy as np
+from tqdm import tqdm
 
 
 def check_node_absorbing(edges, node):
@@ -31,7 +33,7 @@ def SparseMatrixAdd(A, B):
         if (B.row[i], B.col[i]) not in data_set:
             row.append(B.row[i])
             col.append(B.col[i])
-            data.append(A.data[i])
+            data.append(B.data[i])
         else:
             m = list(zip(row, col))
             n = m.index((B.row[i], B.col[i]))
@@ -100,11 +102,11 @@ class TransferProbability:
         Derive matrix P ,matrix Q ,matrix S and column vector V of each node.
 
         """
-        self.vector = []
-        for node in self.nodes:
+        self.vector = [vector for vector in self.nodes]
+        for node in tqdm(self.nodes, desc='TransferProbability'):
+            node = int(node)
             p = self.create_transition_matrix(node)
-            q = self.reorganize(p, node)
-            self.vector[node] = self.cal_vector(node, p, q)
+            self.vector[node] = self.cal_vector(node, p)
 
     def create_transition_matrix(self, d):
         """
@@ -119,7 +121,14 @@ class TransferProbability:
         p_col = []
         p_data = []
         for row in range(nodes_len):
-            for col in range(nodes_len):
+            if row == d:
+                p_row.append(row)
+                p_col.append(row)
+                p_data.append(1)
+                continue
+            col_index = np.argwhere(self.edges.row == row)
+            for array in col_index:
+                col = self.edges.col[array[0]]
                 p = self.transition_probability(d, row, col)
                 if p != 0:
                     p_row.append(row)
@@ -140,10 +149,7 @@ class TransferProbability:
 
         """
 
-        if (nodei == d or check_node_absorbing(self.edges, nodei) == True) \
-                and nodei == nodej:
-            return 1
-        elif (not (nodei == d or check_node_absorbing(self.edges, nodei) == True)) \
+        if (not (nodei == d or check_node_absorbing(self.edges, nodei) == True)) \
                 and nodei != nodej:
             return self.prd(d, nodei, nodej)
         else:
@@ -201,6 +207,7 @@ class TransferProbability:
             flag = 1
         # trajectory traj only has one node rather than edge
         elif len(traj_value[nodei_index_in_traj::]) == 1:
+            d = str(d)
             dists = math.pow(
                 ((self.nodes[d][0] - self.nodes[traj_value[0]][0]) ** 2
                  + (self.nodes[d][1] - self.nodes[traj_value[0]][1]) ** 2),
@@ -229,6 +236,11 @@ class TransferProbability:
         :return: the distance
 
         """
+        if point1 == point2:
+            return sys.maxsize
+        d = str(d)
+        point1 = str(point1)
+        point2 = str(point2)
         d_x = self.nodes[d][0]
         d_y = self.nodes[d][1]
         point1_x = self.nodes[point1][0]
@@ -248,41 +260,7 @@ class TransferProbability:
         p_y = point1_y + (point2_y - point1_y) * r
         return math.sqrt((d_x - p_x) ** 2 + (d_y - p_y) ** 2)
 
-    def reorganize(self, p, d):
-        """
-        Reorganize matrix P to canonical form by grouping
-        absorbing states into ABS and transient states into TR.
-
-        :param np.array p: matrix P
-        :param Point d: the destination node
-        :return: matrix Q(TR * TR), matrix S(TR * ABS)
-
-        """
-        ABS = []
-        TR = []
-        for node in self.nodes:
-            if node == d or check_node_absorbing(p, node) == True:
-                ABS.append(node)
-            else:
-                TR.append(node)
-
-        m = list(zip(p.row, p.col))
-        row = []
-        col = []
-        data = []
-        for i in range(len(TR)):
-            for j in range(len(TR)):
-                if (TR[i], TR[j]) in m:
-                    n = m.index((TR[i], TR[j]))
-                    row.append(i)
-                    col.append(j)
-                    data.append(p.data[n])
-                else:
-                    continue
-        p_left_top = sp.coo_matrix((data, (row, col)), shape=(len(TR), len(TR)), dtype=int)
-        return p_left_top
-
-    def cal_vector(self, d, p, q):
+    def cal_vector(self, d, p):
         """
         Get the column vector V of each node through matrix P and matrix Q.
 
@@ -292,38 +270,21 @@ class TransferProbability:
         :return: column vector V
 
         """
-        TR = []
-        ABS = []
 
-        # D=S[*,d]
-        for node in self.nodes:
-            if not (node == d or check_node_absorbing(p, node) == True):
-                TR.append(node)
-            else:
-                ABS.append(node)
-
-        m = list(zip(p.row, p.col))
         row = []
         col = []
         data = []
-        for i in range(len(TR)):
-            if (TR[i], d) in m:
-                n = m.index((TR[i], d))
-                row.append(i)
-                col.append(1)
-                data.append(p.data[n])
-            else:
-                continue
-        D = sp.coo_matrix((data, (row, col)), shape=(len(TR), 1), dtype=int)
+        row_index = np.argwhere(p.col == d)
+        for array in row_index:
+            array = array[0]
+            row_num = p.row[array]
+            row.append(row_num)
+            col.append(0)
+            data.append(p.data[array])
+        D = sp.coo_matrix((data, (row, col)), shape=(len(self.nodes), 1), dtype=int)
 
         # V=D+Q·D+Q^2·D+...+Q^(t-1)·D
-        v = sp.coo_matrix(([], ([], [])), shape=(len(TR), 1), dtype=int)
+        v = sp.coo_matrix(([], ([], [])), shape=(len(self.nodes), 1), dtype=int)
         for j in range(0, sys.maxsize):
-            v = SparseMatrixAdd(v, SparseMatrixMultiply(MatrixMultiply(q, j), D))
-
-        row = v.row
-        col = v.col
-        for m in range(len(TR)):
-            row[m] = TR[row[m]]
-        v = sp.coo_matrix((v.data, (row, col)), shape=(len(self.nodes), 1), dtype=int)
+            v = SparseMatrixAdd(v, SparseMatrixMultiply(MatrixMultiply(p, j), D))
         return v

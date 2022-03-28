@@ -1,7 +1,7 @@
 from sortedcontainers import SortedList
-
 from libcity.model.abstract_machine_learning_model import AbstractMachineLearningModel
 from libcity.utils.transfer_probability import TransferProbability
+import scipy.sparse as sp
 
 
 class MPR(AbstractMachineLearningModel):
@@ -15,15 +15,19 @@ class MPR(AbstractMachineLearningModel):
         super().__init__(config, data_feature)
         self.data_feature = data_feature
         self.nodes = self.data_feature.get('road_gps')
-        self.road_num = self.data_feature.get('loc_num')
+        self.road_num = self.data_feature.get('road_num')
         self.traj_num = self.data_feature.get('traj_num')
-        self.adj_mx = self.data_feature.get('adj_mx')
+        self.adj_mx_row = self.data_feature.get('adj_mx_row')
+        self.adj_mx_col = self.data_feature.get('adj_mx_col')
+        self.adj_mx_data = self.data_feature.get('adj_mx_data')
+        self.clusters = self.data_feature.get('clusters')
+        self.adj_mx = None
         self.transferpro_mx = None
 
     def predict(self, batch):
         """
         Args:
-            batch (Batch): a batch of input (end, start)
+            batch (Batch): a batch of input (start, end)
             start node: batch[0]
             end node: batch[1]
 
@@ -32,9 +36,16 @@ class MPR(AbstractMachineLearningModel):
         """
         # attribute L records the maximum ρ() value of the route from the
         # start node s to node ni
+
         L_dict = dict()
         for node in self.nodes:
+            node = int(node)
             L_dict[node] = 0
+        for i in range(len(self.clusters)):
+            if batch[0] in self.clusters[i]:
+                batch[0] = i
+            if batch[1] in self.clusters[i]:
+                batch[1] = i
         L_dict[batch[0]] = 1
         # create priority queue sorted by node's attribute L
         priority_queue = SortedList(key=lambda x: L_dict[x])
@@ -56,8 +67,8 @@ class MPR(AbstractMachineLearningModel):
                     node = parent_index[node]
                 return route
             # check node u's adjacent node
-            adjacent_node_indexes = [self.adj_mx.col[index] for index in range(len(self.adj_mx.row))
-                                     if self.adj_mx.row[index] == u]
+            adjacent_node_indexes = [self.adj_mx_col[index] for index in range(len(self.adj_mx_row))
+                                     if self.adj_mx_row[index] == u]
             for v in adjacent_node_indexes:
                 if v == batch[1]:
                     popularity = 1
@@ -107,5 +118,6 @@ class MPR(AbstractMachineLearningModel):
                         traj[(f_id, t_id)].append(traj_id)
                     else:
                         pass
-
+        self.adj_mx = sp.coo_matrix((self.adj_mx_data, (self.adj_mx_row, self.adj_mx_col)), shape=(self.road_num, self.road_num),
+                                    dtype=int)
         self.transferpro_mx = TransferProbability(self.nodes, self.adj_mx, traj, trajectories)

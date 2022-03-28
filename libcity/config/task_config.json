@@ -410,7 +410,7 @@
             "evaluator": "RoutePlanningEvaluator"
         },
         "MPR": {
-            "dataset_class": "MPRDataset ",
+            "dataset_class": "MPRDataset",
             "executor" : "MPRExecutor",
             "evaluator" : "RoutePlanningEvaluator"
         }

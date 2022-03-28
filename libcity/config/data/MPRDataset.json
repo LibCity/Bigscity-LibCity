@@ -1,0 +1,4 @@
+{
+    "train_rate" : 0.8,
+    "num_workers" : 4
+}
