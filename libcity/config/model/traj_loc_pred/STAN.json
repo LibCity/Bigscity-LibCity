@@ -1,5 +1,5 @@
 {
-    "cut_method": "length_window",
+    "cut_method": "fixed_length",
     "window_size": 100,
     "batch_size": 1,
     "max_session_len": 100,
