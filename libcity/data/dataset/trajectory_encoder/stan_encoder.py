@@ -37,7 +37,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
         self.feature_dict = {'traj': 'int', 'traj_temporal_mat': 'float',
                              'candiate_temporal_vec': 'float', 'traj_len': 'int',
                              'target': 'int', 'uid': 'int'}
-        self.max_len = self.config['max_session_len'] - 1  # 最后一个点需要留作 target
+        self.max_len = self.config['max_session_len']  # 最后一个点需要留作 target
         parameters_str = ''
         for key in parameter_list:
             if key in self.config:

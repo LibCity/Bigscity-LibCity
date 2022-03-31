@@ -1,6 +1,7 @@
 {
-    "tim_slot_len": 50,
-    "dis_slot_len": 50,
-    "embed_size": 200,
-    "hidden_size": 200
+    "tim_slot_len": 100,
+    "dis_slot_len": 100,
+    "embed_size": 256,
+    "hidden_size": 512,
+    "max_epoch": 20
 }
