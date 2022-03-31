@@ -113,11 +113,11 @@ class TrajectoryDataset(AbstractDataset):
         if cut_method == 'time_interval':
             # 按照时间窗口进行切割
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                usr_traj = traj[traj['entity_id'] == uid]
+                usr_traj = traj[traj['entity_id'] == uid].to_numpy()
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
-                for index, row in usr_traj.iterrows():
-                    now_time = parse_time(row['time'])
+                for index, row in enumerate(usr_traj):
+                    now_time = parse_time(row[2])
                     if index == 0:
                         session.append(row.tolist())
                         prev_time = now_time
@@ -138,12 +138,12 @@ class TrajectoryDataset(AbstractDataset):
         elif cut_method == 'same_date':
             # 将同一天的 check-in 划为一条轨迹
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                usr_traj = traj[traj['entity_id'] == uid]
+                usr_traj = traj[traj['entity_id'] == uid].to_numpy()
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
                 prev_date = None
-                for index, row in usr_traj.iterrows():
-                    now_time = parse_time(row['time'])
+                for index, row in enumerate(usr_traj):
+                    now_time = parse_time(row[2])
                     now_date = now_time.day
                     if index == 0:
                         session.append(row.tolist())
@@ -166,10 +166,10 @@ class TrajectoryDataset(AbstractDataset):
             if max_session_len != window_size:
                 raise ValueError('the fixed length window is not equal to max_session_len')
             for uid in tqdm(user_set, desc="cut and filter trajectory"):
-                usr_traj = traj[traj['entity_id'] == uid]
+                usr_traj = traj[traj['entity_id'] == uid].to_numpy()
                 sessions = []  # 存放该用户所有的 session
                 session = []  # 单条轨迹
-                for index, row in usr_traj.iterrows():
+                for index, row in enumerate(usr_traj):
                     if len(session) < window_size:
                         session.append(row.tolist())
                     else:
