@@ -9,7 +9,7 @@ from collections import Counter
 from tqdm import tqdm
 from libcity.data.dataset import AbstractDataset
 from libcity.utils import parse_time, cal_basetime, cal_timeoff
-from libcity.data.utils import generate_dataloader
+from libcity.data.utils import generate_dataloader_pad
 
 
 class PBSTrajectoryDataset(AbstractDataset):
@@ -53,11 +53,11 @@ class PBSTrajectoryDataset(AbstractDataset):
         # user 来划，以及按轨迹数来划。
         # TODO: 这里可以设一个参数，现在先按照轨迹数来划吧
         train_data, eval_data, test_data = self.divide_data()
-        return generate_dataloader(train_data, eval_data, test_data,
-                                   self.encoder.feature_dict,
-                                   self.config['batch_size'],
-                                   self.config['num_workers'], self.pad_item,
-                                   self.encoder.feature_max_len)
+        return generate_dataloader_pad(train_data, eval_data, test_data,
+                                       self.encoder.feature_dict,
+                                       self.config['batch_size'],
+                                       self.config['num_workers'], self.pad_item,
+                                       self.encoder.feature_max_len)
 
     def get_data_feature(self):
         res = self.data['data_feature']
