@@ -9,7 +9,7 @@ from logging import getLogger
 
 from libcity.data.dataset import AbstractDataset
 from libcity.utils import parse_time, cal_timeoff
-from libcity.data.utils import generate_dataloader
+from libcity.data.utils import generate_dataloader_pad
 
 
 parameter_list_cut = [
@@ -303,7 +303,7 @@ class ETADataset(AbstractDataset):
         self._logger.info("Number of train data: {}".format(len(train_data)))
         self._logger.info("Number of eval  data: {}".format(len(eval_data)))
         self._logger.info("Number of test  data: {}".format(len(test_data)))
-        return generate_dataloader(
+        return generate_dataloader_pad(
             train_data, eval_data, test_data,
             self.encoder.feature_dict,
             self.config['batch_size'],
