@@ -1,5 +1,5 @@
 """
-训练并评估单一模型的脚本
+模型调参脚本 (based on the ray[tune])
 """
 
 import argparse

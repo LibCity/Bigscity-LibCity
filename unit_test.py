@@ -5,10 +5,10 @@ from libcity.utils import get_model
 
 #############################################
 # The parameter to control the unit testing #
-tested_trajectory_model = 'TemplateTLP'
-tested_trajectory_dataset = 'foursquare_tky'
+tested_trajectory_model = 'RNN'
+tested_trajectory_dataset = 'foursquare_nyc'
 tested_trajectory_encoder = 'StandardTrajectoryEncoder'
-tested_traffic_state_model = 'DCRNN'
+tested_traffic_state_model = 'RNN'
 tested_traffic_state_dataset = 'METR_LA'
 #############################################
 
