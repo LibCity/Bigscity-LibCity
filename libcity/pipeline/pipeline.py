@@ -136,8 +136,15 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     # load config
     experiment_config = ConfigParser(task, model_name, dataset_name, config_file=config_file,
                                      other_args=other_args)
+    # exp_id
+    exp_id = experiment_config.get('exp_id', None)
+    if exp_id is None:
+        exp_id = int(random.SystemRandom().random() * 100000)
+        experiment_config['exp_id'] = exp_id
     # logger
     logger = get_logger(experiment_config)
+    logger.info('Begin ray-tune, task={}, model_name={}, dataset_name={}, exp_id={}'.
+                format(str(task), str(model_name), str(dataset_name), str(exp_id)))
     logger.info(experiment_config.config)
     # check space_file
     if space_file is None:
@@ -167,8 +174,11 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
                 experiment_config[key] = config[key]
         experiment_config['hyper_tune'] = True
         logger = get_logger(experiment_config)
-        logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}'
-                    .format(str(task), str(model_name), str(dataset_name)))
+        # exp_id
+        exp_id = int(random.SystemRandom().random() * 100000)
+        experiment_config['exp_id'] = exp_id
+        logger.info('Begin pipeline, task={}, model_name={}, dataset_name={}, exp_id={}'.
+                    format(str(task), str(model_name), str(dataset_name), str(exp_id)))
         logger.info('running parameters: ' + str(config))
         # load model
         model = get_model(experiment_config, data_feature)
@@ -215,9 +225,9 @@ def hyper_parameter(task=None, model_name=None, dataset_name=None, config_file=N
     # save best
     best_path = os.path.join(best_trial.checkpoint.value, "checkpoint")
     model_state, optimizer_state = torch.load(best_path)
-    model_cache_file = './libcity/cache/model_cache/{}_{}.m'.format(
-        model_name, dataset_name)
-    ensure_dir('./libcity/cache/model_cache')
+    model_cache_file = './libcity/cache/{}/model_cache/{}_{}.m'.format(
+        exp_id, model_name, dataset_name)
+    ensure_dir('./libcity/cache/{}/model_cache'.format(exp_id))
     torch.save((model_state, optimizer_state), model_cache_file)
 
 

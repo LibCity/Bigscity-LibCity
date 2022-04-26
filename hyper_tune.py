@@ -1,5 +1,5 @@
 """
-训练并评估单一模型的脚本
+模型调参脚本 (based on the ray[tune])
 """
 
 import argparse
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--config_file', type=str,
                         default=None, help='the file name of config file')
     parser.add_argument('--space_file', type=str,
-                        default=None, help='the file which specifies the parameter search space')
+                        default='hyper_example', help='the file which specifies the parameter search space')
     parser.add_argument('--scheduler', type=str,
                         default='FIFO', help='the trial sheduler which will be used in ray.tune.run')
     parser.add_argument('--search_alg', type=str,
