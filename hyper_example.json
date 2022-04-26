@@ -2,9 +2,5 @@
     "learning_rate": {
         "type": "choice",
         "list": [0.01, 0.005, 0.001]
-    },
-    "max_epoch": {
-        "type": "choice",
-        "list": [1]
     }
 }
