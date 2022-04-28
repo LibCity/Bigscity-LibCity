@@ -64,9 +64,7 @@ For example:
 python run_model.py --task traffic_state_pred --model GRU --dataset METR_LA
 ```
 
-This script will run the GRU model on the METR_LA dataset for traffic state prediction task under the default configuration.  We have released the correspondence between datasets, models, and tasks at [here](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/data/dataset_for_task.html).
-
-More details is represented in [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/get_started/quick_start.html).
+This script will run the GRU model on the METR_LA dataset for traffic state prediction task under the default configuration.  **We have released the correspondence between datasets, models, and tasks at [here](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/data/dataset_for_task.html).** More details is represented in [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/get_started/quick_start.html).
 
 ## TensorBoard Visualization
 

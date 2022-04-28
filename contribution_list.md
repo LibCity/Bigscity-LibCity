@@ -67,14 +67,16 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 ||GeoSAN|[Reinhard-Tichy](https://github.com/Reinhard-Tichy)|
 ||HSTLSTM|[Creddittale](https://github.com/Creddittale), [WenMellors](https://github.com/WenMellors)|
 |Estimated Time of Arrival|DeepTTE|[NickHan-cs](https://github.com/NickHan-cs)|
+||TTPNet|[NickHan-cs](https://github.com/NickHan-cs)|
 |Map Matching|STMatching|[XBR-1111](https://github.com/XBR-1111)|
 ||IVMM|[excelsior399](https://github.com/excelsior399)|
 ||HMMM|[XBR-1111](https://github.com/XBR-1111)|
 |Road Network Representation Learning|ChebConv|[aptx1231](https://github.com/aptx1231)|
-||LINE|[l782993610](https://github.com/l782993610)|
 ||Node2Vec|[aptx1231](https://github.com/aptx1231)|
 ||DeepWalk|[aptx1231](https://github.com/aptx1231)|
+||LINE|[l782993610](https://github.com/l782993610)|
 ||GAT|[Qwtdgh](https://github.com/Qwtdgh)|
+||GeomGCN|[Aressfull](https://github.com/Aressfull)|
 
 
 
