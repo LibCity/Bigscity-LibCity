@@ -26,7 +26,9 @@ class StrnnEncoder(AbstractTrajectoryEncoder):
             './libcity/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
 
         self.geo_coord = {}
-        path = "./raw_data/{}/{}.geo".format(config['dataset'], config['dataset'])
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        path = "./raw_data/{}/{}.geo".format(self.dataset, self.geo_file)
         f_geo = open(path)
         lines = f_geo.readlines()
 

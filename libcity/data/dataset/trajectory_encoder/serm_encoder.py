@@ -34,9 +34,11 @@ class SermEncoder(AbstractTrajectoryEncoder):
             './libcity/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
         # load poi_profile
         self.poi_profile = None
-        if self.config['dataset'] in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:
-            self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.config['dataset'],
-                                                                         self.config['dataset']))
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        if self.dataset in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:
+            self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.dataset,
+                                                                         self.geo_file))
 
     def encode(self, uid, trajectories, negative_sample=None):
         """standard encoder use the same method as DeepMove
@@ -134,7 +136,7 @@ class SermEncoder(AbstractTrajectoryEncoder):
         """
             return word index
         """
-        if self.config['dataset'] in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:
+        if self.dataset in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:
             # 语义信息在 geo 表中
             words = self.poi_profile.iloc[point[4]]['venue_category_name'].split(' ')
             word_index = []

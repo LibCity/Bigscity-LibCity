@@ -59,9 +59,13 @@ class TtpnetEncoder(AbstractETAEncoder):
             './libcity/cache/dataset_cache/', 'eta{}.json'.format(parameters_str))
 
         self.geo_embedding = []
-        path = "./raw_data/{}/{}.geo".format(config['dataset'], config['dataset'])
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        self.rel_file = self.config.get('rel_file', self.dataset)
+        self.dyna_file = self.config.get('dyna_file', self.dataset)
+        path = "./raw_data/{}/{}.geo".format(self.dataset, self.geo_file)
         f_geo = pd.read_csv(path)
-        self._logger.info("Loaded file " + self.config['dataset'] + '.geo')
+        self._logger.info("Loaded file " + self.geo_file + '.geo')
         for row in f_geo.itertuples():
             embedding = eval(getattr(row, 'embeddings'))
             self.geo_embedding.append(embedding[:])
