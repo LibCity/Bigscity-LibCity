@@ -20,7 +20,10 @@ class PBSTrajectoryDataset(AbstractDataset):
     def __init__(self, config):
         self.config = config
         self.cache_file_folder = './libcity/cache/dataset_cache/'
-        self.data_path = './raw_data/{}/'.format(self.config['dataset'])
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        self.dyna_file = self.config.get('dyna_file', self.dataset)
+        self.data_path = './raw_data/{}/'.format(self.dataset)
         self.data = None
         # 加载 encoder
         self.encoder = self.get_encoder()
@@ -86,7 +89,7 @@ class PBSTrajectoryDataset(AbstractDataset):
         """
         # load data according to config
         traj = pd.read_csv(os.path.join(
-            self.data_path, '{}.dyna'.format(self.config['dataset'])))
+            self.data_path, '{}.dyna'.format(self.dyna_file)))
         # filter inactive poi
         group_location = traj.groupby('location').count()
         filter_location = group_location[group_location['time'] > self.config['min_checkins']]

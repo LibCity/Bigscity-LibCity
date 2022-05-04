@@ -145,7 +145,9 @@ class StanEncoder(AbstractTrajectoryEncoder):
         return time.hour + time.weekday() * 24 + 1
 
     def _cal_poi_matrix(self):
-        poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.config['dataset'], self.config['dataset']))
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.dataset, self.geo_file))
         mat = np.zeros((self.loc_id-1, self.loc_id-1))
         for i in tqdm(range(1, self.loc_id), desc='calculate poi distance matrix'):
             lon_i, lat_i = parse_coordinate(poi_profile.iloc[self.id2location[i]]['coordinates'])

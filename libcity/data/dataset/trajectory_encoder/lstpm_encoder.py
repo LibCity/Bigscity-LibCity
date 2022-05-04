@@ -43,7 +43,9 @@ class LstpmEncoder(AbstractTrajectoryEncoder):
                 parameters_str += '_' + str(self.config[key])
         self.cache_file_name = os.path.join(
             './libcity/cache/dataset_cache/', 'trajectory_{}.json'.format(parameters_str))
-        self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.config['dataset'], self.config['dataset']))
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        self.poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.dataset, self.geo_file))
         self.time_checkin_set = defaultdict(set)
 
     def encode(self, uid, trajectories, negative_sample=None):

@@ -27,7 +27,10 @@ class ETADataset(AbstractDataset):
             for param in parameter_list_cut:
                 self.cut_data_cache += '_' + str(self.config[param])
             self.cut_data_cache += '.json'
-        self.data_path = './raw_data/{}/'.format(self.config['dataset'])
+        self.dataset = self.config.get('dataset', '')
+        self.geo_file = self.config.get('geo_file', self.dataset)
+        self.dyna_file = self.config.get('dyna_file', self.dataset)
+        self.data_path = './raw_data/{}/'.format(self.dataset)
         self.data = None
         self._logger = getLogger()
         # 加载 encoder
@@ -63,8 +66,8 @@ class ETADataset(AbstractDataset):
         """
         # load data according to config
         dyna_file = pd.read_csv(os.path.join(
-            self.data_path, '{}.dyna'.format(self.config['dataset'])))
-        self._logger.info("Loaded file " + self.config['dataset'] + '.dyna, shape=' + str(dyna_file.shape))
+            self.data_path, '{}.dyna'.format(self.dyna_file)))
+        self._logger.info("Loaded file " + self.dyna_file + '.dyna, shape=' + str(dyna_file.shape))
         self.dyna_feature_column = {col: i for i, col in enumerate(dyna_file)}
         res = dict()
         if self.need_cut:
@@ -261,7 +264,7 @@ class ETADataset(AbstractDataset):
                 self._logger.info("Dataset created")
                 if self.need_cut and os.path.exists(self.cut_data_cache):
                     dyna_file = pd.read_csv(os.path.join(
-                        self.data_path, '{}.dyna'.format(self.config['dataset'])))
+                        self.data_path, '{}.dyna'.format(self.dyna_file)))
                     self.dyna_feature_column = {col: i for i, col in enumerate(dyna_file)}
                     f = open(self.cut_data_cache, 'r')
                     dyna_data = json.load(f)

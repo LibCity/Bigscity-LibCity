@@ -369,16 +369,16 @@ class TrafficStateDataset(AbstractDataset):
 
     def _load_od_4d(self, filename):
         """
-                加载.od文件，格式[dyna_id, type, time, origin_id, destination_id properties(若干列)],
-                .geo文件中的id顺序应该跟.dyna中一致,
-                其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
+        加载.od文件，格式[dyna_id, type, time, origin_id, destination_id properties(若干列)],
+        .geo文件中的id顺序应该跟.dyna中一致,
+        其中全局参数`data_col`用于指定需要加载的数据的列，不设置则默认全部加载
 
-                Args:
-                    filename(str): 数据文件名，不包含后缀
+        Args:
+            filename(str): 数据文件名，不包含后缀
 
-                Returns:
-                    np.ndarray: 数据数组, 4d-array: (len_time, len_row, len_column, feature_dim)
-                """
+        Returns:
+            np.ndarray: 数据数组, 4d-array: (len_time, len_row, len_column, feature_dim)
+        """
         self._logger.info("Loading file " + filename + '.od')
         odfile = pd.read_csv(self.data_path + filename + '.od')
         if self.data_col != '':  # 根据指定的列加载数据集
