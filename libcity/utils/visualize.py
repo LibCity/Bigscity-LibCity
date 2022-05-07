@@ -54,7 +54,7 @@ class VisHelper:
             # dyna
             for dyna_file in self.dyna_file:
                 self.dyna_path = self.raw_path + self.dataset + '/' + dyna_file
-                self._visualize_dyna()
+                self._visualize_trajectory()
 
         elif self.type == 'state':
             self.geo_path = self.raw_path + self.dataset + '/' + self.geo_file[0]
@@ -141,6 +141,8 @@ class VisHelper:
 
     def _visualize_geo(self):
         geo_file = pd.read_csv(self.geo_path, index_col=None)
+        if "coordinates" not in list(geo_file.columns):
+            return
         geojson_obj = {'type': "FeatureCollection", 'features': []}
         extra_feature = [_ for _ in list(geo_file.columns) if _ not in self.geo_reserved_lst]
         for _, row in geo_file.iterrows():
@@ -151,6 +153,8 @@ class VisHelper:
             feature_i['geometry'] = {}
             feature_i['geometry']['type'] = row['type']
             feature_i['geometry']['coordinates'] = eval(row['coordinates'])
+            if len(feature_i['geometry']['coordinates']) == 0:
+                return
             geojson_obj['features'].append(feature_i)
 
         ensure_dir(self.save_path)
@@ -160,9 +164,8 @@ class VisHelper:
                                     encoding='utf-8'),
                   ensure_ascii=False, indent=4)
 
-    def _visualize_dyna(self):
+    def _visualize_trajectory(self):
         dyna_file = pd.read_csv(self.dyna_path, index_col=None)
-        dyna_feature_lst = [_ for _ in list(dyna_file.columns) if _ not in self.dyna_reserved_lst]
         geojson_obj = {'type': "FeatureCollection", 'features': []}
         trajectory = {}
         GPS_traj = "coordinates" in dyna_file.columns
@@ -176,8 +179,6 @@ class VisHelper:
                 entity_value = entity_value.groupby("traj_id")
                 for traj_id, traj_value in entity_value:
                     feature_dct = {"usr_id": entity_id, "traj_id": traj_id}
-                    for f in dyna_feature_lst:
-                        feature_dct[f] = float(traj_value[f].mean())
                     feature_i = dict()
                     feature_i['type'] = 'Feature'
                     feature_i['properties'] = feature_dct
