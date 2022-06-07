@@ -1,5 +1,4 @@
 from libcity.data.dataset.dataset_subclass.acfm_dataset import ACFMDataset
-from libcity.data.dataset.dataset_subclass.odcrn_dataset import ODCRNDataset
 from libcity.data.dataset.dataset_subclass.tgclstm_dataset import TGCLSTMDataset
 from libcity.data.dataset.dataset_subclass.astgcn_dataset import ASTGCNDataset
 from libcity.data.dataset.dataset_subclass.stresnet_dataset import STResNetDataset
@@ -45,5 +44,4 @@ __all__ = [
     "GeoSANDataset",
     "GSNetDataset",
     "LINEDataset",
-    "ODCRNDataset",
 ]
