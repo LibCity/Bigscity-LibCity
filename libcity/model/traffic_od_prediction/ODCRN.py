@@ -318,14 +318,14 @@ class ODCRN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.device = config.get('device', 'cpu')
+        self.input_window = config.get('input_window', 1)
+        self.output_window = config.get('output_window', 1)
 
         # initialize static graphs and K values
         self.K = get_support_K(config['kernel_type'], config['cheby_order'])
         self.G = preprocess_adj(adj_mtx=data_feature['adj_mx'],
                                 kernel_type=config['kernel_type'],
                                 cheby_order=config['cheby_order']).to(self.device)
-
-
         self.num_layers = config['num_layers']
         self.hidden_dim = config['hidden_dim']
         self.output_window = config['output_window']
@@ -348,6 +348,9 @@ class ODCRN(AbstractTrafficStateModel):
         self.linear = nn.Linear(in_features=self.hidden_dim, out_features=self.input_dim, bias=True)
 
     def calculate_loss(self, batch):
+        batch['X'] = np.log(batch['X'] + 1)
+        batch['y'] = np.log(batch['y'] + 1)
+
         y_true = batch['y']
         y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
@@ -359,7 +362,17 @@ class ODCRN(AbstractTrafficStateModel):
 
     def predict(self, batch):
         x = batch['X']
-        return self.forward(x)
+        y = batch['y']
+        y_preds = []
+        x_ = x.clone()
+        for i in range(self.output_window):
+            y_ = self.forward(x_)  # (batch_size, 1, len_row, len_column, output_dim)
+            y_preds.append(y_.clone())
+            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
+                y_ = torch.cat([y_, y[:, i:i + 1, :, :, self.output_dim:]], dim=-1)
+            x_ = torch.cat([x_[:, 1:, :, :, :], y_], dim=1)
+        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, len_row, len_column, output_dim)
+        return y_preds
 
     def forward(self, X_seq: torch.Tensor):
 
