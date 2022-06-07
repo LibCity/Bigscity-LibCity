@@ -121,7 +121,7 @@ class LogScaler(Scaler):
         self.eps = eps
 
     def transform(self, data):
-        return torch.log(data + self.eps)
+        return np.log(data + self.eps)
 
     def inverse_transform(self, data):
         return torch.exp(data) - self.eps
