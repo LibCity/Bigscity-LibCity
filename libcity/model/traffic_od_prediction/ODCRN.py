@@ -317,13 +317,14 @@ def preprocess_adj(adj_mtx: np.array, kernel_type, cheby_order):
 class ODCRN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
+        self.device = config.get('device', 'cpu')
+
         # initialize static graphs and K values
         self.K = get_support_K(config['kernel_type'], config['cheby_order'])
         self.G = preprocess_adj(adj_mtx=data_feature['adj_mx'],
                                 kernel_type=config['kernel_type'],
-                                cheby_order=config['cheby_order'])
+                                cheby_order=config['cheby_order']).to(self.device)
 
-        self.device = config.get('device', 'cpu')
 
         self.num_layers = config['num_layers']
         self.hidden_dim = config['hidden_dim']
