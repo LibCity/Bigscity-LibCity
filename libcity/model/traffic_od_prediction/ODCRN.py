@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
+from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
 class AdjProcessor:
@@ -329,10 +329,8 @@ class ODCRN(AbstractTrafficStateModel):
         self.hidden_dim = config['hidden_dim']
         self.output_window = config['output_window']
         self._scaler = self.data_feature.get('scaler')
-        self.input_dim = config['input_dim']
-        self.output_dim = config['output_dim']
+        self.input_dim = self.output_dim = config['input_dim']
         self.use_DGC = config['use_DGC']
-
         self.num_nodes = data_feature['num_nodes']
 
         if self.use_DGC:

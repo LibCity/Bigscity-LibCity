@@ -4,6 +4,7 @@
     "num_layers": 2,
     "hidden_dim": 32,
     "use_DGC": true,
+    "input_dim": 1,
 
     "scaler": "minmax01",
     "load_external": false,
