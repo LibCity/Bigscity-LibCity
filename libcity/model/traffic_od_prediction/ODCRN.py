@@ -348,9 +348,6 @@ class ODCRN(AbstractTrafficStateModel):
         self.linear = nn.Linear(in_features=self.hidden_dim, out_features=self.input_dim, bias=True)
 
     def calculate_loss(self, batch):
-        batch['X'] = torch.log(batch['X'] + 1)
-        batch['y'] = torch.log(batch['y'] + 1)
-
         y_true = batch['y']
         y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
