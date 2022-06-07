@@ -341,7 +341,7 @@
             "evaluator": "TrafficStateEvaluator"
         },
         "ODCRN": {
-            "dataset_class": "ORCRNDataset",
+            "dataset_class": "ODCRNDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         }
