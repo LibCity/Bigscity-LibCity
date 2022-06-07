@@ -6,7 +6,7 @@
     "use_DGC": true,
     "input_dim": 1,
 
-    "scaler": "minmax01",
+    "scaler": "log",
     "load_external": false,
     "normal_external": false,
     "ext_scaler": "none",
