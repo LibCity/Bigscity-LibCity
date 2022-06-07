@@ -359,17 +359,7 @@ class ODCRN(AbstractTrafficStateModel):
 
     def predict(self, batch):
         x = batch['X']
-        y = batch['y']
-        y_preds = []
-        x_ = x.clone()
-        for i in range(self.output_window):
-            y_ = self.forward(x_)  # (batch_size, 1, len_row, len_column, output_dim)
-            y_preds.append(y_.clone())
-            if y_.shape[-1] < x_.shape[-1]:  # output_dim < feature_dim
-                y_ = torch.cat([y_, y[:, i:i + 1, :, :, self.output_dim:]], dim=-1)
-            x_ = torch.cat([x_[:, 1:, :, :, :], y_], dim=1)
-        y_preds = torch.cat(y_preds, dim=1)  # (batch_size, output_length, len_row, len_column, output_dim)
-        return y_preds
+        return self.forward(x)
 
     def forward(self, X_seq: torch.Tensor):
 

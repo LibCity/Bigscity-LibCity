@@ -9,5 +9,5 @@ class ODCRNDataset(TrafficStateOdDataset):
 
     def _load_dyna(self, filename):
         data = super(ODCRNDataset, self)._load_dyna(filename)
-        data = np.log(data)
+        data = np.log(data + 1)
         return data
