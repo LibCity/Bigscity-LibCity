@@ -1,4 +1,5 @@
 import numpy as np
+from torch import tensor
 
 
 class Scaler:
@@ -121,7 +122,7 @@ class LogScaler(Scaler):
         self.eps = eps
 
     def transform(self, data):
-        return np.log(data + self.eps)
+        return tensor.log(data + self.eps)
 
     def inverse_transform(self, data):
-        return np.exp(data) - self.eps
+        return tensor.exp(data) - self.eps
