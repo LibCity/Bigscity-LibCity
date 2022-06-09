@@ -4,6 +4,7 @@ import time
 
 from libcity.evaluator.abstract_evaluator import AbstractEvaluator
 from libcity.evaluator.eval_funcs import top_k
+from logging import getLogger
 allowed_metrics = ['Precision', 'Recall', 'F1', 'MRR', 'MAP', 'NDCG']
 
 
@@ -23,6 +24,7 @@ class TrajLocPredEvaluator(AbstractEvaluator):
             'dcg': 0.0
         }
         self._check_config()
+        self._logger = getLogger()
 
     def _check_config(self):
         if not isinstance(self.metrics, list):
@@ -91,7 +93,7 @@ class TrajLocPredEvaluator(AbstractEvaluator):
             # 使用时间戳
             filename = time.strftime(
                 "%Y_%m_%d_%H_%M_%S", time.localtime(time.time()))
-        print('evaluate result is ', json.dumps(self.result, indent=1))
+        self._logger.info('evaluate result is ', json.dumps(self.result, indent=1))
         with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') \
                 as f:
             json.dump(self.result, f)

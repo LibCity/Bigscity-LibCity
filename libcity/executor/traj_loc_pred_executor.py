@@ -4,7 +4,6 @@ import torch.optim as optim
 import numpy as np
 import os
 from logging import getLogger
-from tqdm import tqdm
 
 from libcity.executor.abstract_executor import AbstractExecutor
 from libcity.utils import get_evaluator
@@ -34,11 +33,13 @@ class TrajLocPredExecutor(AbstractExecutor):
         metrics['loss'] = []
         lr = self.config['learning_rate']
         for epoch in range(self.config['max_epoch']):
+            self._logger.info('start train')
             self.model, avg_loss = self.run(train_dataloader, self.model,
                                             self.config['learning_rate'], self.config['clip'])
             self._logger.info('==>Train Epoch:{:4d} Loss:{:.5f} learning_rate:{}'.format(
                 epoch, avg_loss, lr))
             # eval stage
+            self._logger.info('start evaluate')
             avg_eval_acc, avg_eval_loss = self._valid_epoch(eval_dataloader, self.model)
             self._logger.info('==>Eval Acc:{:.5f} Eval Loss:{:.5f}'.format(avg_eval_acc, avg_eval_loss))
             metrics['accuracy'].append(avg_eval_acc)
@@ -85,7 +86,7 @@ class TrajLocPredExecutor(AbstractExecutor):
     def evaluate(self, test_dataloader):
         self.model.train(False)
         self.evaluator.clear()
-        for batch in tqdm(test_dataloader, desc="test model"):
+        for batch in test_dataloader:
             batch.to_tensor(device=self.config['device'])
             scores = self.model.predict(batch)
             if self.config['evaluate_method'] == 'popularity':
@@ -112,7 +113,7 @@ class TrajLocPredExecutor(AbstractExecutor):
             torch.autograd.set_detect_anomaly(True)
         total_loss = []
         loss_func = self.loss_func or model.calculate_loss
-        for batch in tqdm(data_loader, desc="train model"):
+        for batch in data_loader:
             # one batch, one step
             self.optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
@@ -136,7 +137,7 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.evaluator.clear()
         total_loss = []
         loss_func = self.loss_func or model.calculate_loss
-        for batch in tqdm(data_loader, desc="validate model"):
+        for batch in data_loader:
             batch.to_tensor(device=self.config['device'])
             scores = model.predict(batch)
             loss = loss_func(batch)
