@@ -93,7 +93,7 @@ class TrajLocPredEvaluator(AbstractEvaluator):
             # 使用时间戳
             filename = time.strftime(
                 "%Y_%m_%d_%H_%M_%S", time.localtime(time.time()))
-        self._logger.info('evaluate result is ', json.dumps(self.result, indent=1))
+        self._logger.info('evaluate result is {}'.format(json.dumps(self.result, indent=1)))
         with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') \
                 as f:
             json.dump(self.result, f)
