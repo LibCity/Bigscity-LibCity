@@ -322,6 +322,7 @@ class ContextAwareGAT(GATLayerImp3):
         subgraph_node_feature.append(self.node_features[node].tolist())
         subgraph_node_recode[node] = node_code
         node_code += 1
+        # TODO: 这里可以优化一下效率
         # 当前节点可到的节点
         if node in self.adjacent_list:
             to_node = self.adjacent_list[node]
@@ -560,7 +561,7 @@ class NASR(AbstractModel):
                                     date_time=query_i[2] * 60, log_prob=0.0)
             open_set.put((start_node.log_prob, start_node))
             rid2node[query_i[0]] = start_node
-            max_search_step = 1000
+            max_search_step = 300
             step = 0
             # encode history
             history_trace_i = query_i[5]
