@@ -5,6 +5,7 @@
   "channels": 32,
   "skip_channels": 256,
   "end_channels": 512,
+  "adjtype": "doubletransition",
 
   "scaler": "standard",
   "load_external": true,
