@@ -2,7 +2,6 @@ import os
 import torch
 import torch.optim as optim
 import numpy as np
-from tqdm import tqdm
 from logging import getLogger
 from libcity.executor.abstract_executor import AbstractExecutor
 from libcity.utils import get_evaluator
@@ -11,6 +10,7 @@ from libcity.utils import get_evaluator
 class NASRExecutor(AbstractExecutor):
 
     def __init__(self, config, model):
+        super().__init__(config, model)
         self.config = config
         self.max_epoch = config['max_epoch']
         self.device = config['device']
@@ -101,7 +101,7 @@ class NASRExecutor(AbstractExecutor):
         """
         self.model.train(False)
         self.evaluator.clear()
-        for batch in tqdm(test_dataloader, desc="test model"):
+        for batch in test_dataloader:
             batch.to_tensor(device=self.config['device'])
             generate_trace = self.model.predict(batch)
             self.evaluator.collect({
@@ -171,7 +171,7 @@ class NASRExecutor(AbstractExecutor):
         if self.config['debug']:
             torch.autograd.set_detect_anomaly(True)
         total_loss = []
-        for batch in tqdm(train_dataloader, desc="train model"):
+        for batch in train_dataloader:
             # one batch, one step
             self.optimizer.zero_grad()
             batch.to_tensor(device=self.config['device'])
@@ -190,7 +190,7 @@ class NASRExecutor(AbstractExecutor):
     def _valid_epoch(self, eval_dataloader, mode):
         self.model.train(False)
         total_loss = []
-        for batch in tqdm(eval_dataloader, desc="eval model"):
+        for batch in eval_dataloader:
             # one batch, one step
             batch.to_tensor(device=self.config['device'])
             batch.data['loss_mode'] = mode
