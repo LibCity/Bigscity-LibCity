@@ -59,7 +59,7 @@ class HGCNDataset(TrafficStatePointDataset):
                 self.adj_mx_cluster[i][j] = cluster_sum
         distances = self.adj_mx_cluster[~np.isinf(self.adj_mx_cluster)].flatten()
         std = distances.std()
-        self.adj_mx_cluster = torch.tensor(np.exp(-np.square(self.adj_mx_cluster / std)))
+        self.adj_mx_cluster = np.exp(-np.square(self.adj_mx_cluster / std))
         self.adj_mx_cluster[self.adj_mx_cluster < self.weight_adj_epsilon] = 0
 
     def get_data_feature(self):
