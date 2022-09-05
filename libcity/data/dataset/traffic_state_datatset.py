@@ -175,7 +175,7 @@ class TrafficStateDataset(AbstractDataset):
                     self.adj_mx[self.geo_to_ind[row[1]], self.geo_to_ind[row[0]]] = 1
         self._logger.info("Loaded file " + self.rel_file + '.rel, shape=' + str(self.adj_mx.shape))
         # 计算权重
-        if self.distance_inverse:
+        if self.distance_inverse and self.set_weight_link_or_dist.lower() != 'link':
             self._distance_inverse()
         elif self.calculate_weight_adj and self.set_weight_link_or_dist.lower() != 'link':
             self._calculate_adjacency_matrix()
