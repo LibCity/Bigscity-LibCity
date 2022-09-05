@@ -63,6 +63,8 @@ class TrafficStateDataset(AbstractDataset):
         self.bidir_adj_mx = self.config.get('bidir_adj_mx', False)
         self.calculate_weight_adj = self.config.get('calculate_weight_adj', False)
         self.weight_adj_epsilon = self.config.get('weight_adj_epsilon', 0.1)
+        self.distance_inverse = self.config.get('distance_inverse', False)
+
         # 初始化
         self.data = None
         self.feature_name = {'X': 'float', 'y': 'float'}  # 此类的输入只有X和y
@@ -173,7 +175,9 @@ class TrafficStateDataset(AbstractDataset):
                     self.adj_mx[self.geo_to_ind[row[1]], self.geo_to_ind[row[0]]] = 1
         self._logger.info("Loaded file " + self.rel_file + '.rel, shape=' + str(self.adj_mx.shape))
         # 计算权重
-        if self.calculate_weight_adj and self.set_weight_link_or_dist.lower() != 'link':
+        if self.distance_inverse:
+            self._distance_inverse()
+        elif self.calculate_weight_adj and self.set_weight_link_or_dist.lower() != 'link':
             self._calculate_adjacency_matrix()
 
     def _load_grid_rel(self):
@@ -211,6 +215,11 @@ class TrafficStateDataset(AbstractDataset):
         std = distances.std()
         self.adj_mx = np.exp(-np.square(self.adj_mx / std))
         self.adj_mx[self.adj_mx < self.weight_adj_epsilon] = 0
+
+    def _distance_inverse(self):
+        self._logger.info("Start Calculate the weight by _distance_inverse!")
+        self.adj_mx = 1 / self.adj_mx
+        self.adj_mx[np.isinf(self.adj_mx)] = 1
 
     def _load_dyna(self, filename):
         """
@@ -265,9 +274,9 @@ class TrafficStateDataset(AbstractDataset):
         len_time = len(self.timesolts)
         data = []
         for i in range(0, df.shape[0], len_time):
-            data.append(df[i:i+len_time].values)
+            data.append(df[i:i + len_time].values)
         data = np.array(data, dtype=np.float)  # (len(self.geo_ids), len_time, feature_dim)
-        data = data.swapaxes(0, 1)             # (len_time, len(self.geo_ids), feature_dim)
+        data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
         self._logger.info("Loaded file " + filename + '.dyna' + ', shape=' + str(data.shape))
         return data
 
@@ -313,7 +322,7 @@ class TrafficStateDataset(AbstractDataset):
         for i in range(0, df.shape[0], len_time):
             data.append(df[i:i + len_time].values)
         data = np.array(data, dtype=np.float)  # (len(self.geo_ids), len_time, feature_dim)
-        data = data.swapaxes(0, 1)             # (len_time, len(self.geo_ids), feature_dim)
+        data = data.swapaxes(0, 1)  # (len_time, len(self.geo_ids), feature_dim)
         self._logger.info("Loaded file " + filename + '.grid' + ', shape=' + str(data.shape))
         return data
 
@@ -362,7 +371,7 @@ class TrafficStateDataset(AbstractDataset):
                 index = (i * self.len_column + j) * len_time
                 tmp.append(df[index:index + len_time].values)
             data.append(tmp)
-        data = np.array(data, dtype=np.float)      # (len_row, len_column, len_time, feature_dim)
+        data = np.array(data, dtype=np.float)  # (len_row, len_column, len_time, feature_dim)
         data = data.swapaxes(2, 0).swapaxes(1, 2)  # (len_time, len_row, len_column, feature_dim)
         self._logger.info("Loaded file " + filename + '.grid' + ', shape=' + str(data.shape))
         return data
@@ -688,7 +697,7 @@ class TrafficStateDataset(AbstractDataset):
         data_list = [df]
         if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
-            time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]).\
+            time_in_day = np.tile(time_ind, [1, len_row, len_column, len_row, len_column, 1]). \
                 transpose((5, 1, 2, 3, 4, 0))
             data_list.append(time_in_day)
         if self.add_day_in_week and not is_time_nan:
