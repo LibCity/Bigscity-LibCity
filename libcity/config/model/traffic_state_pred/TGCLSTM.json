@@ -1,7 +1,7 @@
 {
   "K_hop_numbers": 3,
   "back_length": 3,
-  "Clamp_A": false,
+  "Clamp_A": true,
 
   "scaler": "normal",
   "load_external": false,
