@@ -62,9 +62,9 @@ class TGCLSTM(AbstractTrafficStateModel):
 
         self.A_list = []  # Adjacency Matrix List
         adj_mx = data_feature['adj_mx']
-        adj_mx[adj_mx > 1e-4] = 1
-        adj_mx[adj_mx <= 1e-4] = 0
-
+        if self.dataset_class == "TGCLSTMDataset":
+            adj_mx[adj_mx > 1e-4] = 1
+            adj_mx[adj_mx <= 1e-4] = 0
         adj = torch.FloatTensor(adj_mx).to(self.device)
         adj_temp = torch.eye(self.num_nodes, self.num_nodes, device=self.device)
         for i in range(self.K):
