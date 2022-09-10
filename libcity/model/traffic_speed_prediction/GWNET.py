@@ -80,7 +80,7 @@ class GCN(nn.Module):
     def __init__(self, c_in, c_out, dropout, support_len=3, order=2):
         super(GCN, self).__init__()
         self.nconv = NConv()
-        c_in = (order*support_len+1)*c_in
+        c_in = (order * support_len + 1) * c_in
         self.mlp = Linear(c_in, c_out)
         self.dropout = dropout
         self.order = order
@@ -101,7 +101,7 @@ class GCN(nn.Module):
 
 
 class GWNET(AbstractTrafficStateModel):
-    def __init__(self,  config, data_feature):
+    def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
         self.feature_dim = data_feature.get('feature_dim', 2)
@@ -125,6 +125,12 @@ class GWNET(AbstractTrafficStateModel):
         self.output_window = config.get('output_window', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.device = config.get('device', torch.device('cpu'))
+
+        self.apt_layer = config.get('apt_layer', True)
+        if self.apt_layer:
+            self.layers = np.int(
+                np.round(np.log((((self.input_window - 1) / (self.blocks * (self.kernel_size - 1))) + 1)) / np.log(2)))
+            print('# of layers change to %s' % self.layers)
 
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
@@ -211,7 +217,7 @@ class GWNET(AbstractTrafficStateModel):
                                     kernel_size=(1, 1),
                                     bias=True)
         self.receptive_field = receptive_field
-        self._logger.info('receptive_field: '+str(self.receptive_field))
+        self._logger.info('receptive_field: ' + str(self.receptive_field))
 
     def forward(self, batch):
         inputs = batch['X']  # (batch_size, input_window, num_nodes, feature_dim)
@@ -220,7 +226,7 @@ class GWNET(AbstractTrafficStateModel):
 
         in_len = inputs.size(3)
         if in_len < self.receptive_field:
-            x = nn.functional.pad(inputs, (self.receptive_field-in_len, 0, 0, 0))
+            x = nn.functional.pad(inputs, (self.receptive_field - in_len, 0, 0, 0))
         else:
             x = inputs
         x = self.start_conv(x)  # (batch_size, residual_channels, num_nodes, self.receptive_field)
@@ -262,7 +268,7 @@ class GWNET(AbstractTrafficStateModel):
             s = self.skip_convs[i](s)
             # (batch_size, skip_channels, num_nodes, receptive_field-kernel_size+1)
             try:
-                skip = skip[:, :, :,  -s.size(3):]
+                skip = skip[:, :, :, -s.size(3):]
             except(Exception):
                 skip = 0
             skip = s + skip

@@ -2,6 +2,7 @@
   "dropout": 0.3,
   "blocks": 4,
   "layers": 2,
+  "apt_layer": true,
   "gcn_bool": true,
   "addaptadj": true,
   "adjtype": "doubletransition",
@@ -14,14 +15,12 @@
   "dilation_channels": 32,
   "skip_channels": 256,
   "end_channels": 512,
-
   "scaler": "standard",
   "load_external": false,
   "normal_external": false,
   "ext_scaler": "none",
   "add_time_in_day": false,
   "add_day_in_week": false,
-
   "max_epoch": 100,
   "learner": "adam",
   "learning_rate": 0.001,
