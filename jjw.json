@@ -1,0 +1,5 @@
+{
+  "use_row_column": false,
+  "output_window": 1,
+  "dataset_class": "TrafficStateGridDataset"
+}
