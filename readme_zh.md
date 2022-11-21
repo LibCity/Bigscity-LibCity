@@ -31,6 +31,22 @@ LibCity 目前支持以下任务：
 
 * **可扩展性**：LibCity 实现了不同组件的模块化设计，允许用户灵活地加入自定义组件。 因此，新的研究人员可以在 LibCity 的支持下轻松开发新模型。
 
+## LibCity News
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **08/05/2022**: 我们为LibCity开发了一个**实验管理工具**，允许用户在一个可视化的界面中完成实验。代码库的链接是[这里](https://github.com/LibCity/Bigscity-LibCity-WebTool)。一些中文介绍：[Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454773897&idx=1&sn=e09cc3fc7dd772a579dd10730f8fadd8&chksm=88f68a31bf810327849442c6af4bf59d5042dfb9871247239a49f070dbeb9f321b41706da157&scene=126&&sessionid=1669002707#rd), [Zhihu](https://zhuanlan.zhihu.com/p/550605104)
+
+**04/27/2022**: 我们发布了LibCity **v0.3**的第一个版本，最新版本支持9种时空预测任务，涵盖60多个预测模型和近40个城市时空数据集。
+
+**11/24/2021**: 我们在知乎提供了一些LibCity的介绍性教程（中文）, [link1](https://zhuanlan.zhihu.com/p/401186930), [link2](https://zhuanlan.zhihu.com/p/400814990), [link3](https://zhuanlan.zhihu.com/p/400819354), [link4](https://zhuanlan.zhihu.com/p/400821482), [link5](https://zhuanlan.zhihu.com/p/401190615), [link6](https://zhuanlan.zhihu.com/p/436191860)....
+
+**11/10/2021**: 我们提供一份文件，详细描述了LibCity所定义的[原子文件](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/data/atomic_files.html)的格式。你可以在此下载[英文版](file:///D:/BigScity/libcity.github.io/docs/A%20Unified%20Storage%20Format%20of%20Traffic%20Data%20Atomic%20Files%20in%20LibCity.pdf)和[中文版](https://libcity.github.io/LibCity%20%E4%B8%AD%E4%BA%A4%E9%80%9A%E6%95%B0%E6%8D%AE%E7%BB%9F%E4%B8%80%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F-%E5%8E%9F%E5%AD%90%E6%96%87%E4%BB%B6.pdf)，了解详情。
+
+**11/07/2021**: 我们在ACM SIGSPATIAL 2021 Local Track上做了一个演讲，介绍LibCity。你可以在这里下载[LibCity演讲幻灯片（中文）](https://libcity.ai/LibCity-城市时空预测深度学习开源平台.pdf)和[LibCity基础教程幻灯片（中文）](https://libcity.ai/LibCity-中文Tutorial.pptx)。
+
+**11/07/2021**: 我们在ACM SIGSPATIAL 2021 Main Track上做了一个演讲，介绍LibCity。以下是[演讲视频（英文）](https://www.bilibili.com/video/BV19q4y1g7Rh/)和[演讲幻灯片（英文）](https://libcity.ai/LibCity-Presentation.pdf)。
+
 ## Overall Framework
 
 ![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/framework.png)

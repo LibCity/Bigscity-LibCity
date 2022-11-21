@@ -31,6 +31,22 @@ LibCity currently supports the following tasks:
 
 * **Extensible**: LibCity enables a modular design of different components, allowing users to flexibly insert customized components into the library. Therefore, new researchers can easily develop new models with the support of LibCity.
 
+## LibCity News
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: Our self-attention-based traffic flow prediction model **PDFormer** developed on LibCity was accepted by **AAAI2023**, please check this [link](https://github.com/BUAABIGSCity/PDFormer) for more details.
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **08/05/2022**: We develop an **experiment management tool** for the LibCity, which allows users to complete the experiments in a visual interface. The link to the code repository is [here](https://github.com/LibCity/Bigscity-LibCity-WebTool). Some introduction (in Chinese): [Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454773897&idx=1&sn=e09cc3fc7dd772a579dd10730f8fadd8&chksm=88f68a31bf810327849442c6af4bf59d5042dfb9871247239a49f070dbeb9f321b41706da157&scene=126&&sessionid=1669002707#rd), [Zhihu](https://zhuanlan.zhihu.com/p/550605104)
+
+**04/27/2022**: We release the first version of LibCity **v0.3**, the latest version, supporting 9 types of spatio-temporal prediction tasks, covering more than 60 prediction models and nearly 40 urban spatio-temporal datasets.
+
+**11/24/2021**: We provide some introductory tutorials (in Chinese) on Zhihu, [link1](https://zhuanlan.zhihu.com/p/401186930), [link2](https://zhuanlan.zhihu.com/p/400814990), [link3](https://zhuanlan.zhihu.com/p/400819354), [link4](https://zhuanlan.zhihu.com/p/400821482), [link5](https://zhuanlan.zhihu.com/p/401190615), [link6](https://zhuanlan.zhihu.com/p/436191860)....
+
+**11/10/2021**: We provide a document that describes in detail the format of the [atomic files](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/data/atomic_files.html) defined by LibCity. You can download [English Version](https://libcity.ai/A Unified Storage Format of Traffic Data Atomic Files in LibCity.pdf) and [Chinese Version](https://libcity.github.io/LibCity%20%E4%B8%AD%E4%BA%A4%E9%80%9A%E6%95%B0%E6%8D%AE%E7%BB%9F%E4%B8%80%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F-%E5%8E%9F%E5%AD%90%E6%96%87%E4%BB%B6.pdf) here for details.
+
+**11/07/2021**: We have a presentation on ACM SIGSPATIAL 2021 Local Track to introduce LibCity. You can download [LibCity Presentation Slide(Chinese)](https://libcity.ai/LibCity-城市时空预测深度学习开源平台.pdf) and [LibCity Chinese Tutorial](https://libcity.ai/LibCity-中文Tutorial.pptx) here.
+
+**11/07/2021**: We have a presentation on ACM SIGSPATIAL 2021 Main Track to introduce LibCity. Here are the [Presentation Video(English)](https://www.bilibili.com/video/BV19q4y1g7Rh/) and the [Presentation Slide(English)](https://libcity.ai/LibCity-Presentation.pdf).
+
 ## Overall Framework
 
 ![](https://bigscity-libcity-docs.readthedocs.io/en/latest/_images/framework.png)
