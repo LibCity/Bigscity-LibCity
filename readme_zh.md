@@ -41,7 +41,7 @@ LibCity 目前支持以下任务：
 
 **11/24/2021**: 我们在知乎提供了一些LibCity的介绍性教程（中文）, [link1](https://zhuanlan.zhihu.com/p/401186930), [link2](https://zhuanlan.zhihu.com/p/400814990), [link3](https://zhuanlan.zhihu.com/p/400819354), [link4](https://zhuanlan.zhihu.com/p/400821482), [link5](https://zhuanlan.zhihu.com/p/401190615), [link6](https://zhuanlan.zhihu.com/p/436191860)....
 
-**11/10/2021**: 我们提供一份文件，详细描述了LibCity所定义的[原子文件](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/data/atomic_files.html)的格式。你可以在此下载[英文版](https://libcity.ai/A-Unified-Storage-Format-of-Traffic-Data-Atomic-Files-in-LibCity.pdf)和[中文版](https://libcity.github.io/LibCity%20%E4%B8%AD%E4%BA%A4%E9%80%9A%E6%95%B0%E6%8D%AE%E7%BB%9F%E4%B8%80%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F-%E5%8E%9F%E5%AD%90%E6%96%87%E4%BB%B6.pdf)，了解详情。
+**11/10/2021**: 我们提供一份文件，详细描述了LibCity所定义的[原子文件](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/user_guide/data/atomic_files.html)的格式。你可以在此下载[英文版](https://libcity.ai/A-Unified-Storage-Format-of-Traffic-Data-Atomic-Files-in-LibCity.pdf)和[中文版](https://libcity.ai/LibCity%E4%B8%AD%E4%BA%A4%E9%80%9A%E6%95%B0%E6%8D%AE%E7%BB%9F%E4%B8%80%E5%AD%98%E5%82%A8%E6%A0%BC%E5%BC%8F-%E5%8E%9F%E5%AD%90%E6%96%87%E4%BB%B6.pdf)，了解详情。
 
 **11/07/2021**: 我们在ACM SIGSPATIAL 2021 Local Track上做了一个演讲，介绍LibCity。你可以在这里下载[LibCity演讲幻灯片（中文）](https://libcity.ai/LibCity-城市时空预测深度学习开源平台.pdf)和[LibCity基础教程幻灯片（中文）](https://libcity.ai/LibCity-中文Tutorial.pptx)。
 
