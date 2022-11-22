@@ -8,7 +8,8 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 def calculate_normalized_laplacian(adj):
     """
-    L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
+    A = A + I
+    L = D^-1/2 A D^-1/2
 
     Args:
         adj: adj matrix
@@ -16,12 +17,12 @@ def calculate_normalized_laplacian(adj):
     Returns:
         np.ndarray: L
     """
-    adj = sp.coo_matrix(adj)
+    adj = sp.coo_matrix(adj + sp.eye(adj.shape[0]))
     d = np.array(adj.sum(1))
     d_inv_sqrt = np.power(d, -0.5).flatten()
     d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
     d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
-    normalized_laplacian = sp.eye(adj.shape[0]) - adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
+    normalized_laplacian = adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
     return normalized_laplacian
 
 

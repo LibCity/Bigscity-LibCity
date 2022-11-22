@@ -152,7 +152,7 @@ class STAN(AbstractModel):
         t_dim = data_feature['tim_size']
         l_dim = data_feature['loc_size']
         u_dim = data_feature['uid_size']
-        self.max_len = config['max_session_len'] - 1
+        self.max_len = config['max_session_len']
         ex = data_feature['ex']
         embed_dim = config['embed_dim']
         self.batch_size = config['batch_size']

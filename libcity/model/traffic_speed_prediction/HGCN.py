@@ -5,6 +5,58 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import BatchNorm2d, Conv2d, Parameter, BatchNorm1d
 from libcity.model import loss
+import numpy as np
+import scipy.sparse as sp
+from scipy.sparse import linalg
+
+
+def sym_adj(adj):
+    """Symmetrically normalize adjacency matrix."""
+    adj = sp.coo_matrix(adj)
+    rowsum = np.array(adj.sum(1))
+    d_inv_sqrt = np.power(rowsum, -0.5).flatten()
+    d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+    return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).astype(np.float32).todense()
+
+
+def asym_adj(adj):
+    adj = sp.coo_matrix(adj)
+    rowsum = np.array(adj.sum(1)).flatten()
+    d_inv = np.power(rowsum, -1).flatten()
+    d_inv[np.isinf(d_inv)] = 0.
+    d_mat = sp.diags(d_inv)
+    return d_mat.dot(adj).astype(np.float32).todense()
+
+
+def calculate_normalized_laplacian(adj):
+    """
+    # L = D^-1/2 (D-A) D^-1/2 = I - D^-1/2 A D^-1/2
+    # D = diag(A 1)
+    :param adj:
+    :return:
+    """
+    adj = sp.coo_matrix(adj)
+    d = np.array(adj.sum(1))
+    d_inv_sqrt = np.power(d, -0.5).flatten()
+    d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.
+    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+    normalized_laplacian = sp.eye(adj.shape[0]) - adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()
+    return normalized_laplacian
+
+
+def calculate_scaled_laplacian(adj_mx, lambda_max=2, undirected=True):
+    if undirected:
+        adj_mx = np.maximum.reduce([adj_mx, adj_mx.T])
+    lap = calculate_normalized_laplacian(adj_mx)
+    if lambda_max is None:
+        lambda_max, _ = linalg.eigsh(lap, 1, which='LM')
+        lambda_max = lambda_max[0]
+    lap = sp.csr_matrix(lap)
+    m, _ = lap.shape
+    identity = sp.identity(m, format='csr', dtype=lap.dtype)
+    lap = (2 / lambda_max * lap) - identity
+    return lap.astype(np.float32).todense()
 
 
 class nconv(nn.Module):
@@ -181,8 +233,9 @@ class HGCN(AbstractTrafficStateModel):
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.transmit = self.data_feature.get('transmit').to(self.device)
-        self.adj_mx = self.data_feature.get('adj_mx')
-        self.adj_mx_cluster = self.data_feature.get('adj_mx_cluster').to(self.device)
+        self.adjtype = config.get('adjtype', 'doubletransition')
+        self.adj_mx = self.cal_adj(self.data_feature.get('adj_mx'), self.adjtype)
+        self.adj_mx_cluster = self.cal_adj(self.data_feature.get('adj_mx_cluster'), self.adjtype)
         self.centers_ind_groups = self.data_feature.get('centers_ind_groups')
 
         self._logger = getLogger()
@@ -196,8 +249,8 @@ class HGCN(AbstractTrafficStateModel):
         self.skip_channels = config.get('skip_channels', 32)
         self.end_channels = config.get('end_channels', 512)
 
-        self.supports = [torch.tensor(self.adj_mx)]
-        self.supports_cluster = [self.adj_mx_cluster.clone().detach()]
+        self.supports = [torch.tensor(i).to(self.device) for i in self.adj_mx]
+        self.supports_cluster = [torch.tensor(i).to(self.device) for i in self.adj_mx_cluster]
         self.supports_len = torch.tensor(0, device=self.device)
         self.supports_len_cluster = torch.tensor(0, device=self.device)
 
@@ -291,6 +344,23 @@ class HGCN(AbstractTrafficStateModel):
             input_cluster[:, :, k, :] = input[:, :, self.centers_ind_groups[k][0], :] + \
                                         input[:, :, self.centers_ind_groups[k][0], :]
         return input_cluster
+
+    def cal_adj(self, adj, adjtype):
+        if adjtype == "scalap":
+            adj_mx = [calculate_scaled_laplacian(adj)]
+        elif adjtype == "normlap":
+            adj_mx = [calculate_normalized_laplacian(adj).astype(np.float32).todense()]
+        elif adjtype == "symnadj":
+            adj_mx = [sym_adj(adj)]
+        elif adjtype == "transition":
+            adj_mx = [asym_adj(adj)]
+        elif adjtype == "doubletransition":
+            adj_mx = [asym_adj(adj), asym_adj(np.transpose(adj))]
+        elif adjtype == "identity":
+            adj_mx = [np.diag(np.ones(adj.shape[0])).astype(np.float32)]
+        else:
+            assert 0, "adj type not defined"
+        return adj_mx
 
     def forward(self, batch):
         input = batch['X'].permute(0, 3, 2, 1)

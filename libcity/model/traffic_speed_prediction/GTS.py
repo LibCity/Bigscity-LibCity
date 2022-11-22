@@ -53,8 +53,7 @@ def gumbel_softmax(device, logits, temperature, hard=False, eps=1e-10):
 
 
 class GCONV(nn.Module):
-    def __init__(self, num_nodes, max_diffusion_step, device, input_dim, hid_dim, output_dim, adj_mx,
-                 bias_start=0.0):
+    def __init__(self, num_nodes, max_diffusion_step, device, input_dim, hid_dim, output_dim, bias_start=0.0):
         super().__init__()
         self._num_nodes = num_nodes
         self._max_diffusion_step = max_diffusion_step
@@ -65,7 +64,6 @@ class GCONV(nn.Module):
         shape = (input_size * self._num_matrices, self._output_dim)
         self.weight = torch.nn.Parameter(torch.empty(*shape, device=self._device))
         self.biases = torch.nn.Parameter(torch.empty(self._output_dim, device=self._device))
-        self.adj_mx = adj_mx
         torch.nn.init.xavier_normal_(self.weight)
         torch.nn.init.constant_(self.biases, bias_start)
 
@@ -74,7 +72,7 @@ class GCONV(nn.Module):
         x_ = x_.unsqueeze(0)
         return torch.cat([x, x_], dim=0)
 
-    def forward(self, inputs, state):
+    def forward(self, inputs, state, adj_mx):
         # 对X(t)和H(t-1)做图卷积，并加偏置bias
         # Reshape input and state to (batch_size, num_nodes, input_dim/state_dim)
         batch_size = inputs.shape[0]
@@ -96,12 +94,12 @@ class GCONV(nn.Module):
             pass
         else:
             # T1=L x1=T1*x=L*x
-            x1 = torch.sparse.mm(self.adj_mx, x0)  # supports: n*n; x0: n*(total_arg_size * batch_size)
+            x1 = torch.sparse.mm(adj_mx, x0)  # supports: n*n; x0: n*(total_arg_size * batch_size)
             x = self._concat(x, x1)  # (2, num_nodes, total_arg_size * batch_size)
             for k in range(2, self._max_diffusion_step + 1):
                 # T2=2LT1-T0=2L^2-1 x2=T2*x=2L^2x-x=2L*x1-x0...
                 # T3=2LT2-T1=2L(2L^2-1)-L x3=2L*x2-x1...
-                x2 = 2 * torch.sparse.mm(self.adj_mx, x1) - x0
+                x2 = 2 * torch.sparse.mm(adj_mx, x1) - x0
                 x = self._concat(x, x2)  # (3, num_nodes, total_arg_size * batch_size)
                 x1, x0 = x2, x1  # 循环
         # x.shape (Ks, num_nodes, total_arg_size * batch_size)
@@ -143,13 +141,12 @@ class FC(nn.Module):
 
 
 class DCGRUCell(nn.Module):
-    def __init__(self, input_dim, num_units, adj_mx, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
+    def __init__(self, input_dim, num_units, max_diffusion_step, num_nodes, device, nonlinearity='tanh',
                  filter_type="laplacian", use_gc_for_ru=True):
         """
         Args:
             input_dim:
             num_units:
-            adj_mx:
             max_diffusion_step:
             num_nodes:
             device:
@@ -163,7 +160,7 @@ class DCGRUCell(nn.Module):
         self._num_nodes = num_nodes
         self._num_units = num_units
         self._device = device
-        self._adj_mx = self._calculate_random_walk_matrix(adj_mx).t()
+        # self._adj_mx = self._calculate_random_walk_matrix(adj_mx).t()
         self._max_diffusion_step = max_diffusion_step
         self._use_gc_for_ru = use_gc_for_ru
         self.device = device
@@ -171,13 +168,13 @@ class DCGRUCell(nn.Module):
         if self._use_gc_for_ru:
             self._fn = GCONV(self._num_nodes, self._max_diffusion_step, self._device,
                              input_dim=input_dim, hid_dim=self._num_units, output_dim=2*self._num_units,
-                             adj_mx=self._adj_mx, bias_start=1.0)
+                             bias_start=1.0)
         else:
             self._fn = FC(self._num_nodes, self._device, input_dim=input_dim,
                           hid_dim=self._num_units, output_dim=2*self._num_units, bias_start=1.0)
         self._gconv = GCONV(self._num_nodes, self._max_diffusion_step, self._device,
                             input_dim=input_dim, hid_dim=self._num_units, output_dim=self._num_units,
-                            adj_mx=self._adj_mx, bias_start=0.0)
+                            bias_start=0.0)
 
     @staticmethod
     def _build_sparse_matrix(lap, device):
@@ -197,7 +194,7 @@ class DCGRUCell(nn.Module):
         random_walk_mx = torch.mm(d_mat_inv, adj_mx)
         return random_walk_mx
 
-    def forward(self, inputs, hx):
+    def forward(self, inputs, hx, adj):
         """
         Gated recurrent unit (GRU) with Graph Convolution.
         Args:
@@ -206,15 +203,17 @@ class DCGRUCell(nn.Module):
         Returns:
             torch.tensor: shape (B, num_nodes * rnn_units)
         """
+        adj_mx = self._calculate_random_walk_matrix(adj).t()
+
         output_size = 2 * self._num_units
-        value = torch.sigmoid(self._fn(inputs, hx))  # (batch_size, num_nodes * output_size)
+        value = torch.sigmoid(self._fn(inputs, hx, adj_mx))  # (batch_size, num_nodes * output_size)
         value = torch.reshape(value, (-1, self._num_nodes, output_size))    # (batch_size, num_nodes, output_size)
 
         r, u = torch.split(tensor=value, split_size_or_sections=self._num_units, dim=-1)
         r = torch.reshape(r, (-1, self._num_nodes * self._num_units))  # (batch_size, num_nodes * _num_units)
         u = torch.reshape(u, (-1, self._num_nodes * self._num_units))  # (batch_size, num_nodes * _num_units)
 
-        c = self._gconv(inputs, r * hx)  # (batch_size, num_nodes * _num_units)
+        c = self._gconv(inputs, r * hx, adj_mx)  # (batch_size, num_nodes * _num_units)
         if self._activation is not None:
             c = self._activation(c)
 
@@ -237,19 +236,19 @@ class Seq2SeqAttrs:
 
 
 class EncoderModel(nn.Module, Seq2SeqAttrs):
-    def __init__(self, config, data_feature, adj_mx, device):
+    def __init__(self, config, data_feature, device):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, data_feature)
         self.device = device
         self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.dcgru_layers = nn.ModuleList()
-        self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
+        self.dcgru_layers.append(DCGRUCell(self.input_dim, self.rnn_units, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type))
         for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type))
 
-    def forward(self, inputs, hidden_state=None):
+    def forward(self, inputs, adj, hidden_state=None):
         """
         Encoder forward pass.
         Args:
@@ -268,7 +267,7 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
         hidden_states = []
         output = inputs
         for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
-            next_hidden_state = dcgru_layer(output, hidden_state[layer_num])
+            next_hidden_state = dcgru_layer(output, hidden_state[layer_num], adj)
             # next_hidden_state: (batch_size, self.num_nodes * self.rnn_units)
             hidden_states.append(next_hidden_state)
             output = next_hidden_state  # 循环
@@ -276,7 +275,7 @@ class EncoderModel(nn.Module, Seq2SeqAttrs):
 
 
 class DecoderModel(nn.Module, Seq2SeqAttrs):
-    def __init__(self, config, data_feature, adj_mx, device):
+    def __init__(self, config, data_feature, device):
         nn.Module.__init__(self)
         Seq2SeqAttrs.__init__(self, config, data_feature)
         self.device = device
@@ -284,13 +283,13 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         self.horizon = int(config.get('output_window', 1))
         self.projection_layer = nn.Linear(self.rnn_units, self.output_dim)
         self.dcgru_layers = nn.ModuleList()
-        self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, adj_mx, self.max_diffusion_step,
+        self.dcgru_layers.append(DCGRUCell(self.output_dim, self.rnn_units, self.max_diffusion_step,
                                            self.num_nodes, self.device, filter_type=self.filter_type))
         for i in range(1, self.num_rnn_layers):
-            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, adj_mx, self.max_diffusion_step,
+            self.dcgru_layers.append(DCGRUCell(self.rnn_units, self.rnn_units, self.max_diffusion_step,
                                                self.num_nodes, self.device, filter_type=self.filter_type))
 
-    def forward(self, inputs, hidden_state=None):
+    def forward(self, inputs, adj, hidden_state=None):
         """
         Decoder forward pass.
         Args:
@@ -306,7 +305,7 @@ class DecoderModel(nn.Module, Seq2SeqAttrs):
         hidden_states = []
         output = inputs
         for layer_num, dcgru_layer in enumerate(self.dcgru_layers):
-            next_hidden_state = dcgru_layer(output, hidden_state[layer_num])
+            next_hidden_state = dcgru_layer(output, hidden_state[layer_num], adj)
             # next_hidden_state: (batch_size, self.num_nodes * self.rnn_units)
             hidden_states.append(next_hidden_state)
             output = next_hidden_state
@@ -332,8 +331,8 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         self.seq_len = int(config.get('input_window', 1))  # for the encoder
         self.horizon = int(config.get('output_window', 1))  # for the decoder
 
-        self.encoder_model = EncoderModel(self.config, data_feature, self.adj_mx, self.device)
-        self.decoder_model = DecoderModel(self.config, data_feature, self.adj_mx, self.device)
+        self.encoder_model = EncoderModel(self.config, data_feature, self.device)
+        self.decoder_model = DecoderModel(self.config, data_feature, self.device)
         self._logger = getLogger()
 
         # 此处 adj_mx 作用是在训练自动图结构推断时起到参考作用
@@ -388,7 +387,7 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         return self.cl_decay_steps / (
                 self.cl_decay_steps + np.exp(batches_seen / self.cl_decay_steps))
 
-    def encoder(self, inputs):
+    def encoder(self, inputs, adj):
         """
         Encoder forward pass
         :param inputs: shape (seq_len, batch_size, num_sensor * input_dim)
@@ -396,11 +395,11 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         """
         encoder_hidden_state = None
         for t in range(self.encoder_model.seq_len):
-            _, encoder_hidden_state = self.encoder_model(inputs[t], encoder_hidden_state)
+            _, encoder_hidden_state = self.encoder_model(inputs[t], adj, encoder_hidden_state)
 
         return encoder_hidden_state
 
-    def decoder(self, encoder_hidden_state, labels=None, batches_seen=None):
+    def decoder(self, encoder_hidden_state, adj, labels=None, batches_seen=None):
         """
         Decoder forward pass
         :param encoder_hidden_state: (num_layers, batch_size, self.hidden_state_size)
@@ -417,7 +416,7 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
 
         for t in range(self.decoder_model.horizon):
             decoder_output, decoder_hidden_state = \
-                self.decoder_model(decoder_input, decoder_hidden_state)
+                self.decoder_model(decoder_input, adj, decoder_hidden_state)
             decoder_input = decoder_output
             outputs.append(decoder_output)
             if self.training and self.use_curriculum_learning:
@@ -502,9 +501,9 @@ class GTS(AbstractTrafficStateModel, Seq2SeqAttrs):
         mask = torch.eye(self.num_nodes, self.num_nodes).bool().to(self.device)
         adj.masked_fill_(mask, 0)
 
-        encoder_hidden_state = self.encoder(inputs)
+        encoder_hidden_state = self.encoder(inputs, adj)
         self._logger.debug("Encoder complete, starting decoder")
-        outputs = self.decoder(encoder_hidden_state, labels, batches_seen=batches_seen)
+        outputs = self.decoder(encoder_hidden_state, adj, labels, batches_seen=batches_seen)
         self._logger.debug("Decoder complete")
 
         # print(f"shape of output = {outputs.shape}")

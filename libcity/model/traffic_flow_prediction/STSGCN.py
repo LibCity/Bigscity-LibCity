@@ -357,7 +357,7 @@ class STSGCN(AbstractTrafficStateModel):
             data = torch.relu(self.first_layer_embedding(data))
 
         for stsgcl_layer in self.stsgcl_layers:
-            data = stsgcl_layer(data, self.adj)
+            data = stsgcl_layer(data.clone(), self.adj)
 
         need_concat = []
         for output_layer in self.outputs:
