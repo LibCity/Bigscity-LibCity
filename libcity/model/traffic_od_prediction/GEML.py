@@ -196,7 +196,8 @@ class GEML(AbstractTrafficStateModel):
             .reshape((self.batch_size, self.input_window, self.num_nodes, self.num_nodes)) \
             .to(self.device)
 
-        self.GCN = GCN(self.num_nodes, self.embed_dim, self.device)
+        self.GCN_ge = GCN(self.num_nodes, self.embed_dim, self.device)
+        self.GCN_se = GCN(self.num_nodes, self.embed_dim, self.device)
 
         # self.LSTM = nn.LSTM(2 * self.embed_dim, 2 * self.embed_dim)
         self.LSTM = SLSTM(2 * self.embed_dim, 2 * self.embed_dim, self.device, self.p_interval)
@@ -206,10 +207,10 @@ class GEML(AbstractTrafficStateModel):
     def forward(self, batch):
         x = batch['X'].squeeze(dim=-1)
         # (B, T, N, N)
-        x_ge_embed = self.GCN(x, self.geo_adj[:x.shape[0], ...])
+        x_ge_embed = self.GCN_ge(x, self.geo_adj[:x.shape[0], ...])
         # (B, T, N, E)
 
-        x_se_embed = self.GCN(x, self.semantic_adj)
+        x_se_embed = self.GCN_se(x, self.semantic_adj)
 
         # (B, T, N, E)
         x_embed = torch.cat([x_ge_embed, x_se_embed], dim=3)
