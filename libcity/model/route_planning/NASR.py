@@ -225,6 +225,8 @@ class ContextAwareGAT(GATLayerImp3):
         self.moving_state_w = nn.Linear(in_features=self.hidden_size, out_features=self.num_of_heads, bias=False)
         self.distance_emb = nn.Embedding(num_embeddings=self.distance_bins, embedding_dim=self.distance_emb_size)
         self.distance_w = nn.Linear(in_features=self.distance_emb_size, out_features=self.num_of_heads, bias=False)
+        # cache subgraph
+        self.node_subgraph = {}
 
     def forward(self, data):
         """
@@ -298,6 +300,57 @@ class ContextAwareGAT(GATLayerImp3):
         out_nodes_features = self.skip_concat_bias(attentions_per_edge, in_nodes_features, out_nodes_features)
         return out_nodes_features
 
+    def get_node_subgraph(self, node):
+        """
+        calculate the node's subgraph, and cache the subgraph to avoid repeated calculation
+        Args:
+            node:
+
+        Returns:
+
+        """
+        node = node.item()
+        if node not in self.node_subgraph:
+            subgraph_node_feature = []
+            subgraph_node_recode = {}  # 子图需要重新编号
+            node_code = 0
+            subgraph_row = []
+            subgraph_col = []
+            subgraph_data = []
+            # 先把当前节点放到子图里
+            subgraph_node_feature.append(self.node_features[node].tolist())
+            subgraph_node_recode[node] = node_code
+            node_code += 1
+            # 当前节点可到的节点
+            if node in self.adjacent_list:
+                to_node = self.adjacent_list[node]
+                for sub_node in to_node:
+                    if sub_node not in subgraph_node_recode:
+                        subgraph_node_recode[sub_node] = node_code
+                        node_code += 1
+                        subgraph_node_feature.append(self.node_features[sub_node].tolist())
+                    sub_node_code = subgraph_node_recode[sub_node]
+                    subgraph_row.append(0)
+                    subgraph_col.append(sub_node_code)
+                    subgraph_data.append(int(self.adj_mx.getrow(node).getcol(sub_node).toarray()[0, 0]))
+            # 到当前节点的节点
+            if node in self.from_list:
+                from_node = self.from_list[node]
+                for sub_node in from_node:
+                    if sub_node not in subgraph_node_recode:
+                        subgraph_node_recode[sub_node] = node_code
+                        node_code += 1
+                        subgraph_node_feature.append(self.node_features[sub_node].tolist())
+                    sub_node_code = subgraph_node_recode[sub_node]
+                    subgraph_row.append(sub_node_code)
+                    subgraph_col.append(0)
+                    subgraph_data.append(int(self.adj_mx.getrow(sub_node).getcol(node).toarray()[0, 0]))
+            self.node_subgraph[node] = [subgraph_row, subgraph_col, subgraph_data, subgraph_node_feature]
+            return subgraph_row, subgraph_col, subgraph_data, subgraph_node_feature
+        else:
+            return self.node_subgraph[node][0], self.node_subgraph[node][1], self.node_subgraph[node][2],\
+                   self.node_subgraph[node][3]
+
     def forward_subgraph(self, moving_state, node):
         """
         只对 node 节点邻居构成的子图进行 forward
@@ -311,42 +364,7 @@ class ContextAwareGAT(GATLayerImp3):
         #
         # Step 1: Linear Projection + regularization
         #
-        node = node.item()
-        subgraph_node_feature = []
-        subgraph_node_recode = {}  # 子图需要重新编号
-        node_code = 0
-        subgraph_row = []
-        subgraph_col = []
-        subgraph_data = []
-        # 先把当前节点放到子图里
-        subgraph_node_feature.append(self.node_features[node].tolist())
-        subgraph_node_recode[node] = node_code
-        node_code += 1
-        # TODO: 这里可以优化一下效率
-        # 当前节点可到的节点
-        if node in self.adjacent_list:
-            to_node = self.adjacent_list[node]
-            for sub_node in to_node:
-                if sub_node not in subgraph_node_recode:
-                    subgraph_node_recode[sub_node] = node_code
-                    node_code += 1
-                    subgraph_node_feature.append(self.node_features[sub_node].tolist())
-                sub_node_code = subgraph_node_recode[sub_node]
-                subgraph_row.append(0)
-                subgraph_col.append(sub_node_code)
-                subgraph_data.append(int(self.adj_mx.getrow(node).getcol(sub_node).toarray()[0, 0]))
-        # 到当前节点的节点
-        if node in self.from_list:
-            from_node = self.from_list[node]
-            for sub_node in from_node:
-                if sub_node not in subgraph_node_recode:
-                    subgraph_node_recode[sub_node] = node_code
-                    node_code += 1
-                    subgraph_node_feature.append(self.node_features[sub_node].tolist())
-                sub_node_code = subgraph_node_recode[sub_node]
-                subgraph_row.append(sub_node_code)
-                subgraph_col.append(0)
-                subgraph_data.append(int(self.adj_mx.getrow(sub_node).getcol(node).toarray()[0, 0]))
+        subgraph_row, subgraph_col, subgraph_data, subgraph_node_feature = self.get_node_subgraph(node)
         in_nodes_features = torch.FloatTensor(subgraph_node_feature).to(self.device)
         edge_index = torch.LongTensor([subgraph_row, subgraph_col]).to(self.device)
         num_of_nodes = in_nodes_features.shape[self.nodes_dim]
@@ -520,8 +538,8 @@ class NASR(AbstractModel):
             f_cost: each candidate's f_cost
         """
         # calculate g prob
-        g_prob, moving_state = self.function_g.forward(uid=uid.squeeze(0), current_trace=[current_trace],
-                                                       candidate_set=[candidate_set],
+        g_prob, moving_state = self.function_g.forward(uid=uid.squeeze(0), current_trace=[current_trace.cpu()],
+                                                       candidate_set=[candidate_set.cpu()],
                                                        history_trace=[], history_trace_hidden=history_hidden)
         # This step needs to be done because of the function_g forward interface
         g_prob = g_prob[0]
@@ -561,7 +579,7 @@ class NASR(AbstractModel):
                                     date_time=query_i[2] * 60, log_prob=0.0)
             open_set.put((start_node.log_prob, start_node))
             rid2node[query_i[0]] = start_node
-            max_search_step = 300
+            max_search_step = 1000
             step = 0
             # encode history
             history_trace_i = query_i[5]

@@ -12,6 +12,7 @@ class RoutePlanningEvaluator(AbstractEvaluator):
     Personalized Route Recommendation'
     """
     def __init__(self, config):
+        super().__init__(config)
         self.metrics = config['metrics']
         self.result = {}
         self.intermediate_result = {
@@ -85,7 +86,7 @@ class RoutePlanningEvaluator(AbstractEvaluator):
             # 使用时间戳
             filename = time.strftime(
                 "%Y_%m_%d_%H_%M_%S", time.localtime(time.time()))
-        print('evaluate result is ', json.dumps(self.result, indent=1))
+        print('evaluate result is {}'.format(json.dumps(self.result, indent=1)))
         with open(os.path.join(save_path, '{}.json'.format(filename)), 'w') \
                 as f:
             json.dump(self.result, f)
