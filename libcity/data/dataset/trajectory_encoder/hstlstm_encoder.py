@@ -19,6 +19,7 @@ class HstlstmEncoder(AbstractTrajectoryEncoder):
         self.location2id = {}  # 因为原始数据集中的部分 loc id 不会被使用到因此这里需要重新编码一下
         self.loc_id = 0
         self.tim_max = 100.0  # 最大的时间差（单位秒）
+        self.tim_interval_init = 0.0
         self.dis_max = 0.5  # 最大的距离差（单位千米）
         self.history_type = self.config['history_type']
         self.feature_dict = {'current_loc': 'int', 'tim_interval': 'float',
@@ -72,7 +73,7 @@ class HstlstmEncoder(AbstractTrajectoryEncoder):
                         self.location2id[loc] = self.loc_id
                         self.loc_id += 1
                     current_loc.append(self.location2id[loc])
-                    tim_interval.append(self.tim_max)  # use fixed interval for start point
+                    tim_interval.append(self.tim_interval_init)  # use fixed interval for start point
                     dis.append(self.dis_max)
                 else:
                     if loc not in self.location2id:
