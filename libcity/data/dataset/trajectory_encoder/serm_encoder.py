@@ -136,7 +136,7 @@ class SermEncoder(AbstractTrajectoryEncoder):
         """
             return word index
         """
-        if self.dataset in ['foursquare_tky', 'foursquare_nyk', 'foursquare_serm']:
+        if self.dataset in ['foursquare_tky', 'foursquare_nyc']:
             # 语义信息在 geo 表中
             words = self.poi_profile.iloc[point[4]]['venue_category_name'].split(' ')
             word_index = []
@@ -150,4 +150,4 @@ class SermEncoder(AbstractTrajectoryEncoder):
                     word_index.append(self.word_index[w])
             return word_index
         else:
-            return []
+            raise TypeError('SERM model can only run on foursquare dataset, because it needs POI category information.')
