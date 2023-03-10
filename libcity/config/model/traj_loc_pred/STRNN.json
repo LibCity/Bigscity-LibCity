@@ -1,3 +1,4 @@
 {
-    "hidden_size": 500
+    "hidden_size": 128,
+    "max_epoch": 10
 }
