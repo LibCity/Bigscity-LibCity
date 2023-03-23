@@ -36,9 +36,15 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
         self.dataset = self.config.get('dataset', '')
         self.geo_file = self.config.get('geo_file', self.dataset)
         self.data_path = './raw_data/{}/'.format(self.dataset)
-        self.geo = pd.read_csv(os.path.join(self.data_path, '{}.geo'.format(self.geo_file)))
+        poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.dataset, self.geo_file))
+        self.poi_gps_dict = {}
+        for index, row in poi_profile.iterrows():
+            poi_id = row['geo_id']
+            coords = row['coordinates']
+            lon, lat = parse_coordinate(coords)
+            self.poi_gps_dict[poi_id] = (lon, lat)
 
-    def encode(self, uid, trajectories, negative_sample):
+    def encode(self, uid, trajectories, negative_sample=None):
         """Encoded Method refered to the open source code
             https://github.com/drhuangliwei/An-Attention-based-Spatiotemporal-LSTM-Network-for-Next-POI-Recommendation
             row index is:
@@ -59,7 +65,7 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
             for index, row in enumerate(traj):
                 loc = row[4]
                 now_time = parse_time(row[2])
-                lon, lat = parse_coordinate(self.geo.loc[self.geo['geo_id'] == loc].iloc[0]['coordinates'])
+                lon, lat = self.poi_gps_dict[loc]
                 if index == 0:
                     # for the first checkin, distance and time_interval set to a fixed value
                     if loc not in self.location2id:
@@ -86,9 +92,9 @@ class AtstlstmEncoder(AbstractTrajectoryEncoder):
             # the final checkin will be target (positive sample), so use the second last to cal neg
             row = traj[-2]
             loc = row[4]
-            pre_lon, pre_lat = parse_coordinate(self.geo.loc[self.geo['geo_id'] == loc].iloc[0]['coordinates'])
+            pre_lon, pre_lat = self.poi_gps_dict[loc]
             for neg in negative_sample[i]:
-                neg_lon, neg_lat = parse_coordinate(self.geo.loc[self.geo['geo_id'] == neg].iloc[0]['coordinates'])
+                neg_lon, neg_lat = self.poi_gps_dict[neg]
                 if neg not in self.location2id:
                     self.location2id[neg] = self.loc_id
                     self.loc_id += 1
