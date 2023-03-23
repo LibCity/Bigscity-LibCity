@@ -148,11 +148,17 @@ class StanEncoder(AbstractTrajectoryEncoder):
         self.dataset = self.config.get('dataset', '')
         self.geo_file = self.config.get('geo_file', self.dataset)
         poi_profile = pd.read_csv('./raw_data/{}/{}.geo'.format(self.dataset, self.geo_file))
+        self.poi_gps_dict = {}
+        for index, row in poi_profile.iterrows():
+            poi_id = row['geo_id']
+            coords = row['coordinates']
+            lon, lat = parse_coordinate(coords)
+            self.poi_gps_dict[poi_id] = (lon, lat)
         mat = np.zeros((self.loc_id-1, self.loc_id-1))
         for i in tqdm(range(1, self.loc_id), desc='calculate poi distance matrix'):
-            lon_i, lat_i = parse_coordinate(poi_profile.iloc[self.id2location[i]]['coordinates'])
+            lon_i, lat_i = self.poi_gps_dict[self.id2location[i]]
             for j in range(1, self.loc_id):
-                lon_j, lat_j = parse_coordinate(poi_profile.iloc[self.id2location[j]]['coordinates'])
+                lon_j, lat_j = self.poi_gps_dict[self.id2location[j]]
                 dis = haversine(lon_i, lat_i, lon_j, lat_j)
                 mat[i-1][j-1] = dis
                 if dis > self.ex[0]:
