@@ -16,8 +16,8 @@ class TrajLocPredExecutor(AbstractExecutor):
         self.metrics = 'Recall@{}'.format(config['topk'])
         self.config = config
         self.model = model.to(self.config['device'])
-        self.tmp_path = './libcity/tmp/checkpoint/'
         self.exp_id = self.config.get('exp_id', None)
+        self.tmp_path = './libcity/tmp/checkpoint/{}/'.format(self.exp_id)
         self.cache_dir = './libcity/cache/{}/model_cache'.format(self.exp_id)
         self.evaluate_res_dir = './libcity/cache/{}/evaluate_cache'.format(self.exp_id)
         self.loss_func = None  # TODO: 根据配置文件支持选择特定的 Loss Func 目前并未实装
