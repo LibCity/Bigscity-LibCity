@@ -85,7 +85,9 @@ class StanEncoder(AbstractTrajectoryEncoder):
             # calculate candidate temporal relation matrix
             candiate_temporal_mat = self._cal_mat2(current_tim)
             # 一条轨迹可以产生多条训练数据，根据第一个点预测第二个点，前两个点预测第三个点....
-            for i in range(len(traj) - 1):
+            # 点数太多了，占用内存，因此增大步长
+            i = 0
+            while i < len(traj) - 1:
                 trace = []
                 target = int(current_traj[i+1][1])
                 # mask current_traj and traj_temporal_mat
@@ -102,6 +104,7 @@ class StanEncoder(AbstractTrajectoryEncoder):
                 trace.append(target-1)  # 因为模型预测是从 0 开始预测，而我们的 encode 是从 1 开始
                 trace.append(uid)
                 encoded_trajectories.append(trace)
+                i += np.random.randint(1, 5)
         return encoded_trajectories
 
     def gen_data_feature(self):

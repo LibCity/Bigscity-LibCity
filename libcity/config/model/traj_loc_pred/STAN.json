@@ -1,11 +1,13 @@
 {
     "cut_method": "fixed_length",
-    "window_size": 100,
+    "window_size": 50,
     "batch_size": 1,
-    "max_session_len": 100,
+    "max_session_len": 50,
     "embed_dim": 50,
     "num_neg": 10,
-    "learning_rate": 3e-3,
-    "max_epoch": 100,
-    "lr_step": 5
+    "learning_rate": 0.001,
+    "max_epoch": 20,
+    "min_sessions": 3,
+    "min_checkins": 3,
+    "cache_dataset": false
 }
