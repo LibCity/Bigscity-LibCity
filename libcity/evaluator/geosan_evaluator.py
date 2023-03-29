@@ -10,19 +10,19 @@ from libcity.evaluator.abstract_evaluator import AbstractEvaluator
 class GeoSANEvaluator(AbstractEvaluator):
 
     def __init__(self, config):
-        self.metrics = config['evaluator_config']['metrics']  # 评估指标, only contains hr and ndcg
-        self.topk = config['evaluator_config']['topk']
+        self.metrics = config['metrics']  # 评估指标
+        self.topk = config['topk']
         self.num_neg = config['executor_config']['test']['num_negative_samples']
         self.cnter = Counter()
         self.result = {}
-        self.allowed_metrics = ['hr', 'ndcg']
+        self.allowed_metrics = ['Precision', 'Recall', 'F1', 'MRR', 'MAP', 'NDCG']
         self._check_config()
 
     def _check_config(self):
         if not isinstance(self.metrics, list):
             raise TypeError('Evaluator type is not list')
         for i in self.metrics:
-            if i.lower() not in self.allowed_metrics:
+            if i not in self.allowed_metrics:
                 raise ValueError('the metric is not allowed in \
                     TrajLocPredEvaluator')
 
@@ -50,11 +50,34 @@ class GeoSANEvaluator(AbstractEvaluator):
         ndcg = 1 / np.log2(np.arange(0, self.num_neg + 1) + 2)
         ndcg = ndcg * array
         ndcg = ndcg.cumsum() / hr.max()
-        hr = hr / hr.max()
+        recall = hr / hr.max()
+        precision = hr / (hr.max() * self.topk)
+        if precision[self.topk-1] + recall[self.topk-1] == 0:
+            f1_score = 0.0
+        else:
+            f1_score = 2 * precision * recall / (precision + recall)
+        # 计算 MRR 和 MAP
+        # 实际上在这个任务下 MRR = MAP，所以只需要计算一个就行
+        # array 就是每个 target 在预测顺序中的排位情况
+        topk_array = array[:self.topk]
+        rank = 0.0
+        for rank_index in range(self.topk):
+            if topk_array[rank_index] > 0:
+                rank = rank + (1.0 / (rank_index + 1)) * topk_array[rank_index]
+        mrr = rank / hr.max()
+        map = rank / hr.max()
+        if 'Recall' in self.metrics:
+            self.result[f'Recall@{self.topk}'] = recall[self.topk-1]
+        if 'Precision' in self.metrics:
+            self.result[f'Precision@{self.topk}'] = precision[self.topk-1]
+        if 'F1' in self.metrics:
+            self.result[f'F1@{self.topk}'] = f1_score
+        if 'MAP' in self.metrics:
+            self.result[f'MAP@{self.topk}'] = map
+        if 'MRR' in self.metrics:
+            self.result[f'MRR@{self.topk}'] = mrr
         if 'NDCG' in self.metrics:
-            self.result[f'NDCG@{self.topk}'] = float(ndcg[self.topk-1])
-        if 'HR' in self.metrics:
-            self.result[f'HR@{self.topk}'] = float(hr[self.topk-1])
+            self.result[f'NDCG@{self.topk}'] = ndcg[self.topk-1]
 
     def save_result(self, save_path, filename=None):
         """

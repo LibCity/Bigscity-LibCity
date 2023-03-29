@@ -50,6 +50,7 @@ class GeoSANExecutor(AbstractExecutor):
                 running_loss += loss.item()
                 processed_batch += 1
                 batch_iterator.set_postfix_str(f"loss={loss.item():.4f}")
+                break
             save_name_tmp = 'ep_' + str(epoch_idx) + '.m'
             torch.save(self.model.state_dict(), self.tmp_path + save_name_tmp)
             epoch_time = Time.time() - start_time
@@ -57,6 +58,7 @@ class GeoSANExecutor(AbstractExecutor):
             print("time taken: {:.2f} sec".format(epoch_time))
             print("avg. loss: {:.4f}".format(running_loss / processed_batch))
             print("epoch={:d}, loss={:.4f}".format(epoch_idx + 1, running_loss / processed_batch))
+            break
         for rt, dirs, files in os.walk(self.tmp_path):
             for name in files:
                 remove_path = os.path.join(rt, name)
@@ -79,6 +81,7 @@ class GeoSANExecutor(AbstractExecutor):
                 output = self.model.predict(batch)
                 # shape: [(1+K)*L, N]
                 self.evaluator.collect(output)
+                break
         self.evaluator.save_result(self.evaluate_res_dir)
 
     def load_model(self, cache_name):
