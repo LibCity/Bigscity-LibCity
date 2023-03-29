@@ -19,7 +19,7 @@ class GeoSANExecutor(AbstractExecutor):
         self.exp_id = self.config.get('exp_id', None)
         self.cache_dir = './libcity/cache/{}/model_cache'.format(self.exp_id)
         self.evaluate_res_dir = './libcity/cache/{}/evaluate_cache'.format(self.exp_id)
-        self.tmp_path = './libcity/tmp/checkpoint/'
+        self.tmp_path = './libcity/tmp/checkpoint/{}/'.format(self.exp_id)
 
     def train(self, train_dataloader, eval_dataloader):
         """
