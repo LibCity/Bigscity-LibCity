@@ -55,7 +55,7 @@ class GeoSANEvaluator(AbstractEvaluator):
         if precision[self.topk-1] + recall[self.topk-1] == 0:
             f1_score = 0.0
         else:
-            f1_score = 2 * precision * recall / (precision + recall)
+            f1_score = 2 * precision[self.topk-1] * recall[self.topk-1] / (precision[self.topk-1] + recall[self.topk-1])
         # 计算 MRR 和 MAP
         # 实际上在这个任务下 MRR = MAP，所以只需要计算一个就行
         # array 就是每个 target 在预测顺序中的排位情况
