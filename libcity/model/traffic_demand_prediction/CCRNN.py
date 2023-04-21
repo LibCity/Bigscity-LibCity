@@ -11,9 +11,6 @@ from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
 
 
-# 不能加入外部数据，即feature_dim==output_dim
-
-
 def normalized_laplacian(w: np.ndarray) -> np.matrix:
     d = np.array(w.sum(1))
     d_inv_sqrt = np.power(d, -0.5).flatten()
@@ -107,6 +104,12 @@ class CCRNN(AbstractTrafficStateModel):
         """
         inputs = batch['X']
         targets = batch['y']
+
+        self._logger.debug("X: {}".format(inputs.size()))  # (input_window, batch_size, num_nodes * input_dim)
+
+        if targets is not None:
+            targets = targets[..., :self.output_dim].to(self.device)
+            self._logger.debug("y: {}".format(targets.size()))
 
         if self.method == 'big':
             graph = list()
