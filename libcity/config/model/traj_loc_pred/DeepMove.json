@@ -10,6 +10,5 @@
     "lr_step": 3,
     "max_epoch": 30,
     "optimizer": "adam",
-    "window_size": 72,
-    "max_session_len": 10
+    "window_size": 72
 }
