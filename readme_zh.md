@@ -33,7 +33,7 @@ LibCity 目前支持以下任务：
 
 ## LibCity News
 
-[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **27/4/2023**: 我们发布了LibCity的[长文](https://arxiv.org/abs/2304.14343)论文，包括 (1) 城市时空数据分类和基础单元，并提出统一存储格式，(2) 对城市时空预测领域（包括宏观群体预测、微观个体预测和基础任务）的详细综述，（3）提出城市时空预测开源算法库LibCity，详细介绍各模块和使用案例，并提供一个基于网页的实验管理和可视化平台，（4）基于LibCity选择20余个模型和20余个数据集进行对比实验，得到模型性能排行榜，总结未来的有发展的研究方向。详情请查看此[链接](https://arxiv.org/abs/2304.14343)。
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发布了LibCity的[长文](https://arxiv.org/abs/2304.14343)论文，包括 (1) 城市时空数据分类和基础单元，并提出统一存储格式，(2) 对城市时空预测领域（包括宏观群体预测、微观个体预测和基础任务）的详细综述，（3）提出城市时空预测开源算法库LibCity，详细介绍各模块和使用案例，并提供一个基于网页的实验管理和可视化平台，（4）基于LibCity选择20余个模型和20余个数据集进行对比实验，得到模型性能排行榜，总结未来的有发展的研究方向。详情请查看此[链接](https://arxiv.org/abs/2304.14343)。
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
