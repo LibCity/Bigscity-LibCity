@@ -160,7 +160,7 @@ Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for you
 }
 ```
 
-For the long papar, please cite it as follows:
+For the long paper, please cite it as follows:
 
 ```
 @article{libcitylong,
