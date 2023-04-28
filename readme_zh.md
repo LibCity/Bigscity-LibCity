@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[会议论文](https://dl.acm.org/doi/10.1145/3474717.3483923)|[期刊论文](https://arxiv.org/abs/2304.14343)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper) |[实验工具](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
+[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[会议论文](https://dl.acm.org/doi/10.1145/3474717.3483923)|[期刊论文](https://arxiv.org/abs/2304.14343)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper)|[实验工具](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
 
 LibCity 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
