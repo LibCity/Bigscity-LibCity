@@ -33,6 +33,8 @@ LibCity 目前支持以下任务：
 
 ## LibCity News
 
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **27/4/2023**: 我们发布了LibCity的[长文](https://arxiv.org/abs/2304.14343)论文，包括 (1) 城市时空数据分类和基础单元，并提出统一存储格式，(2) 对城市时空预测领域（包括宏观群体预测、微观个体预测和基础任务）的详细综述，（3）提出城市时空预测开源算法库LibCity，详细介绍各模块和使用案例，并提供一个基于网页的实验管理和可视化平台，（4）基于LibCity选择20余个模型和20余个数据集进行对比实验，得到模型性能排行榜，总结未来的有发展的研究方向。详情请查看此[链接](https://arxiv.org/abs/2304.14343)。
+
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **08/05/2022**: 我们为LibCity开发了一个**实验管理工具**，允许用户在一个可视化的界面中完成实验。代码库的链接是[这里](https://github.com/LibCity/Bigscity-LibCity-WebTool)。一些中文介绍：[Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454773897&idx=1&sn=e09cc3fc7dd772a579dd10730f8fadd8&chksm=88f68a31bf810327849442c6af4bf59d5042dfb9871247239a49f070dbeb9f321b41706da157&scene=126&&sessionid=1669002707#rd), [Zhihu](https://zhuanlan.zhihu.com/p/550605104)
