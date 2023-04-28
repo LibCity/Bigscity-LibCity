@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper Conference](https://dl.acm.org/doi/10.1145/3474717.3483923)|[Paper Journal](https://arxiv.org/abs/2304.14343)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[Experiment Tool](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md) 
 
 LibCity is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 
@@ -142,7 +142,7 @@ If you encounter a bug or have any suggestion, please contact us by [raising an 
 Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for your research or development, please cite our [paper](https://dl.acm.org/doi/10.1145/3474717.3483923).
 
 ```
-@inproceedings{10.1145/3474717.3483923,
+@inproceedings{libcity,
   author = {Wang, Jingyuan and Jiang, Jiawei and Jiang, Wenjun and Li, Chao and Zhao, Wayne Xin},
   title = {LibCity: An Open Library for Traffic Prediction},
   year = {2021},
@@ -160,8 +160,15 @@ Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for you
 }
 ```
 
+For the long papar, please cite it as follows:
+
 ```
-Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
+@article{libcitylong,
+  title={Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction: A Unified Library and Performance Benchmark}, 
+  author={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chengkai Han and Wayne Xin Zhao},
+  journal={arXiv preprint arXiv:2304.14343},
+  year={2023}
+}
 ```
 
 ## License
