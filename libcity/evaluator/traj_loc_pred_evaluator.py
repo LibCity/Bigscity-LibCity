@@ -19,10 +19,14 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         self.evaluate_method = config['evaluate_method']
         self.intermediate_result = {
             'total': 0,
-            'hit': 0,
             'rank': 0.0,
             'dcg': 0.0
         }
+        if(type(self.topk) == type(0)):
+            self.intermediate_result['hit'] = 0
+        elif (type(self.topk) == type([])):
+            for k in self.topk:
+                self.intermediate_result['hit' + str(k)] = 0
         self._check_config()
         self._logger = getLogger()
 
@@ -46,24 +50,47 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         """
         if not isinstance(batch, dict):
             raise TypeError('evaluator.collect input is not a dict of user')
-        hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk)
-        total = len(batch['loc_true'])
-        self.intermediate_result['total'] += total
-        self.intermediate_result['hit'] += hit
-        self.intermediate_result['rank'] += rank
-        self.intermediate_result['dcg'] += dcg
+        if(type(self.topk) == type(0)):
+            hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk)
+            total = len(batch['loc_true'])
+            self.intermediate_result['total'] += total
+            self.intermediate_result['hit'] += hit
+            self.intermediate_result['rank'] += rank
+            self.intermediate_result['dcg'] += dcg
+        elif(type(self.topk) == type([])):
+            total = len(batch['loc_true'])
+            self.intermediate_result['total'] += total
+            for idx in range(len(self.topk)):
+                hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk[idx])
+                self.intermediate_result['hit' + str(self.topk[idx])] += hit
+                if (idx == 0):
+                    self.intermediate_result['rank'] += rank
+                    self.intermediate_result['dcg'] += dcg
 
     def evaluate(self):
-        precision_key = 'Precision@{}'.format(self.topk)
-        precision = self.intermediate_result['hit'] / (
-            self.intermediate_result['total'] * self.topk)
-        if 'Precision' in self.metrics:
-            self.result[precision_key] = precision
-        # recall is used to valid in the trainning, so must exit
-        recall_key = 'Recall@{}'.format(self.topk)
-        recall = self.intermediate_result['hit'] \
-            / self.intermediate_result['total']
-        self.result[recall_key] = recall
+        if(type(self.topk) == type(0)):
+            precision_key = 'Precision@{}'.format(self.topk)
+            precision = self.intermediate_result['hit'] / (
+                    self.intermediate_result['total'] * self.topk)
+            if 'Precision' in self.metrics:
+                self.result[precision_key] = precision
+            # recall is used to valid in the trainning, so must exit
+            recall_key = 'Recall@{}'.format(self.topk)
+            recall = self.intermediate_result['hit'] \
+                     / self.intermediate_result['total']
+            self.result[recall_key] = recall
+        elif(type(self.topk) == type([])):
+            for k in self.topk:
+                precision_key = 'Precision@{}'.format(k)
+                precision = self.intermediate_result['hit' + str(k)] / (
+                        self.intermediate_result['total'] * k)
+                if 'Precision' in self.metrics:
+                    self.result[precision_key] = precision
+                # recall is used to valid in the trainning, so must exit
+                recall_key = 'Recall@{}'.format(k)
+                recall = self.intermediate_result['hit' + str(k)] \
+                         / self.intermediate_result['total']
+                self.result[recall_key] = recall
         if 'F1' in self.metrics:
             f1_key = 'F1@{}'.format(self.topk)
             if precision + recall == 0:
@@ -102,7 +129,11 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         self.result = {}
         self.intermediate_result = {
             'total': 0,
-            'hit': 0,
             'rank': 0.0,
             'dcg': 0.0
         }
+        if (type(self.topk) == type(0)):
+            self.intermediate_result['hit'] = 0
+        elif (type(self.topk) == type([])):
+            for k in self.topk:
+                self.intermediate_result['hit' + str(k)] = 0
