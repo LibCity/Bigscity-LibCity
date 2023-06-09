@@ -6,7 +6,7 @@ from libcity.evaluator.abstract_evaluator import AbstractEvaluator
 from libcity.evaluator.eval_funcs import top_k
 from logging import getLogger
 allowed_metrics = ['Precision', 'Recall', 'F1', 'MRR', 'MAP', 'NDCG']
-
+from collections import defaultdict
 
 class TrajLocPredEvaluator(AbstractEvaluator):
 
@@ -17,12 +17,7 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         self.result = {}
         # 兼容全样本评估与负样本评估
         self.evaluate_method = config['evaluate_method']
-        self.intermediate_result = {
-            'total': 0,
-            'hit': 0,
-            'rank': 0.0,
-            'dcg': 0.0
-        }
+        self.intermediate_result = defaultdict(float)
         self._check_config()
         self._logger = getLogger()
 
@@ -46,43 +41,85 @@ class TrajLocPredEvaluator(AbstractEvaluator):
         """
         if not isinstance(batch, dict):
             raise TypeError('evaluator.collect input is not a dict of user')
-        hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk)
-        total = len(batch['loc_true'])
-        self.intermediate_result['total'] += total
-        self.intermediate_result['hit'] += hit
-        self.intermediate_result['rank'] += rank
-        self.intermediate_result['dcg'] += dcg
+        if(type(self.topk) == type(0)):
+            hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk)
+            total = len(batch['loc_true'])
+            self.intermediate_result['total'] += total
+            self.intermediate_result['hit'] += hit
+            self.intermediate_result['rank'] += rank
+            self.intermediate_result['dcg'] += dcg
+        elif(type(self.topk) == type([])):
+            total = len(batch['loc_true'])
+            self.intermediate_result['total'] += total
+            for idx in range(len(self.topk)):
+                hit, rank, dcg = top_k(batch['loc_pred'], batch['loc_true'], self.topk[idx])
+                self.intermediate_result['hit' + str(self.topk[idx])] += hit
+                self.intermediate_result['rank' + str(self.topk[idx])] += rank
+                self.intermediate_result['dcg' + str(self.topk[idx])] += dcg
 
     def evaluate(self):
-        precision_key = 'Precision@{}'.format(self.topk)
-        precision = self.intermediate_result['hit'] / (
-            self.intermediate_result['total'] * self.topk)
-        if 'Precision' in self.metrics:
-            self.result[precision_key] = precision
-        # recall is used to valid in the trainning, so must exit
-        recall_key = 'Recall@{}'.format(self.topk)
-        recall = self.intermediate_result['hit'] \
-            / self.intermediate_result['total']
-        self.result[recall_key] = recall
-        if 'F1' in self.metrics:
-            f1_key = 'F1@{}'.format(self.topk)
-            if precision + recall == 0:
-                self.result[f1_key] = 0.0
-            else:
-                self.result[f1_key] = (2 * precision * recall) / (precision +
-                                                                  recall)
-        if 'MRR' in self.metrics:
-            mrr_key = 'MRR@{}'.format(self.topk)
-            self.result[mrr_key] = self.intermediate_result['rank'] \
-                / self.intermediate_result['total']
-        if 'MAP' in self.metrics:
-            map_key = 'MAP@{}'.format(self.topk)
-            self.result[map_key] = self.intermediate_result['rank'] \
-                / self.intermediate_result['total']
-        if 'NDCG' in self.metrics:
-            ndcg_key = 'NDCG@{}'.format(self.topk)
-            self.result[ndcg_key] = self.intermediate_result['dcg'] \
-                / self.intermediate_result['total']
+        if(type(self.topk) == type(0)):
+            precision_key = 'Precision@{}'.format(self.topk)
+            precision = self.intermediate_result['hit'] / (
+                    self.intermediate_result['total'] * self.topk)
+            if 'Precision' in self.metrics:
+                self.result[precision_key] = precision
+            # recall is used to valid in the trainning, so must exit
+            recall_key = 'Recall@{}'.format(self.topk)
+            recall = self.intermediate_result['hit'] \
+                     / self.intermediate_result['total']
+            self.result[recall_key] = recall
+            if 'F1' in self.metrics:
+                f1_key = 'F1@{}'.format(self.topk)
+                if precision + recall == 0:
+                    self.result[f1_key] = 0.0
+                else:
+                    self.result[f1_key] = (2 * precision * recall) / (precision +
+                                                                      recall)
+            if 'MRR' in self.metrics:
+                mrr_key = 'MRR@{}'.format(self.topk)
+                self.result[mrr_key] = self.intermediate_result['rank'] \
+                                       / self.intermediate_result['total']
+            if 'MAP' in self.metrics:
+                map_key = 'MAP@{}'.format(self.topk)
+                self.result[map_key] = self.intermediate_result['rank'] \
+                                       / self.intermediate_result['total']
+            if 'NDCG' in self.metrics:
+                ndcg_key = 'NDCG@{}'.format(self.topk)
+                self.result[ndcg_key] = self.intermediate_result['dcg'] \
+                                        / self.intermediate_result['total']
+        elif(type(self.topk) == type([])):
+            for k in self.topk:
+                precision_key = 'Precision@{}'.format(k)
+                precision = self.intermediate_result['hit' + str(k)] / (
+                        self.intermediate_result['total'] * k)
+                if 'Precision' in self.metrics:
+                    self.result[precision_key] = precision
+                # recall is used to valid in the trainning, so must exit
+                recall_key = 'Recall@{}'.format(k)
+                recall = self.intermediate_result['hit' + str(k)] \
+                         / self.intermediate_result['total']
+                self.result[recall_key] = recall
+                if 'F1' in self.metrics:
+                    f1_key = 'F1@{}'.format(k)
+                    if precision + recall == 0:
+                        self.result[f1_key] = 0.0
+                    else:
+                        self.result[f1_key] = (2 * precision * recall) / (precision +
+                                                                          recall)
+                if 'MRR' in self.metrics:
+                    mrr_key = 'MRR@{}'.format(k)
+                    self.result[mrr_key] = self.intermediate_result['rank' + str(k)] \
+                                           / self.intermediate_result['total']
+                if 'MAP' in self.metrics:
+                    map_key = 'MAP@{}'.format(k)
+                    self.result[map_key] = self.intermediate_result['rank' + str(k)] \
+                                           / self.intermediate_result['total']
+                if 'NDCG' in self.metrics:
+                    ndcg_key = 'NDCG@{}'.format(k)
+                    self.result[ndcg_key] = self.intermediate_result['dcg' + str(k)] \
+                                            / self.intermediate_result['total']
+
         return self.result
 
     def save_result(self, save_path, filename=None):
@@ -100,9 +137,4 @@ class TrajLocPredEvaluator(AbstractEvaluator):
 
     def clear(self):
         self.result = {}
-        self.intermediate_result = {
-            'total': 0,
-            'hit': 0,
-            'rank': 0.0,
-            'dcg': 0.0
-        }
+        self.intermediate_result.clear()

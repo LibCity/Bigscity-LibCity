@@ -13,7 +13,10 @@ class TrajLocPredExecutor(AbstractExecutor):
 
     def __init__(self, config, model, data_feature):
         self.evaluator = get_evaluator(config)
-        self.metrics = 'Recall@{}'.format(config['topk'])
+        if(type(config['topk']) == type(0)):
+            self.metrics = 'Recall@{}'.format(config['topk'])
+        elif(type(config['topk']) == type([])):
+            self.metrics = 'Recall@{}'.format(config['topk'][0])
         self.config = config
         self.model = model.to(self.config['device'])
         self.tmp_path = './libcity/tmp/checkpoint/'

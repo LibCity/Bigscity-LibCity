@@ -1,5 +1,5 @@
 {
-  "metrics": ["Recall"],
+  "metrics": ["Recall","F1","MRR","MAP","NDCG"],
   "evaluate_method": "popularity",
-  "topk": 1
+  "topk": 5
 }
