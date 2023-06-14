@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md)
+[HomePage](https://libcity.ai/)|[Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/index.html)|[Datasets](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[Paper Conference](https://dl.acm.org/doi/10.1145/3474717.3483923)|[Paper Journal](https://arxiv.org/abs/2304.14343)|[Paper List](https://github.com/LibCity/Bigscity-LibCity-Paper)|[Experiment Tool](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[中文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme_zh.md) 
 
 LibCity is a unified, comprehensive, and extensible library, which provides researchers with a credible experimental tool and a convenient development framework in the traffic prediction field. Our library is implemented based on PyTorch and includes all the necessary steps or components related to traffic prediction into a systematic pipeline, allowing researchers to conduct comprehensive experiments. Our library will contribute to the standardization and reproducibility in the field of traffic prediction.
 
@@ -32,6 +32,8 @@ LibCity currently supports the following tasks:
 * **Extensible**: LibCity enables a modular design of different components, allowing users to flexibly insert customized components into the library. Therefore, new researchers can easily develop new models with the support of LibCity.
 
 ## LibCity News
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: We published a [long paper](https://arxiv.org/abs/2304.14343) on LibCity, including (1) classification and base units of urban spatial-temporal data and proposed a unified storage format, i.e., atomic files, (2) a detailed review of urban spatial-temporal prediction field (including macro-group prediction, micro-individual prediction, and fundamental tasks), (3) proposed LibCity, an open source library for urban spatial-temporal prediction, detailing each module and use cases, and providing a web-based experiment management and visualization platform, (4) selected more than 20 models and datasets for comparison experiments based on LibCity, obtained model performance rankings and summarized promising future research directions. Please check this [link](https://arxiv.org/abs/2304.14343) for more details.
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: Our self-attention-based traffic flow prediction model **PDFormer** developed on LibCity was accepted by **AAAI2023**, please check this [link](https://github.com/BUAABIGSCity/PDFormer) for more details.
 
@@ -140,7 +142,7 @@ If you encounter a bug or have any suggestion, please contact us by [raising an 
 Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for your research or development, please cite our [paper](https://dl.acm.org/doi/10.1145/3474717.3483923).
 
 ```
-@inproceedings{10.1145/3474717.3483923,
+@inproceedings{libcity,
   author = {Wang, Jingyuan and Jiang, Jiawei and Jiang, Wenjun and Li, Chao and Zhao, Wayne Xin},
   title = {LibCity: An Open Library for Traffic Prediction},
   year = {2021},
@@ -158,8 +160,15 @@ Our paper is accepted by ACM SIGSPATIAL 2021. If you find LibCity useful for you
 }
 ```
 
+For the long paper, please cite it as follows:
+
 ```
-Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
+@article{libcitylong,
+  title={Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction: A Unified Library and Performance Benchmark}, 
+  author={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chengkai Han and Wayne Xin Zhao},
+  journal={arXiv preprint arXiv:2304.14343},
+  year={2023}
+}
 ```
 
 ## License

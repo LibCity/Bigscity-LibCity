@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
+[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[会议论文](https://dl.acm.org/doi/10.1145/3474717.3483923)|[期刊论文](https://arxiv.org/abs/2304.14343)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper)|[实验工具](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
 
 LibCity 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
@@ -32,6 +32,8 @@ LibCity 目前支持以下任务：
 * **可扩展性**：LibCity 实现了不同组件的模块化设计，允许用户灵活地加入自定义组件。 因此，新的研究人员可以在 LibCity 的支持下轻松开发新模型。
 
 ## LibCity News
+
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发布了LibCity的[长文](https://arxiv.org/abs/2304.14343)论文，包括 (1) 城市时空数据分类和基础单元，并提出统一存储格式，(2) 对城市时空预测领域（包括宏观群体预测、微观个体预测和基础任务）的详细综述，（3）提出城市时空预测开源算法库LibCity，详细介绍各模块和使用案例，并提供一个基于网页的实验管理和可视化平台，（4）基于LibCity选择20余个模型和20余个数据集进行对比实验，得到模型性能排行榜，总结未来的有发展的研究方向。详情请查看此[链接](https://arxiv.org/abs/2304.14343)。
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
@@ -156,8 +158,15 @@ LibCity 主要由北航智慧城市兴趣小组 ([BIGSCITY](https://www.bigcity.
 }
 ```
 
+对于新发布的长文，请这样引用：
+
 ```
-Jingyuan Wang, Jiawei Jiang, Wenjun Jiang, Chao Li, and Wayne Xin Zhao. 2021. LibCity: An Open Library for Traffic Prediction. In Proceedings of the 29th International Conference on Advances in Geographic Information Systems (SIGSPATIAL '21). Association for Computing Machinery, New York, NY, USA, 145–148. DOI:https://doi.org/10.1145/3474717.3483923
+@article{libcitylong,
+  title={Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction: A Unified Library and Performance Benchmark}, 
+  author={Jingyuan Wang and Jiawei Jiang and Wenjun Jiang and Chengkai Han and Wayne Xin Zhao},
+  journal={arXiv preprint arXiv:2304.14343},
+  year={2023}
+}
 ```
 
 ## License
