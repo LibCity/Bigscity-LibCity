@@ -1,0 +1,23 @@
+{
+  "num_block": 3,
+  "time_series_emb_dim": 32,
+  "spatial_emb_dim": 32,
+  "temp_dim_tid": 32,
+  "temp_dim_diw": 32,
+  "if_spatial": true,
+  "if_TiD": true,
+  "if_DiW": true,
+  "scaler": "standard",
+  "load_external": true,
+  "normal_external": false,
+  "ext_scaler": "none",
+  "add_time_in_day": true,
+  "add_day_in_week": true,
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_decay": false,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": false
+}
