@@ -489,9 +489,9 @@ class DistanceFunction(nn.Module):
 
     def forward(self, X, E_d, E_u, T_D, D_W):
         # last pooling
-        if T_D:
+        if T_D is not None:
             T_D = T_D[:, -1, :, :]
-        if D_W:
+        if D_W is not None:
             D_W = D_W[:, -1, :, :]
         # dynamic information
         X = X[:, :, :, 0].transpose(1, 2).contiguous()  # X->[batch_size, seq_len, num_nodes]->[batch_size, num_nodes, seq_len]
@@ -503,13 +503,13 @@ class DistanceFunction(nn.Module):
         emb1 = E_d.unsqueeze(0).expand(batch_size, -1, -1)
         emb2 = E_u.unsqueeze(0).expand(batch_size, -1, -1)
         # distance calculation
-        if T_D and D_W:
+        if T_D  is not None and D_W is not None:
             X1 = torch.cat([dy_feat, T_D, D_W, emb1], dim=-1)  # hidden state for calculating distance
             X2 = torch.cat([dy_feat, T_D, D_W, emb2], dim=-1)  # hidden state for calculating distance
-        elif D_W:
+        elif D_W is not None:
             X1 = torch.cat([dy_feat, D_W, emb1], dim=-1)  # hidden state for calculating distance
             X2 = torch.cat([dy_feat, D_W, emb2], dim=-1)  # hidden state for calculating distance
-        elif T_D:
+        elif T_D is not None:
             X1 = torch.cat([dy_feat, T_D, emb1], dim=-1)  # hidden state for calculating distance
             X2 = torch.cat([dy_feat, T_D, emb2], dim=-1)  # hidden state for calculating distance
         else:
