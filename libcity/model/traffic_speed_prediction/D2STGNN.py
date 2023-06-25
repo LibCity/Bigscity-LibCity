@@ -471,7 +471,12 @@ class DistanceFunction(nn.Module):
         # Time Slot Embedding Extraction
         self.time_slot_embedding = nn.Linear(self.time_emb_dim, self.time_slot_emb_dim)
         # Distance Score
-        self.all_feat_dim = self.ts_feat_dim + self.node_dim + self.time_emb_dim * 2
+        time_dim = 0
+        if config.get("add_time_in_day", True):
+            time_dim += self.time_emb_dim
+        if config.get("add_day_in_week", True):
+            time_dim += self.time_emb_dim
+        self.all_feat_dim = self.ts_feat_dim + self.node_dim + time_dim
         self.WQ = nn.Linear(self.all_feat_dim, self.hidden_dim, bias=False)
         self.WK = nn.Linear(self.all_feat_dim, self.hidden_dim, bias=False)
         self.bn = nn.BatchNorm1d(self.hidden_dim*2)
@@ -484,8 +489,10 @@ class DistanceFunction(nn.Module):
 
     def forward(self, X, E_d, E_u, T_D, D_W):
         # last pooling
-        T_D = T_D[:, -1, :, :]
-        D_W = D_W[:, -1, :, :]
+        if T_D:
+            T_D = T_D[:, -1, :, :]
+        if D_W:
+            D_W = D_W[:, -1, :, :]
         # dynamic information
         X = X[:, :, :, 0].transpose(1, 2).contiguous()  # X->[batch_size, seq_len, num_nodes]->[batch_size, num_nodes, seq_len]
         [batch_size, num_nodes, seq_len] = X.shape
@@ -496,8 +503,18 @@ class DistanceFunction(nn.Module):
         emb1 = E_d.unsqueeze(0).expand(batch_size, -1, -1)
         emb2 = E_u.unsqueeze(0).expand(batch_size, -1, -1)
         # distance calculation
-        X1 = torch.cat([dy_feat, T_D, D_W, emb1], dim=-1)  # hidden state for calculating distance
-        X2 = torch.cat([dy_feat, T_D, D_W, emb2], dim=-1)  # hidden state for calculating distance
+        if T_D and D_W:
+            X1 = torch.cat([dy_feat, T_D, D_W, emb1], dim=-1)  # hidden state for calculating distance
+            X2 = torch.cat([dy_feat, T_D, D_W, emb2], dim=-1)  # hidden state for calculating distance
+        elif D_W:
+            X1 = torch.cat([dy_feat, D_W, emb1], dim=-1)  # hidden state for calculating distance
+            X2 = torch.cat([dy_feat, D_W, emb2], dim=-1)  # hidden state for calculating distance
+        elif T_D:
+            X1 = torch.cat([dy_feat, T_D, emb1], dim=-1)  # hidden state for calculating distance
+            X2 = torch.cat([dy_feat, T_D, emb2], dim=-1)  # hidden state for calculating distance
+        else:
+            X1 = torch.cat([dy_feat, emb1], dim=-1)  # hidden state for calculating distance
+            X2 = torch.cat([dy_feat, emb2], dim=-1)  # hidden state for calculating distance
         X  = [X1, X2]
         adjacent_list = []
         for _ in X:
@@ -792,4 +809,3 @@ class D2STGNN(AbstractTrafficStateModel):
 
     def predict(self, batch):
         return self.forward(batch)
-
