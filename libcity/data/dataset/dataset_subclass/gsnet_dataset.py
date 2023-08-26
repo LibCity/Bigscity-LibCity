@@ -77,7 +77,7 @@ class GSNetDataset(TrafficStateCPTDataset):
         self.geo_ids = orig_geo_ids
         return result
 
-    # for grid-based auxillary matrices
+    # for grid-based auxiliary matrices
     def _load_risk_mask(self, filename):
         self._logger.info("Loading file " + filename + ".geo")
         df = pd.read_csv(self.data_path + filename + '.geo')
