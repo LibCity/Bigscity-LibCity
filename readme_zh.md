@@ -6,7 +6,7 @@
 
 # LibCity（阡陌）
 
-[主页](https://libcity.ai/)|[文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#)|[数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets)|[会议论文](https://dl.acm.org/doi/10.1145/3474717.3483923)|[期刊论文](https://arxiv.org/abs/2304.14343)|[论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper)|[实验工具](https://github.com/LibCity/Bigscity-LibCity-WebTool)|[英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
+[主页](https://libcity.ai/) | [文档](https://bigscity-libcity-docs.readthedocs.io/zh_CN/latest/#) | [数据集](https://github.com/LibCity/Bigscity-LibCity-Datasets) | [会议论文](https://dl.acm.org/doi/10.1145/3474717.3483923) | [长文论文](https://arxiv.org/abs/2304.14343) | [论文列表](https://github.com/LibCity/Bigscity-LibCity-Paper) | [实验工具](https://github.com/LibCity/Bigscity-LibCity-WebTool) | [EA&B论文](https://arxiv.org/abs/2308.12899) | [英文版](https://github.com/LibCity/Bigscity-LibCity/blob/master/readme.md)
 
 LibCity 是一个统一、全面、可扩展的代码库，为交通预测领域的研究人员提供了一个可靠的实验工具和便捷的开发框架。 我们的库基于 PyTorch 实现，并将与交通预测相关的所有必要步骤或组件包含到系统的流水线中，使研究人员能够进行全面的对比实验。 我们的库将有助于交通预测领域的标准化和可复现性。
 
@@ -33,11 +33,13 @@ LibCity 目前支持以下任务：
 
 ## LibCity News
 
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** 我们发表了题为*Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]*的论文，包括（1）城市时空数据的统一存储格式，（2）城市时空预测模型的技术发展路线图，（3）使用 18 个模型和 20 个数据集进行的广泛实验和性能评估。[[Paper]](https://arxiv.org/abs/2308.12899).
+
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**06/20/2023:** 我们发布了2015年11月采集的北京轨迹数据集，包括1018312条轨迹。我们从OpenStreetMap获得了相应的路网数据，并对轨迹数据进行了预处理，得到了与路网相匹配的北京轨迹数据集，我们相信这个数据集可以促进城市轨迹挖掘任务的发展。**请参考此[链接](https://github.com/aptx1231/START)获取数据，并保证此数据仅用于研究目的**。
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **06/04/2023**: LibCity 荣获第三届中国科学开源软件创意大赛**二等奖**！[Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454775999&idx=1&sn=881a31468c5cd472ed72967b487837cf&chksm=88f68207bf810b1157ac622ae0beba0a1f2ca8ece38fa5c743c4e082c30d9e27d23b92b61530&scene=126&sessionid=1687198811#rd)
 
-[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发布了LibCity的[长文](https://arxiv.org/abs/2304.14343)论文，包括 (1) 城市时空数据分类和基础单元，并提出统一存储格式，(2) 对城市时空预测领域（包括宏观群体预测、微观个体预测和基础任务）的详细综述，（3）提出城市时空预测开源算法库LibCity，详细介绍各模块和使用案例，并提供一个基于网页的实验管理和可视化平台，（4）基于LibCity选择20余个模型和20余个数据集进行对比实验，得到模型性能排行榜，总结未来的有发展的研究方向。详情请查看此[链接](https://arxiv.org/abs/2304.14343)。
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发表了一篇题为*LibCity： A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*，其中提供了 LibCity 的更多详细信息。[[Paper]](https://arxiv.org/abs/2304.14343).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
