@@ -33,13 +33,13 @@ LibCity 目前支持以下任务：
 
 ## LibCity News
 
-[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** 我们发表了题为*Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]*的论文，包括（1）城市时空数据的统一存储格式，（2）城市时空预测模型的技术发展路线图，（3）使用 18 个模型和 20 个数据集进行的广泛实验和性能评估。[[Paper]](https://arxiv.org/abs/2308.12899).
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** 我们发表了题为 *Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]* 的论文，包括（1）城市时空数据的统一存储格式，（2）城市时空预测模型的技术发展路线图，（3）使用 18 个模型和 20 个数据集进行的广泛实验和性能评估。[[Paper]](https://arxiv.org/abs/2308.12899).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**06/20/2023:** 我们发布了2015年11月采集的北京轨迹数据集，包括1018312条轨迹。我们从OpenStreetMap获得了相应的路网数据，并对轨迹数据进行了预处理，得到了与路网相匹配的北京轨迹数据集，我们相信这个数据集可以促进城市轨迹挖掘任务的发展。**请参考此[链接](https://github.com/aptx1231/START)获取数据，并保证此数据仅用于研究目的**。
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **06/04/2023**: LibCity 荣获第三届中国科学开源软件创意大赛**二等奖**！[Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454775999&idx=1&sn=881a31468c5cd472ed72967b487837cf&chksm=88f68207bf810b1157ac622ae0beba0a1f2ca8ece38fa5c743c4e082c30d9e27d23b92b61530&scene=126&sessionid=1687198811#rd)
 
-[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发表了一篇题为*LibCity： A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*，其中提供了 LibCity 的更多详细信息。[[Paper]](https://arxiv.org/abs/2304.14343).
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发表了一篇题为 *LibCity： A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*，其中提供了 LibCity 的更多详细信息。[[Paper]](https://arxiv.org/abs/2304.14343).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
