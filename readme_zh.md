@@ -39,7 +39,7 @@ LibCity 目前支持以下任务：
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **06/04/2023**: LibCity 荣获第三届中国科学开源软件创意大赛**二等奖**！[Weixin](https://mp.weixin.qq.com/s?__biz=MzA3NzM4OTc4Mw==&mid=2454775999&idx=1&sn=881a31468c5cd472ed72967b487837cf&chksm=88f68207bf810b1157ac622ae0beba0a1f2ca8ece38fa5c743c4e082c30d9e27d23b92b61530&scene=126&sessionid=1687198811#rd)
 
-[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发表了一篇题为 *LibCity： A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*，其中提供了 LibCity 的更多详细信息。[[Paper]](https://arxiv.org/abs/2304.14343).
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/27/2023**: 我们发表了一篇题为 *LibCity： A Unified Library Towards Efficient and Comprehensive Urban Spatial-Temporal Prediction*的长文，其中提供了 LibCity 的更多详细信息。[[Paper]](https://arxiv.org/abs/2304.14343).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/19/2022**: 我们在LibCity上开发的基于自注意力机制的交通流预测模型**PDFormer**被**AAAI2023**接受，详情请查看此[链接](https://github.com/BUAABIGSCity/PDFormer)。
 
