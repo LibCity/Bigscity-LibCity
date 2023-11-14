@@ -186,7 +186,7 @@ class STGODE(AbstractTrafficStateModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
-        self.A_sp_hat = self.data_feature.get('A_sp_hat')
+        self.A_sp_hat = self.data_feature.get('adj_mx')
         self.A_se_hat = self.data_feature.get('A_se_hat')
         self._logger = getLogger()
 
@@ -195,8 +195,8 @@ class STGODE(AbstractTrafficStateModel):
         self.sigma2 = config.get('sigma2', 10)
         self.thres1 = config.get('thres1', 0.6)
         self.thres2 = config.get('thres2', 0.5)
-        self.his_length = config.get('his_length', 12)
-        self.pred_length = config.get('pred_length', 12)
+        self.his_length = config.get('input_window', 12)
+        self.pred_length = config.get('output_window', 12)
 
         # section 3: model structure
         # spatial graph
