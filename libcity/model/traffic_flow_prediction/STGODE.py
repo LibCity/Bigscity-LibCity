@@ -7,12 +7,12 @@ from logging import getLogger
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
 
-
 adjoint = False
 if adjoint:
     from torchdiffeq import odeint_adjoint as odeint
 else:
     from torchdiffeq import odeint
+
 
 class ODEFunc(nn.Module):
 
@@ -45,7 +45,7 @@ class ODEFunc(nn.Module):
 
 
 class ODEblock(nn.Module):
-    def __init__(self, odefunc, t=torch.tensor([0,1])):
+    def __init__(self, odefunc, t=torch.tensor([0, 1])):
         super(ODEblock, self).__init__()
         self.t = t
         self.odefunc = odefunc
@@ -71,11 +71,11 @@ class ODEG(nn.Module):
         return F.relu(z)
 
 
-
 class Chomp1d(nn.Module):
     """
     extra dimension will be added by padding, remove it
     """
+
     def __init__(self, chomp_size):
         super(Chomp1d, self).__init__()
         self.chomp_size = chomp_size
@@ -88,6 +88,7 @@ class TemporalConvNet(nn.Module):
     """
     time dilation convolution
     """
+
     def __init__(self, num_inputs, num_channels, kernel_size=2, dropout=0.2):
         """
         Args:
@@ -100,10 +101,11 @@ class TemporalConvNet(nn.Module):
         num_levels = len(num_channels)
         for i in range(num_levels):
             dilation_size = 2 ** i
-            in_channels = num_inputs if i == 0 else num_channels[i-1]
+            in_channels = num_inputs if i == 0 else num_channels[i - 1]
             out_channels = num_channels[i]
             padding = (kernel_size - 1) * dilation_size
-            self.conv = nn.Conv2d(in_channels, out_channels, (1, kernel_size), dilation=(1, dilation_size), padding=(0, padding))
+            self.conv = nn.Conv2d(in_channels, out_channels, (1, kernel_size), dilation=(1, dilation_size),
+                                  padding=(0, padding))
             self.conv.weight.data.normal_(0, 0.01)
             self.chomp = Chomp1d(padding)
             self.relu = nn.ReLU()
@@ -157,10 +159,10 @@ class STGCNBlock(nn.Module):
         super(STGCNBlock, self).__init__()
         self.A_hat = A_hat
         self.temporal1 = TemporalConvNet(num_inputs=in_channels,
-                                   num_channels=out_channels)
+                                         num_channels=out_channels)
         self.odeg = ODEG(out_channels[-1], 12, A_hat, time=6)
         self.temporal2 = TemporalConvNet(num_inputs=out_channels[-1],
-                                   num_channels=out_channels)
+                                         num_channels=out_channels)
         self.batch_norm = nn.BatchNorm2d(num_nodes)
 
     def forward(self, X):
@@ -173,24 +175,22 @@ class STGCNBlock(nn.Module):
         t = self.temporal1(X)
         t = self.odeg(t)
         t = self.temporal2(F.relu(t))
-
-        return self.batch_norm(t)
+        t = self.batch_norm(t)
+        return t
 
 
 class STGODE(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
-
+        self.device = config.get('device', torch.device('cpu'))
         # section 1: data_feature
         self._scaler = self.data_feature.get('scaler')
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
-        self.A_sp_hat = self.data_feature.get('adj_mx')
-        self.A_se_hat = self.data_feature.get('A_se_hat')
+        self.A_sp_hat = torch.tensor(self.data_feature.get('adj_mx'), device=self.device, dtype=torch.float32)
+        self.A_se_hat = torch.tensor(self.data_feature.get('A_se_hat'), device=self.device, dtype=torch.float32)
         self._logger = getLogger()
-
-        # section 2: model config
         self.sigma1 = config.get('sigma1', 0.1)
         self.sigma2 = config.get('sigma2', 10)
         self.thres1 = config.get('thres1', 0.6)
@@ -224,15 +224,21 @@ class STGODE(AbstractTrafficStateModel):
     def predict(self, batch):
         outs = []
         # spatial graph
+        x = batch['X']
+        # (B,T,N,F) -> (B, N, T, F)
+        x = x.permute(0, 2, 1, 3)
         for blk in self.sp_blocks:
-            outs.append(blk(batch))
+            outs.append(blk(x))
         # semantic graph
         for blk in self.se_blocks:
-            outs.append(blk(batch))
+            outs.append(blk(x))
         outs = torch.stack(outs)
         x = torch.max(outs, dim=0)[0]
         x = x.reshape((x.shape[0], x.shape[1], -1))
-        return self.pred(x)
+        y = self.pred(x)
+        y = y.permute(0, 2, 1)
+        y = y.unsqueeze(-1)
+        return y
 
     def calculate_loss(self, batch):
         y_true = batch['y']  # ground-truth value
