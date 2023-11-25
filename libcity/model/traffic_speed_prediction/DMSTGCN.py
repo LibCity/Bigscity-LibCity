@@ -59,6 +59,7 @@ class DMSTGCN(AbstractTrafficStateModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.time_slots = self.data_feature.get('time_slots', 288)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self._logger = getLogger()
         # section 2: model config
         self.output_window = config.get('output_window', 12)
@@ -216,8 +217,8 @@ class DMSTGCN(AbstractTrafficStateModel):
             xo = nn.functional.pad(inputs, (self.receptive_field - in_len, 0, 0, 0))
         else:
             xo = inputs
-        x = self.start_conv(xo[:, [2]])
-        x_a = self.start_conv_a(xo[:, [0]])
+        x = self.start_conv(xo[:, [0]])
+        x_a = self.start_conv_a(xo[:, [1]])
         idx = batch['idx']
         skip = 0
 
@@ -278,6 +279,6 @@ class DMSTGCN(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
-        y_true = self._scaler.inverse_transform(y_true[..., :self.output_window])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_window])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true)

@@ -14,5 +14,16 @@
   "clip_grad_norm": true,
   "max_grad_norm": 5,
   "use_early_stop": true,
-  "patience": 20
+  "patience": 20,
+
+  "num_layers": 2,
+  "dropout": 0.3,
+  "residual_channels": 32,
+  "dilation_channels": 32,
+  "end_channels": 512,
+  "kernel_size": 2,
+  "num_blocks": 4,
+  "normalization": "batch",
+  "embedding_dims": 40,
+  "order": 2
 }

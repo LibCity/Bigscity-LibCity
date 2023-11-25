@@ -36,7 +36,6 @@ class DMSTGCNDataset(TrafficStateDataset):
                                            x_train[..., self.output_dim:], y_train[..., self.output_dim:])
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
-
         idx_train = np.arange(0, x_train.shape[0]) % self.timeslots
         x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
         y_val[..., :self.output_dim] = self.scaler.transform(y_val[..., :self.output_dim])
