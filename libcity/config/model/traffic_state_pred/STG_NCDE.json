@@ -1,0 +1,26 @@
+{
+    "max_epoch": 200,
+  
+    "learner": "adam",
+    "learning_rate": 0.01,
+    "lr_epsilon": 1e-8,
+    "weight_decay": 1e-2,
+  
+    "lr_decay": true,
+    "lr_scheduler": "steplr",
+    "step_size": 50,
+    "lr_decay_ratio": 0.5,
+  
+    "clip_grad_norm": true,
+    "max_grad_norm": 5,
+    "use_early_stop": false,
+
+    "hidden_dim":128,
+    "hig_hid_dim":128,
+    "horizon":12,
+    "num_layers":3,
+    "default_graph":true,
+    "embed_dim":10,
+    "g_type": "agc"
+
+  }
