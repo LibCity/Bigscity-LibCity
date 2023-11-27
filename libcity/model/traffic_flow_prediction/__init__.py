@@ -2,6 +2,7 @@ from libcity.model.traffic_flow_prediction.AGCRN import AGCRN
 from libcity.model.traffic_flow_prediction.ASTGCN import ASTGCN
 from libcity.model.traffic_flow_prediction.MSTGCN import MSTGCN
 from libcity.model.traffic_flow_prediction.ACFM import ACFM
+from libcity.model.traffic_flow_prediction.SSTBAN import SSTBAN
 from libcity.model.traffic_flow_prediction.STResNet import STResNet
 from libcity.model.traffic_flow_prediction.STResNetCommon import STResNetCommon
 from libcity.model.traffic_flow_prediction.ACFMCommon import ACFMCommon
@@ -41,5 +42,6 @@ __all__ = [
     "CRANN",
     "CONVGCNCommon",
     "DSAN",
-    "MultiSTGCnetCommon"
+    "MultiSTGCnetCommon",
+    "SSTBAN"
 ]
