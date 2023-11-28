@@ -1,0 +1,15 @@
+{
+    "batch_size": 8,
+    "cache_dataset": true,
+    "num_workers": 0,
+    "pad_with_last_sample": true,
+    "train_rate": 0.76,
+    "eval_rate": 0.12,
+    "scaler": "none",
+    "load_external": false,
+    "normal_external": false,
+    "ext_scaler": "none",
+    "input_window": 16,
+    "output_window": 3
+  }
+  
