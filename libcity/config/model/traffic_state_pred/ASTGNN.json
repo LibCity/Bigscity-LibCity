@@ -1,0 +1,34 @@
+{
+    "max_epoch": 100,
+
+    "learner": "adam",
+    "learning_rate": 0.001,
+
+    "lr_decay": false,
+    "lr_scheduler": "steplr",
+    "step_size": 50,
+    "lr_decay_ratio": 0.5,
+
+    "clip_grad_norm": false,
+    "max_grad_norm": 10,
+    "use_early_stop": false,
+    "patience": 5,
+
+    "encoder_input_size": 1,
+    "decoder_output_size": 1,
+    "num_layers": 3,
+    "d_model": 64,
+    "nb_head": 8,
+    "num_of_weeks": 0,
+    "num_of_days": 0,
+    "num_of_hours": 1,
+    "points_per_hour": 1,
+    "num_for_predict": 12,
+    "dropout": 0.0,
+    "aware_temporal_context": 1,
+    "ScaledSAt": 1,
+    "SE": true,
+    "TE": true,
+    "kernel_size": 1,
+    "smooth_layer_num": 1
+  }
