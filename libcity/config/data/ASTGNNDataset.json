@@ -1,0 +1,20 @@
+{
+    "batch_size": 4,
+    "cache_dataset": true,
+    "num_workers": 0,
+    "pad_with_last_sample": true,
+    "train_rate": 0.6,
+    "eval_rate": 0.2,
+    "scaler": "none",
+    "load_external": false,
+    "normal_external": false,
+    "ext_scaler": "none",
+    "input_window": 0,
+    "output_window": 0,
+
+    "num_of_weeks": 0,
+    "num_of_days": 0,
+    "num_of_hours": 1,
+    "points_per_hour": 12,
+    "num_for_predict": 12
+  }

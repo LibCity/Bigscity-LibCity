@@ -878,22 +878,14 @@ class ASTGNN(AbstractTrafficStateModel):
         norm_Adj_matrix = np.dot(D, W)
 
         return norm_Adj_matrix
-    
-class EncoderDecoder(nn.Module):
-    def __init__(self, encoder, decoder, src_dense, trg_dense, generator, DEVICE):
-        super(EncoderDecoder, self).__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-        self.src_embed = src_dense
-        self.trg_embed = trg_dense
-        self.prediction_generator = generator
-        self.to(DEVICE)
 
-    def forward(self, src, trg):
+    def predict(self, batch):
         '''
         src:  (batch_size, N, T_in, F_in)
         trg: (batch, N, T_out, F_out)
         '''
+        src = batch['En']
+        trg = batch['De']
         encoder_output = self.encode(src)  # (batch_size, N, T_in, d_model)
 
         return self.decode(trg, encoder_output)
@@ -908,3 +900,14 @@ class EncoderDecoder(nn.Module):
 
     def decode(self, trg, encoder_output):
         return self.prediction_generator(self.decoder(self.trg_embed(trg), encoder_output))
+    
+    def calculate_loss(self, batch):
+        y_true = batch['y']  # ground-truth value
+        y_predicted = self.predict(batch)  # prediction results
+        # denormalization the value
+        # y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        # y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+        y_true = y_true[..., :self.decoder_output_size]
+        y_predicted = y_predicted[..., :self.decoder_output_size]
+        loss = torch.nn.L1Loss.to(self.device)
+        return loss(y_predicted, y_true)
