@@ -16,19 +16,19 @@
 
     "encoder_input_size": 1,
     "decoder_output_size": 1,
-    "num_layers": 3,
+    "num_layers": 4,
     "d_model": 64,
     "nb_head": 8,
     "num_of_weeks": 0,
     "num_of_days": 0,
     "num_of_hours": 1,
-    "points_per_hour": 1,
+    "points_per_hour": 12,
     "num_for_predict": 12,
     "dropout": 0.0,
     "aware_temporal_context": 1,
     "ScaledSAt": 1,
     "SE": true,
     "TE": true,
-    "kernel_size": 1,
-    "smooth_layer_num": 1
+    "kernel_size": 3,
+    "smooth_layer_num": 0
   }

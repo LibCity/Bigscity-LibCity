@@ -886,6 +886,8 @@ class ASTGNN(AbstractTrafficStateModel):
         '''
         src = batch['En']
         trg = batch['De']
+        src = src.transpose(-1, -2)
+        trg = trg.unsqueeze(-1)
         encoder_output = self.encode(src)  # (batch_size, N, T_in, d_model)
 
         return self.decode(trg, encoder_output)
@@ -903,11 +905,12 @@ class ASTGNN(AbstractTrafficStateModel):
     
     def calculate_loss(self, batch):
         y_true = batch['y']  # ground-truth value
+        y_true = y_true.unsqueeze(-1)
         y_predicted = self.predict(batch)  # prediction results
         # denormalization the value
         # y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         # y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         y_true = y_true[..., :self.decoder_output_size]
         y_predicted = y_predicted[..., :self.decoder_output_size]
-        loss = torch.nn.L1Loss.to(self.device)
+        loss = torch.nn.L1Loss().to(self.device)
         return loss(y_predicted, y_true)

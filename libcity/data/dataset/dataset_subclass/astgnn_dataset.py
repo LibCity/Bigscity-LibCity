@@ -306,6 +306,11 @@ class ASTGNNDataset(TrafficStatePointDataset):
             for item in indices:
                 batch.append(copy.deepcopy(item))
             return batch
+        # pre process
+        train_x = train_x[:, :, 0:1, :]
+        val_x = val_x[:, :, 0:1, :]
+        test_x = test_x[:, :, 0:1, :]
+        
         train_target_norm = max_min_normalization(train_target, _max[:, :, 0, :], _min[:, :, 0, :])
         test_target_norm = max_min_normalization(test_target, _max[:, :, 0, :], _min[:, :, 0, :])
         val_target_norm = max_min_normalization(val_target, _max[:, :, 0, :], _min[:, :, 0, :])
@@ -314,11 +319,12 @@ class ASTGNNDataset(TrafficStatePointDataset):
         train_decoder_input_start = np.squeeze(train_decoder_input_start, 2)  # (B,N,T(1))
         train_decoder_input = np.concatenate((train_decoder_input_start, train_target_norm[:, :, :-1]), axis=2)  # (B, N, T)
 
-        train_x_tensor = torch.from_numpy(train_x).type(torch.FloatTensor).to(self.device)  # (B, N, F, T)
-        train_decoder_input_tensor = torch.from_numpy(train_decoder_input).type(torch.FloatTensor).to(self.device)  # (B, N, T)
-        train_target_tensor = torch.from_numpy(train_target_norm).type(torch.FloatTensor).to(self.device)  # (B, N, T)
+        # train_x_tensor = torch.from_numpy(train_x).type(torch.FloatTensor)  # (B, N, F, T)
+        # train_decoder_input_tensor = torch.from_numpy(train_decoder_input).type(torch.FloatTensor)  # (B, N, T)
+        # train_target_tensor = torch.from_numpy(train_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
-        train_data = list(zip(train_x_tensor, train_decoder_input_tensor, train_target_tensor))
+        # train_data = list(zip(train_x_tensor, train_decoder_input_tensor, train_target_tensor))
+        train_data = list(zip(train_x, train_decoder_input, train_target_norm))
         train_dataset = ListDataset(train_data)
         self.train_dataloader = DataLoader(dataset=train_dataset, batch_size=self.batch_size,
                                   num_workers=self.num_workers, collate_fn=collator,
@@ -332,11 +338,12 @@ class ASTGNNDataset(TrafficStatePointDataset):
         val_decoder_input_start = np.squeeze(val_decoder_input_start, 2)  # (B,N,T(1))
         val_decoder_input = np.concatenate((val_decoder_input_start, val_target_norm[:, :, :-1]), axis=2)  # (B, N, T)
 
-        val_x_tensor = torch.from_numpy(val_x).type(torch.FloatTensor).to(self.device)  # (B, N, F, T)
-        val_decoder_input_tensor = torch.from_numpy(val_decoder_input).type(torch.FloatTensor).to(self.device)  # (B, N, T)
-        val_target_tensor = torch.from_numpy(val_target_norm).type(torch.FloatTensor).to(self.device)  # (B, N, T)
+        # val_x_tensor = torch.from_numpy(val_x).type(torch.FloatTensor)  # (B, N, F, T)
+        # val_decoder_input_tensor = torch.from_numpy(val_decoder_input).type(torch.FloatTensor)  # (B, N, T)
+        # val_target_tensor = torch.from_numpy(val_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
-        eval_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        # eval_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        eval_data = list(zip(val_x, val_decoder_input, val_target_norm))
         eval_dataset = ListDataset(eval_data)
         self.eval_dataloader = DataLoader(dataset=eval_dataset, batch_size=self.batch_size,
                                   num_workers=self.num_workers, collate_fn=collator,
@@ -349,11 +356,12 @@ class ASTGNNDataset(TrafficStatePointDataset):
         test_decoder_input_start = np.squeeze(test_decoder_input_start, 2)  # (B,N,T(1))
         test_decoder_input = np.concatenate((test_decoder_input_start, test_target_norm[:, :, :-1]), axis=2)  # (B, N, T)
 
-        test_x_tensor = torch.from_numpy(test_x).type(torch.FloatTensor).to(self.device)  # (B, N, F, T)
-        test_decoder_input_tensor = torch.from_numpy(test_decoder_input).type(torch.FloatTensor).to(self.device)  # (B, N, T)
-        test_target_tensor = torch.from_numpy(test_target_norm).type(torch.FloatTensor).to(self.device)  # (B, N, T)
+        # test_x_tensor = torch.from_numpy(test_x).type(torch.FloatTensor)  # (B, N, F, T)
+        # test_decoder_input_tensor = torch.from_numpy(test_decoder_input).type(torch.FloatTensor)  # (B, N, T)
+        # test_target_tensor = torch.from_numpy(test_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
-        test_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        # test_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        test_data = list(zip(test_x, test_decoder_input, test_target_norm))
         test_dataset = ListDataset(test_data)
         self.test_dataloader = DataLoader(dataset=test_dataset, batch_size=self.batch_size,
                                   num_workers=self.num_workers, collate_fn=collator,
@@ -363,9 +371,9 @@ class ASTGNNDataset(TrafficStatePointDataset):
         # self.test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size)
 
         # print
-        print('train:', train_x_tensor.size(), train_decoder_input_tensor.size(), train_target_tensor.size())
-        print('val:', val_x_tensor.size(), val_decoder_input_tensor.size(), val_target_tensor.size())
-        print('test:', test_x_tensor.size(), test_decoder_input_tensor.size(), test_target_tensor.size())
+        # print('train:', train_x_tensor.size(), train_decoder_input_tensor.size(), train_target_tensor.size())
+        # print('val:', val_x_tensor.size(), val_decoder_input_tensor.size(), val_target_tensor.size())
+        # print('test:', test_x_tensor.size(), test_decoder_input_tensor.size(), test_target_tensor.size())
 
         
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader

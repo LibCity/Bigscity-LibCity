@@ -102,7 +102,7 @@
         ],
         "ASTGNN": {
             "dataset_class": "ASTGNNDataset",
-            "executor": "TrafficStateExecutor",
+            "executor": "ASTGNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "DCRNN": {
