@@ -112,7 +112,9 @@ class ASTGNNExecutor(TrafficStateExecutor):
             else:
                 self.optimizer.zero_grad()
                 batch.to_tensor(self.device)
-                encoder_inputs, decoder_inputs, labels = batch
+                encoder_inputs = batch['En']
+                decoder_inputs = batch['De']
+                labels = batch['y']
                 encoder_inputs = encoder_inputs.transpose(-1, -2)  # (B, N, T, F)
                 decoder_inputs = decoder_inputs.unsqueeze(-1)  # (B, N, T, 1)
                 labels = labels.unsqueeze(-1)
