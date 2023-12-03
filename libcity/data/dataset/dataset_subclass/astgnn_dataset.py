@@ -306,6 +306,14 @@ class ASTGNNDataset(TrafficStatePointDataset):
             for item in indices:
                 batch.append(copy.deepcopy(item))
             return batch
+        # 数据归一化
+        self.feature_dim = train_x.shape[-1]
+        self.scaler = self._get_scalar(self.scaler_type,
+                                       train_x[..., :self.output_dim], train_target[..., :self.output_dim])
+        self.scaler.min = _min
+        self.scaler.max = _max
+        self.ext_scaler = self._get_scalar(self.ext_scaler_type,
+                                           train_x[..., self.output_dim:], train_target[..., self.output_dim:])
         # pre process
         train_x = train_x[:, :, 0:1, :]
         val_x = val_x[:, :, 0:1, :]
@@ -324,6 +332,9 @@ class ASTGNNDataset(TrafficStatePointDataset):
         # train_target_tensor = torch.from_numpy(train_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
         # train_data = list(zip(train_x_tensor, train_decoder_input_tensor, train_target_tensor))
+        train_x = train_x.transpose(0, 1, 3, 2)
+        train_decoder_input = np.expand_dims(train_decoder_input, axis=-1)
+        train_target_norm = np.expand_dims(train_target_norm, axis=-1)
         train_data = list(zip(train_x, train_decoder_input, train_target_norm))
         train_dataset = ListDataset(train_data)
         self.train_dataloader = DataLoader(dataset=train_dataset, batch_size=self.batch_size,
@@ -343,6 +354,9 @@ class ASTGNNDataset(TrafficStatePointDataset):
         # val_target_tensor = torch.from_numpy(val_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
         # eval_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        val_x = val_x.transpose(0, 1, 3, 2)
+        val_decoder_input = np.expand_dims(val_decoder_input, axis=-1)
+        val_target_norm = np.expand_dims(val_target_norm, axis=-1)
         eval_data = list(zip(val_x, val_decoder_input, val_target_norm))
         eval_dataset = ListDataset(eval_data)
         self.eval_dataloader = DataLoader(dataset=eval_dataset, batch_size=self.batch_size,
@@ -361,6 +375,9 @@ class ASTGNNDataset(TrafficStatePointDataset):
         # test_target_tensor = torch.from_numpy(test_target_norm).type(torch.FloatTensor)  # (B, N, T)
 
         # test_data = list(zip(val_x_tensor, val_decoder_input_tensor, val_target_tensor))
+        test_x = test_x.transpose(0, 1, 3, 2)
+        test_decoder_input = np.expand_dims(test_decoder_input, axis=-1)
+        test_target_norm = np.expand_dims(test_target_norm, axis=-1)
         test_data = list(zip(test_x, test_decoder_input, test_target_norm))
         test_dataset = ListDataset(test_data)
         self.test_dataloader = DataLoader(dataset=test_dataset, batch_size=self.batch_size,
@@ -370,10 +387,4 @@ class ASTGNNDataset(TrafficStatePointDataset):
         # test_dataset = torch.utils.data.TensorDataset(test_x_tensor, test_decoder_input_tensor, test_target_tensor)
         # self.test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size)
 
-        # print
-        # print('train:', train_x_tensor.size(), train_decoder_input_tensor.size(), train_target_tensor.size())
-        # print('val:', val_x_tensor.size(), val_decoder_input_tensor.size(), val_target_tensor.size())
-        # print('test:', test_x_tensor.size(), test_decoder_input_tensor.size(), test_target_tensor.size())
-
-        
         return self.train_dataloader, self.eval_dataloader, self.test_dataloader

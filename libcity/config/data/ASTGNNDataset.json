@@ -5,7 +5,7 @@
     "pad_with_last_sample": true,
     "train_rate": 0.6,
     "eval_rate": 0.2,
-    "scaler": "none",
+    "scaler": "minmax11",
     "load_external": false,
     "normal_external": false,
     "ext_scaler": "none",
