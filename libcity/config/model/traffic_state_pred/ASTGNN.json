@@ -19,7 +19,7 @@
     "num_layers": 4,
     "d_model": 64,
     "nb_head": 8,
-    "num_of_weeks": 0,
+    "num_of_weeks": 1,
     "num_of_days": 0,
     "num_of_hours": 1,
     "points_per_hour": 12,
