@@ -1,12 +1,12 @@
 {
-    "max_epoch": 200,
+    "max_epoch": 100,
   
     "learner": "adam",
-    "learning_rate": 0.01,
+    "learning_rate": 0.001,
     "lr_epsilon": 1e-8,
-    "weight_decay": 1e-2,
+    "weight_decay": 1e-3,
   
-    "lr_decay": true,
+    "lr_decay": false,
     "lr_scheduler": "steplr",
     "step_size": 50,
     "lr_decay_ratio": 0.5,
