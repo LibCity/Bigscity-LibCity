@@ -19,7 +19,6 @@ from libcity.model.traffic_flow_prediction.CRANN import CRANN
 from libcity.model.traffic_flow_prediction.CONVGCNCommon import CONVGCNCommon
 from libcity.model.traffic_flow_prediction.DSAN import DSAN
 from libcity.model.traffic_flow_prediction.MultiSTGCnetCommon import MultiSTGCnetCommon
-from libcity.model.traffic_flow_prediction.STGODE import STGODE
 
 __all__ = [
     "AGCRN",
@@ -42,6 +41,5 @@ __all__ = [
     "CRANN",
     "CONVGCNCommon",
     "DSAN",
-    "MultiSTGCnetCommon",
-    "STGODE"
+    "MultiSTGCnetCommon"
 ]
