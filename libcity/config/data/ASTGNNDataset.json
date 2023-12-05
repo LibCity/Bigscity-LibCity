@@ -12,7 +12,7 @@
     "input_window": 0,
     "output_window": 1,
 
-    "num_of_weeks": 1,
+    "num_of_weeks": 0,
     "num_of_days": 0,
     "num_of_hours": 1,
     "points_per_hour": 12,
