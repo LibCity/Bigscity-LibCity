@@ -217,7 +217,9 @@ class DMSTGCN(AbstractTrafficStateModel):
             xo = nn.functional.pad(inputs, (self.receptive_field - in_len, 0, 0, 0))
         else:
             xo = inputs
+        # xo[:,[0]] means primary feature
         x = self.start_conv(xo[:, [0]])
+        # xo[:,[1]] means auxiliary feature, witch can be set in the raw_data/dataset_name/config.json file
         x_a = self.start_conv_a(xo[:, [1]])
         idx = batch['idx']
         skip = 0
