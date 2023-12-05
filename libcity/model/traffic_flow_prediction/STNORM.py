@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 from torch.nn import Parameter
-import sys
 from logging import getLogger
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
@@ -19,7 +17,6 @@ class SNorm(nn.Module):
 
         out = x_norm * self.gamma.view(1, -1, 1, 1) + self.beta.view(1, -1, 1, 1)
         return out
-
 
 class TNorm(nn.Module):
     def __init__(self,  num_nodes, channels, track_running_stats=True, momentum=0.1):
@@ -50,8 +47,7 @@ class TNorm(nn.Module):
         out = x_norm * self.gamma + self.beta
         return out
 
-
-class ST_NORM(AbstractTrafficStateModel):
+class STNorm(AbstractTrafficStateModel):
     # def __init__(self, device, num_nodes, tnorm_bool=False, snorm_bool=False, in_dim=1,out_dim=12, channels=16,kernel_size=2,blocks=4,layers=2):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
@@ -124,8 +120,6 @@ class ST_NORM(AbstractTrafficStateModel):
                 receptive_field += additional_scope
                 additional_scope *= 2
 
-
-
         self.end_conv_1 = nn.Conv2d(in_channels=self.channels,
                                   out_channels=self.channels,
                                   kernel_size=(1,1),
@@ -158,7 +152,6 @@ class ST_NORM(AbstractTrafficStateModel):
             x = input
         x = self.start_conv(x)
         skip = 0
-
 
         # WaveNet layers
         for i in range(self.blocks * self.layers):
@@ -197,17 +190,6 @@ class ST_NORM(AbstractTrafficStateModel):
         rep = F.relu(self.end_conv_1(x))
         out = self.end_conv_2(rep)
         return out
-
-    def load_my_state_dict(self, state_dict):
-        own_state = self.state_dict()
-        for name, param in state_dict.items():
-            if isinstance(param, Parameter):
-                param = param.data
-            try:
-                own_state[name].copy_(param)
-            except:
-                print(name)
-                print(param.shape)
                 
     def calculate_loss(self, batch):
         y_true = batch['y']  # ground-truth value
@@ -219,7 +201,3 @@ class ST_NORM(AbstractTrafficStateModel):
         y_predicted = y_predicted[..., :self.out_dim]
         loss = torch.nn.MSELoss().to(self.device)
         return loss(y_predicted, y_true)
-
-
-
-
