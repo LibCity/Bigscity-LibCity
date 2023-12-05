@@ -194,10 +194,7 @@ class STNorm(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']  # ground-truth value
         y_predicted = self.predict(batch)  # prediction results
-        # denormalization the value
-        # y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-        # y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         y_true = y_true[..., :self.out_dim]
         y_predicted = y_predicted[..., :self.out_dim]
-        loss = torch.nn.MSELoss().to(self.device)
-        return loss(y_predicted, y_true)
+        res = loss.masked_mse_torch(y_predicted, y_true)
+        return res
