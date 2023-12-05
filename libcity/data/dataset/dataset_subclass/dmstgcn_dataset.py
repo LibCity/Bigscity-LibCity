@@ -51,12 +51,10 @@ class DMSTGCNDataset(TrafficStateDataset):
             y_val[..., self.output_dim:] = self.ext_scaler.transform(y_val[..., self.output_dim:])
             x_test[..., self.output_dim:] = self.ext_scaler.transform(x_test[..., self.output_dim:])
             y_test[..., self.output_dim:] = self.ext_scaler.transform(y_test[..., self.output_dim:])
-
-        x_trains, y_trains, idx_trains = self.shuffle(x_train, y_train, idx_train)
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
-        train_data = list(zip(x_trains, y_trains, idx_trains))
+        train_data = list(zip(x_train, y_train, idx_train))
         eval_data = list(zip(x_val, y_val, idx_val))
         test_data = list(zip(x_test, y_test, idx_test))
         # 转Dataloader
@@ -71,9 +69,3 @@ class DMSTGCNDataset(TrafficStateDataset):
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
                 "output_dim": self.output_dim, "num_batches": self.num_batches,
                 "time_slots": self.timeslots}
-
-    def shuffle(self, x, y, idx):
-        permutation = np.random.permutation(x.shape[0])
-        xs, ys = x[permutation], y[permutation]
-        idxs = idx[permutation]
-        return xs, ys, idxs

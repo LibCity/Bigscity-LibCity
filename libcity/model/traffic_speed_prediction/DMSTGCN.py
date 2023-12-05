@@ -209,6 +209,8 @@ class DMSTGCN(AbstractTrafficStateModel):
     def predict(self, batch):
         """
         input:(B,T,N,F)-> (B, F, N, T)
+        其中F包含两个特征，第0个是主特征，第1个是辅助特征。因此本模型只适合PEMSD4和8数据集
+        论文中分别使用speed/flow作为主/辅助特征。使用其他特征，需要修改raw_data/dataset_name/config.json文件中的"data_col"属性。
         """
         inputs = batch['X']
         inputs = inputs.permute(0, 3, 2, 1)
