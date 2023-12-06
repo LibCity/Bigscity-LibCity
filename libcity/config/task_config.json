@@ -88,7 +88,7 @@
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
-            "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm"
+            "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm", "DMSTGCN"
         ],
         "allowed_dataset": [
             "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
@@ -100,6 +100,11 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
+        "DMSTGCN": {
+            "dataset_class": "DMSTGCNDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
         "STGODE": {
             "dataset_class": "STGODEDataset",
             "executor": "TrafficStateExecutor",
