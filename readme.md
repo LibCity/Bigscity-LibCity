@@ -33,6 +33,8 @@ LibCity currently supports the following tasks:
 
 ## LibCity News
 
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/04/2023**: Our creative design *ZongHeng* based on LibCity won the first prize in the 9th China Graduate Contest on Smart-city Technology and Creative Design! [Weixin](https://mp.weixin.qq.com/s/rAiTaVtnG9Kub_BBW502qw)
+
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** We published a paper titled *Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]*, including (1) a Unified Storage Format for urban spatial-temporal data, (2) a Technical Development Roadmap for urban spatial-temporal prediction models, (3) Extensive Experiments and Performance Evaluation using 18 models and 20 datasets. [[Paper]](https://arxiv.org/abs/2308.12899).
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**06/20/2023:** We released the Beijing trajectory dataset collected in November 2015, including 1018312 trajectories. We obtained the corresponding road network data from OpenStreetMap and preprocessed the trajectory data to get the Beijing trajectory dataset matched to the road network, and we believed that this dataset could promote the development of urban trajectory mining tasks. Please refer to this [link](https://github.com/aptx1231/START) to obtain it and ensure that this data is **used for research purposes only**. 
