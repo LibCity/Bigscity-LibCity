@@ -101,7 +101,7 @@
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
         "STNorm": {
-            "dataset_class": "STNORMDataset",
+            "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },

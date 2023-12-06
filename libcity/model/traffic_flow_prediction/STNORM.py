@@ -48,7 +48,6 @@ class TNorm(nn.Module):
         return out
 
 class STNorm(AbstractTrafficStateModel):
-    # def __init__(self, device, num_nodes, tnorm_bool=False, snorm_bool=False, in_dim=1,out_dim=12, channels=16,kernel_size=2,blocks=4,layers=2):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.in_dim = self.data_feature.get('feature_dim', 1)
