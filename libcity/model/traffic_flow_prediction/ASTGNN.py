@@ -18,7 +18,6 @@ def clones(module, N):
     '''
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
-
 def subsequent_mask(size):
     '''
     mask out subsequent positions.
@@ -28,7 +27,6 @@ def subsequent_mask(size):
     attn_shape = (1, size, size)
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
     return torch.from_numpy(subsequent_mask) == 0   # 1 means reachable; 0 means unreachable
-
 
 class spatialGCN(nn.Module):
     def __init__(self, sym_norm_Adj_matrix, in_channels, out_channels):
@@ -67,7 +65,6 @@ class GCN(nn.Module):
         '''
         return F.relu(self.Theta(torch.matmul(self.sym_norm_Adj_matrix, x)))  # (N,N)(b,N,in)->(b,N,in)->(b,N,out)
 
-
 class Spatial_Attention_layer(nn.Module):
     '''
     compute spatial attention scores
@@ -90,7 +87,6 @@ class Spatial_Attention_layer(nn.Module):
         score = self.dropout(F.softmax(score, dim=-1))  # the sum of each row is 1; (b*t, N, N)
 
         return score.reshape((batch_size, num_of_timesteps, num_of_vertices, num_of_vertices))
-
 
 class spatialAttentionGCN(nn.Module):
     def __init__(self, sym_norm_Adj_matrix, in_channels, out_channels, dropout=.0):
@@ -119,7 +115,6 @@ class spatialAttentionGCN(nn.Module):
         return F.relu(self.Theta(torch.matmul(self.sym_norm_Adj_matrix.mul(spatial_attention), x)).reshape((batch_size, num_of_timesteps, num_of_vertices, self.out_channels)).transpose(1, 2))
         # (b*t, n, f_in)->(b*t, n, f_out)->(b,t,n,f_out)->(b,n,t,f_out)
 
-
 class spatialAttentionScaledGCN(nn.Module):
     def __init__(self, sym_norm_Adj_matrix, in_channels, out_channels, dropout=.0):
         super(spatialAttentionScaledGCN, self).__init__()
@@ -147,7 +142,6 @@ class spatialAttentionScaledGCN(nn.Module):
         return F.relu(self.Theta(torch.matmul(self.sym_norm_Adj_matrix.mul(spatial_attention), x)).reshape((batch_size, num_of_timesteps, num_of_vertices, self.out_channels)).transpose(1, 2))
         # (b*t, n, f_in)->(b*t, n, f_out)->(b,t,n,f_out)->(b,n,t,f_out)
 
-
 class SpatialPositionalEncoding(nn.Module):
     def __init__(self, d_model, num_of_vertices, dropout, gcn=None, smooth_layer_num=0):
         super(SpatialPositionalEncoding, self).__init__()
@@ -170,7 +164,6 @@ class SpatialPositionalEncoding(nn.Module):
                 embed = l(embed)  # (1,N,d_model) -> (1,N,d_model)
         x = x + embed.unsqueeze(2)  # (B, N, T, d_model)+(1, N, 1, d_model)
         return self.dropout(x)
-
 
 class TemporalPositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout, max_len, lookup_index=None):
@@ -204,7 +197,6 @@ class TemporalPositionalEncoding(nn.Module):
 
         return self.dropout(x.detach())
 
-
 class SublayerConnection(nn.Module):
     '''
     A residual connection followed by a layer norm
@@ -230,7 +222,6 @@ class SublayerConnection(nn.Module):
         if (not self.residual_connection) and self.use_LayerNorm:
             return self.dropout(sublayer(self.norm(x)))
 
-
 class PositionWiseGCNFeedForward(nn.Module):
     def __init__(self, gcn, dropout=.0):
         super(PositionWiseGCNFeedForward, self).__init__()
@@ -243,7 +234,6 @@ class PositionWiseGCNFeedForward(nn.Module):
         :return: (B, N, T, F_out)
         '''
         return self.dropout(F.relu(self.gcn(x)))
-
 
 def attention(query, key, value, mask=None, dropout=None):
     '''
@@ -266,7 +256,6 @@ def attention(query, key, value, mask=None, dropout=None):
     # p_attn: (batch, N, h, T1, T2)
 
     return torch.matmul(p_attn, value), p_attn  # (batch, N, h, T1, d_k), (batch, N, h, T1, T2)
-
 
 class MultiHeadAttention(nn.Module):
     def __init__(self, nb_head, d_model, dropout=.0):
@@ -305,7 +294,6 @@ class MultiHeadAttention(nn.Module):
         x = x.view(nbatches, N, -1, self.h * self.d_k)  # (batch, N, T1, d_model)
         return self.linears[-1](x)
 
-
 class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; query causal;
     def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
         '''
@@ -329,7 +317,6 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
         self.w_length = num_of_weeks * points_per_hour
         self.d_length = num_of_days * points_per_hour
         self.h_length = num_of_hours * points_per_hour
-
 
     def forward(self, query, key, value, mask=None, query_multi_segment=False, key_multi_segment=False):
         '''
@@ -416,7 +403,6 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
         x = x.view(nbatches, N, -1, self.h * self.d_k)  # (batch, N, T1, d_model)
         return self.linears[-1](x)
 
-
 class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on query, 1d conv on key
     def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
 
@@ -435,7 +421,6 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
         self.w_length = num_of_weeks * points_per_hour
         self.d_length = num_of_days * points_per_hour
         self.h_length = num_of_hours * points_per_hour
-
 
     def forward(self, query, key, value, mask=None, query_multi_segment=False, key_multi_segment=False):
         '''
@@ -521,7 +506,6 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
         x = x.transpose(2, 3).contiguous()  # (batch, N, T1, h, d_k)
         x = x.view(nbatches, N, -1, self.h * self.d_k)  # (batch, N, T1, d_model)
         return self.linears[-1](x)
-
 
 class MultiHeadAttentionAwareTemporalContex_qc_k1d(nn.Module):  # query: causal conv; key 1d conv
     def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
@@ -798,12 +782,6 @@ class ASTGNN(AbstractTrafficStateModel):
         h_index = search_index(max_len, num_of_hours, num_for_predict, points_per_hour, 1)
         en_lookup_index = w_index + d_index + h_index
 
-        print('TemporalPositionalEncoding max_len:', max_len)
-        print('w_index:', w_index)
-        print('d_index:', d_index)
-        print('h_index:', h_index)
-        print('en_lookup_index:', en_lookup_index)
-
         if aware_temporal_context:  # employ temporal trend-aware attention
             attn_ss = MultiHeadAttentionAwareTemporalContex_q1d_k1d(nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, num_for_predict, kernel_size, dropout=dropout)  # encoder的trend-aware attention用一维卷积
             attn_st = MultiHeadAttentionAwareTemporalContex_qc_k1d(nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, num_for_predict, kernel_size, dropout=dropout)
@@ -898,7 +876,6 @@ class ASTGNN(AbstractTrafficStateModel):
         '''
         h = self.src_embed(src)
         return self.encoder(h)
-        # return self.encoder(self.src_embed(src))
 
     def decode(self, trg, encoder_output):
         return self.prediction_generator(self.decoder(self.trg_embed(trg), encoder_output))
@@ -912,5 +889,5 @@ class ASTGNN(AbstractTrafficStateModel):
         # y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         y_true = y_true[..., :self.decoder_output_size]
         y_predicted = y_predicted[..., :self.decoder_output_size]
-        loss = torch.nn.L1Loss().to(self.device)
-        return loss(y_predicted, y_true)
+        res = loss.masked_mae_torch(y_predicted, y_true)
+        return res
