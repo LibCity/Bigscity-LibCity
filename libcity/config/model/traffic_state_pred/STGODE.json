@@ -1,0 +1,22 @@
+{
+  "max_epoch": 200,
+
+  "learner": "adam",
+  "learning_rate": 0.01,
+  "lr_epsilon": 1e-8,
+  "weight_decay": 1e-2,
+
+  "lr_decay": true,
+  "lr_scheduler": "steplr",
+  "step_size": 50,
+  "lr_decay_ratio": 0.5,
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": false,
+
+  "sigma1": 0.1,
+  "sigma2": 10,
+  "thres1": 0.6,
+  "thres2": 0.5
+}
