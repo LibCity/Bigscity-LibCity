@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Parameter
 from logging import getLogger
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
@@ -195,5 +194,5 @@ class STNorm(AbstractTrafficStateModel):
         y_predicted = self.predict(batch)  # prediction results
         y_true = y_true[..., :self.out_dim]
         y_predicted = y_predicted[..., :self.out_dim]
-        res = loss.masked_mse_torch(y_predicted, y_true)
+        res = loss.masked_mae_torch(y_predicted, y_true, 0)
         return res
