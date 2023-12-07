@@ -654,8 +654,7 @@ class ASTGNNCommon(AbstractTrafficStateModel):
         self.encoder_input_size = config.get('encoder_input_size', 1)
         self.decoder_output_size = config.get('decoder_output_size', 1)
         
-        self.output_window = self.data_feature.get('output_window', 12)
-        num_for_predict = self.data_feature.get('output_window', 12)
+        num_for_predict = config.get('output_window', 12)
         
         num_layers = config.get('num_layers', 3)
         d_model = config.get('d_model', 64)

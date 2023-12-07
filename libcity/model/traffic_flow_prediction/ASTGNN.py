@@ -742,11 +742,11 @@ class ASTGNN(AbstractTrafficStateModel):
         self.encoder_input_size = config.get('encoder_input_size', 1)
         self.decoder_output_size = config.get('decoder_output_size', 1)
         
-        num_for_predict = self.data_feature.get('output_window', 12)
-        points_per_hour = self.data_feature.get('points_per_hour', 12)
-        num_of_weeks = self.data_feature.get('len_trend', 0) // num_for_predict
-        num_of_days = self.data_feature.get('len_period', 0) // num_for_predict
-        num_of_hours = self.data_feature.get('len_closeness', 0) // num_for_predict
+        num_for_predict = config.get('output_window', 12)
+        points_per_hour = config.get('points_per_hour', 12)
+        num_of_weeks = config.get('len_trend', 0)
+        num_of_days = config.get('len_period', 0)
+        num_of_hours = config.get('len_closeness', 0)
         
         num_layers = config.get('num_layers', 3)
         d_model = config.get('d_model', 64)
