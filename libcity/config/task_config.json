@@ -101,7 +101,7 @@
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK"
         ],
         "ASTGNN": {
-            "dataset_class": "ASTGNNDataset",
+            "dataset_class": "ASTGCNDataset",
             "executor": "ASTGNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },

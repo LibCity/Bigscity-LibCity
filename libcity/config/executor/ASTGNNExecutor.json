@@ -31,6 +31,7 @@
     "load_best_epoch": true,
     "hyper_tune": false,
 
+    "fine_tune_lr": 0.0001,
     "fine_tune_epochs": 50
   }
   

@@ -737,6 +737,7 @@ class ASTGNN(AbstractTrafficStateModel):
         
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
+        self._scaler = self.data_feature.get('scaler')
         
         self.encoder_input_size = config.get('encoder_input_size', 1)
         self.decoder_output_size = config.get('decoder_output_size', 1)
@@ -857,18 +858,26 @@ class ASTGNN(AbstractTrafficStateModel):
 
         return norm_Adj_matrix
 
-    def predict(self, batch):
+    def train_predict(self, batch):
         '''
         src:  (batch_size, N, T_in, F_in)
         trg: (batch, N, T_out, F_out)
         '''
-        src = batch['En']
-        trg = batch['De']
-        # src = src.transpose(-1, -2)
-        # trg = trg.unsqueeze(-1)
-        encoder_output = self.encode(src)  # (batch_size, N, T_in, d_model)
-
-        return self.decode(trg, encoder_output)
+        en, de, target = self.data_process(batch)
+        encoder_output = self.encode(en)  # (batch_size, N, T_in, d_model)
+        return self.decode(de, encoder_output)
+    
+    def predict(self, batch):
+        en, de, target = self.data_process(batch)
+        predict_length = target.shape[2]
+        encoder_output = self.encode(en)
+        decoder_start_inputs = de[:, :, :1, :]
+        decoder_input_list = [decoder_start_inputs]
+        for step in range(predict_length):
+            decoder_inputs = torch.cat(decoder_input_list, dim=2)
+            predict_output = self.decode(decoder_inputs, encoder_output)
+            decoder_input_list = [decoder_start_inputs, predict_output]
+        return predict_output
 
     def encode(self, src):
         '''
@@ -879,15 +888,40 @@ class ASTGNN(AbstractTrafficStateModel):
 
     def decode(self, trg, encoder_output):
         return self.prediction_generator(self.decoder(self.trg_embed(trg), encoder_output))
+
+    def calculate_train_loss(self, batch):
+        y_true = self.get_label(batch)
+        y_predicted = self.train_predict(batch)
+        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        
+    def calculate_val_loss(self, batch):
+        y_true = self.get_label(batch)
+        y_predicted = self.predict(batch)
+        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        
+    def calculate_test_loss(self, batch):
+        y_true = self.get_label(batch)
+        y_predicted = self.predict(batch)
+        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
+        
+    def data_process(self, batch):
+        x = batch['X'].transpose(1, 2).transpose(2, 3)  # B N F T
+        target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,0 ,:]  # B N F T
+        x = x[:, :, 0:1, :]
+        decoder_input_start = x[:, :, 0:1, -1:] 
+        decoder_input_start = decoder_input_start.squeeze(2)
+        decoder_input = torch.cat((decoder_input_start, target[:, :, :-1]), axis=2)
+        x = x.transpose(-1, -2)
+        y = target.unsqueeze(-1)
+        decoder_input = decoder_input.unsqueeze(-1)
+        return x, decoder_input, y
     
-    def calculate_loss(self, batch):
-        y_true = batch['y']  # ground-truth value
-        # y_true = y_true.unsqueeze(-1)
-        y_predicted = self.predict(batch)  # prediction results
-        # denormalization the value
-        # y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-        # y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        y_true = y_true[..., :self.decoder_output_size]
-        y_predicted = y_predicted[..., :self.decoder_output_size]
-        res = loss.masked_mae_torch(y_predicted, y_true)
-        return res
+    def get_label(self, batch):
+        return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,0 ,:].unsqueeze(-1)  # B N F T
+        

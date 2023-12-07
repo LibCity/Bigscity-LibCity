@@ -10,7 +10,7 @@
     "normal_external": false,
     "ext_scaler": "none",
     "input_window": 0,
-    "output_window": 1,
+    "output_window": 0,
 
     "num_of_weeks": 0,
     "num_of_days": 0,
