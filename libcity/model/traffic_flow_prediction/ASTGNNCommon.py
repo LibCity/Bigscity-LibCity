@@ -295,7 +295,7 @@ class MultiHeadAttention(nn.Module):
         return self.linears[-1](x)
 
 class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; query causal;
-    def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
+    def __init__(self, nb_head, d_model, points_per_hour, kernel_size=3, dropout=.0):
         '''
         :param nb_head:
         :param d_model:
@@ -314,9 +314,7 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
         self.padding = kernel_size - 1
         self.conv1Ds_aware_temporal_context = clones(nn.Conv2d(d_model, d_model, (1, kernel_size), padding=(0, self.padding)), 2)  # # 2 causal conv: 1  for query, 1 for key
         self.dropout = nn.Dropout(p=dropout)
-        self.w_length = num_of_weeks * points_per_hour
-        self.d_length = num_of_days * points_per_hour
-        self.h_length = num_of_hours * points_per_hour
+        self.h_length = points_per_hour
 
     def forward(self, query, key, value, mask=None, query_multi_segment=False, key_multi_segment=False):
         '''
@@ -343,20 +341,11 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
         if query_multi_segment and key_multi_segment:
             query_list = []
             key_list = []
-            if self.w_length > 0:
-                query_w, key_w = [l(x.permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, :self.w_length, :], key[:, :, :self.w_length, :]))]
-                query_list.append(query_w)
-                key_list.append(key_w)
-
-            if self.d_length > 0:
-                query_d, key_d = [l(x.permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, self.w_length:self.w_length+self.d_length, :], key[:, :, self.w_length:self.w_length+self.d_length, :]))]
-                query_list.append(query_d)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                query_h, key_h = [l(x.permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :], key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :]))]
-                query_list.append(query_h)
-                key_list.append(key_h)
+            query_h, key_h = [l(x.permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) 
+                              for l, x in zip(self.conv1Ds_aware_temporal_context, 
+                                              (query[:, :, : self.h_length, :], key[:, :, : self.h_length, :]))]
+            query_list.append(query_h)
+            key_list.append(key_h)
 
             query = torch.cat(query_list, dim=3)
             key = torch.cat(key_list, dim=3)
@@ -370,18 +359,9 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
             query = self.conv1Ds_aware_temporal_context[0](query.permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
 
             key_list = []
-
-            if self.w_length > 0:
-                key_w = self.conv1Ds_aware_temporal_context[1](key[:, :, :self.w_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_w)
-
-            if self.d_length > 0:
-                key_d = self.conv1Ds_aware_temporal_context[1](key[:, :, self.w_length:self.w_length + self.d_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                key_h = self.conv1Ds_aware_temporal_context[1](key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_h)
+            
+            key_h = self.conv1Ds_aware_temporal_context[1](key[:, :, : self.h_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
+            key_list.append(key_h)
 
             key = torch.cat(key_list, dim=3)
 
@@ -404,7 +384,7 @@ class MultiHeadAttentionAwareTemporalContex_qc_kc(nn.Module):  # key causal; que
         return self.linears[-1](x)
 
 class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on query, 1d conv on key
-    def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
+    def __init__(self, nb_head, d_model, points_per_hour, kernel_size=3, dropout=.0):
 
         super(MultiHeadAttentionAwareTemporalContex_q1d_k1d, self).__init__()
         assert d_model % nb_head == 0
@@ -418,9 +398,7 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
             2)  # # 2 causal conv: 1  for query, 1 for key
 
         self.dropout = nn.Dropout(p=dropout)
-        self.w_length = num_of_weeks * points_per_hour
-        self.d_length = num_of_days * points_per_hour
-        self.h_length = num_of_hours * points_per_hour
+        self.h_length = points_per_hour
 
     def forward(self, query, key, value, mask=None, query_multi_segment=False, key_multi_segment=False):
         '''
@@ -447,20 +425,9 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
         if query_multi_segment and key_multi_segment:
             query_list = []
             key_list = []
-            if self.w_length > 0:
-                query_w, key_w = [l(x.permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, :self.w_length, :], key[:, :, :self.w_length, :]))]
-                query_list.append(query_w)
-                key_list.append(key_w)
-
-            if self.d_length > 0:
-                query_d, key_d = [l(x.permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, self.w_length:self.w_length+self.d_length, :], key[:, :, self.w_length:self.w_length+self.d_length, :]))]
-                query_list.append(query_d)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                query_h, key_h = [l(x.permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :], key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :]))]
-                query_list.append(query_h)
-                key_list.append(key_h)
+            query_h, key_h = [l(x.permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2) for l, x in zip(self.conv1Ds_aware_temporal_context, (query[:, :, :self.h_length, :], key[:, :, :self.h_length, :]))]
+            query_list.append(query_h)
+            key_list.append(key_h)
 
             query = torch.cat(query_list, dim=3)
             key = torch.cat(key_list, dim=3)
@@ -474,18 +441,8 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
             query = self.conv1Ds_aware_temporal_context[0](query.permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
 
             key_list = []
-
-            if self.w_length > 0:
-                key_w = self.conv1Ds_aware_temporal_context[1](key[:, :, :self.w_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_w)
-
-            if self.d_length > 0:
-                key_d = self.conv1Ds_aware_temporal_context[1](key[:, :, self.w_length:self.w_length + self.d_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                key_h = self.conv1Ds_aware_temporal_context[1](key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_h)
+            key_h = self.conv1Ds_aware_temporal_context[1](key[:, :, :self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
+            key_list.append(key_h)
 
             key = torch.cat(key_list, dim=3)
 
@@ -508,7 +465,7 @@ class MultiHeadAttentionAwareTemporalContex_q1d_k1d(nn.Module):  # 1d conv on qu
         return self.linears[-1](x)
 
 class MultiHeadAttentionAwareTemporalContex_qc_k1d(nn.Module):  # query: causal conv; key 1d conv
-    def __init__(self, nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, points_per_hour, kernel_size=3, dropout=.0):
+    def __init__(self, nb_head, d_model, points_per_hour, kernel_size=3, dropout=.0):
         super(MultiHeadAttentionAwareTemporalContex_qc_k1d, self).__init__()
         assert d_model % nb_head == 0
         self.d_k = d_model // nb_head
@@ -519,9 +476,7 @@ class MultiHeadAttentionAwareTemporalContex_qc_k1d(nn.Module):  # query: causal 
         self.query_conv1Ds_aware_temporal_context = nn.Conv2d(d_model, d_model, (1, kernel_size), padding=(0, self.causal_padding))
         self.key_conv1Ds_aware_temporal_context = nn.Conv2d(d_model, d_model, (1, kernel_size), padding=(0, self.padding_1D))
         self.dropout = nn.Dropout(p=dropout)
-        self.w_length = num_of_weeks * points_per_hour
-        self.d_length = num_of_days * points_per_hour
-        self.h_length = num_of_hours * points_per_hour
+        self.h_length = points_per_hour
 
 
     def forward(self, query, key, value, mask=None, query_multi_segment=False, key_multi_segment=False):
@@ -549,25 +504,12 @@ class MultiHeadAttentionAwareTemporalContex_qc_k1d(nn.Module):  # query: causal 
         if query_multi_segment and key_multi_segment:
             query_list = []
             key_list = []
-            if self.w_length > 0:
-                query_w = self.query_conv1Ds_aware_temporal_context(query[:, :, :self.w_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.causal_padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_w = self.key_conv1Ds_aware_temporal_context(key[:, :, :self.w_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                query_list.append(query_w)
-                key_list.append(key_w)
+            
+            query_h = self.query_conv1Ds_aware_temporal_context(query[:, :, : self.h_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.causal_padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
+            key_h = self.key_conv1Ds_aware_temporal_context(key[:, :, : self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
 
-            if self.d_length > 0:
-                query_d = self.query_conv1Ds_aware_temporal_context(query[:, :, self.w_length:self.w_length+self.d_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.causal_padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_d = self.key_conv1Ds_aware_temporal_context(key[:, :, self.w_length:self.w_length+self.d_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                query_list.append(query_d)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                query_h = self.query_conv1Ds_aware_temporal_context(query[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :].permute(0, 3, 1, 2))[:, :, :, :-self.causal_padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1,
-                                                                                                                4, 2)
-                key_h = self.key_conv1Ds_aware_temporal_context(key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-
-                query_list.append(query_h)
-                key_list.append(key_h)
+            query_list.append(query_h)
+            key_list.append(key_h)
 
             query = torch.cat(query_list, dim=3)
             key = torch.cat(key_list, dim=3)
@@ -582,19 +524,10 @@ class MultiHeadAttentionAwareTemporalContex_qc_k1d(nn.Module):  # query: causal 
             query = self.query_conv1Ds_aware_temporal_context(query.permute(0, 3, 1, 2))[:, :, :, :-self.causal_padding].contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
 
             key_list = []
-
-            if self.w_length > 0:
-                key_w = self.key_conv1Ds_aware_temporal_context(key[:, :, :self.w_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_w)
-
-            if self.d_length > 0:
-                key_d = self.key_conv1Ds_aware_temporal_context(key[:, :, self.w_length:self.w_length + self.d_length, :].permute(0, 3, 1, 2)).contiguous().view(nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_d)
-
-            if self.h_length > 0:
-                key_h = self.key_conv1Ds_aware_temporal_context(key[:, :, self.w_length + self.d_length:self.w_length + self.d_length + self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(
-                    nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
-                key_list.append(key_h)
+            
+            key_h = self.key_conv1Ds_aware_temporal_context(key[:, :, : self.h_length, :].permute(0, 3, 1, 2)).contiguous().view(
+                nbatches, self.h, self.d_k, N, -1).permute(0, 3, 1, 4, 2)
+            key_list.append(key_h)
 
             key = torch.cat(key_list, dim=3)
 
@@ -707,28 +640,7 @@ class Decoder(nn.Module):
             x = layer(x, memory)
         return self.norm(x)
 
-def search_index(max_len, num_of_depend, num_for_predict,points_per_hour, units):
-    '''
-    Parameters
-    ----------
-    max_len: int, length of all encoder input
-    num_of_depend: int,
-    num_for_predict: int, the number of points will be predicted for each sample
-    units: int, week: 7 * 24, day: 24, recent(hour): 1
-    points_per_hour: int, number of points per hour, depends on data
-    Returns
-    ----------
-    list[(start_idx, end_idx)]
-    '''
-    x_idx = []
-    for i in range(1, num_of_depend + 1):
-        start_idx = max_len - points_per_hour * units * i
-        for j in range(num_for_predict):
-            end_idx = start_idx + j
-            x_idx.append(end_idx)
-    return x_idx
-
-class ASTGNN(AbstractTrafficStateModel):
+class ASTGNNCommon(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.in_dim = self.data_feature.get('feature_dim', 1)
@@ -742,11 +654,8 @@ class ASTGNN(AbstractTrafficStateModel):
         self.encoder_input_size = config.get('encoder_input_size', 1)
         self.decoder_output_size = config.get('decoder_output_size', 1)
         
+        self.output_window = self.data_feature.get('output_window', 12)
         num_for_predict = self.data_feature.get('output_window', 12)
-        points_per_hour = self.data_feature.get('points_per_hour', 12)
-        num_of_weeks = self.data_feature.get('len_trend', 0) // num_for_predict
-        num_of_days = self.data_feature.get('len_period', 0) // num_for_predict
-        num_of_hours = self.data_feature.get('len_closeness', 0) // num_for_predict
         
         num_layers = config.get('num_layers', 3)
         d_model = config.get('d_model', 64)
@@ -776,25 +685,17 @@ class ASTGNN(AbstractTrafficStateModel):
 
         trg_dense = nn.Linear(self.decoder_output_size, d_model)  # target input projection
 
-        # encoder temporal position embedding
-        max_len = max(num_of_weeks * 7 * 24 * num_for_predict, num_of_days * 24 * num_for_predict, num_of_hours * num_for_predict)
-
-        w_index = search_index(max_len, num_of_weeks, num_for_predict, points_per_hour, 7*24)
-        d_index = search_index(max_len, num_of_days, num_for_predict, points_per_hour, 24)
-        h_index = search_index(max_len, num_of_hours, num_for_predict, points_per_hour, 1)
-        en_lookup_index = w_index + d_index + h_index
-
         if aware_temporal_context:  # employ temporal trend-aware attention
-            attn_ss = MultiHeadAttentionAwareTemporalContex_q1d_k1d(nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, num_for_predict, kernel_size, dropout=dropout)  # encoder的trend-aware attention用一维卷积
-            attn_st = MultiHeadAttentionAwareTemporalContex_qc_k1d(nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, num_for_predict, kernel_size, dropout=dropout)
-            att_tt = MultiHeadAttentionAwareTemporalContex_qc_kc(nb_head, d_model, num_of_weeks, num_of_days, num_of_hours, num_for_predict, kernel_size, dropout=dropout)  # decoder的trend-aware attention用因果卷积
+            attn_ss = MultiHeadAttentionAwareTemporalContex_q1d_k1d(nb_head, d_model, num_for_predict, kernel_size, dropout=dropout)  # encoder的trend-aware attention用一维卷积
+            attn_st = MultiHeadAttentionAwareTemporalContex_qc_k1d(nb_head, d_model, num_for_predict, kernel_size, dropout=dropout)
+            att_tt = MultiHeadAttentionAwareTemporalContex_qc_kc(nb_head, d_model, num_for_predict, kernel_size, dropout=dropout)  # decoder的trend-aware attention用因果卷积
         else:  # employ traditional self attention
             attn_ss = MultiHeadAttention(nb_head, d_model, dropout=dropout)
             attn_st = MultiHeadAttention(nb_head, d_model, dropout=dropout)
             att_tt = MultiHeadAttention(nb_head, d_model, dropout=dropout)
 
         if SE and TE:
-            encode_temporal_position = TemporalPositionalEncoding(d_model, dropout, max_len, en_lookup_index)  # decoder temporal position embedding
+            encode_temporal_position = TemporalPositionalEncoding(d_model, dropout, num_for_predict)  # decoder temporal position embedding
             decode_temporal_position = TemporalPositionalEncoding(d_model, dropout, num_for_predict)
             spatial_position = SpatialPositionalEncoding(d_model, num_of_vertices, dropout, GCN(norm_Adj_matrix, d_model, d_model), smooth_layer_num=smooth_layer_num)
             encoder_embedding = nn.Sequential(src_dense, c(encode_temporal_position), c(spatial_position))
@@ -804,7 +705,7 @@ class ASTGNN(AbstractTrafficStateModel):
             encoder_embedding = nn.Sequential(src_dense, c(spatial_position))
             decoder_embedding = nn.Sequential(trg_dense, c(spatial_position))
         elif (not SE) and (TE):
-            encode_temporal_position = TemporalPositionalEncoding(d_model, dropout, max_len, en_lookup_index)  # decoder temporal position embedding
+            encode_temporal_position = TemporalPositionalEncoding(d_model, dropout, num_for_predict)  # decoder temporal position embedding
             decode_temporal_position = TemporalPositionalEncoding(d_model, dropout, num_for_predict)
             encoder_embedding = nn.Sequential(src_dense, c(encode_temporal_position))
             decoder_embedding = nn.Sequential(trg_dense, c(decode_temporal_position))
