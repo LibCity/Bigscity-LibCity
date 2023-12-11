@@ -58,16 +58,10 @@ class STGODEDataset(TrafficStatePointDataset):
         dtw_matrix[dtw_distance > self.thres1] = 1
         return dtw_matrix
 
-    def _load_rel(self):
-        map_info = pd.read_csv(self.data_path + self.rel_file + '.rel')
-        dist_matrix = np.zeros((self.num_nodes, self.num_nodes)) + np.float64('inf')
-        for i in range(map_info.shape[0]):
-            start = map_info['origin_id'][i]
-            end = map_info['destination_id'][i]
-            dist_matrix[start][end] = map_info['weight'][i]
-        std = np.std(dist_matrix[dist_matrix != np.float64('inf')])
-        mean = np.mean(dist_matrix[dist_matrix != np.float64('inf')])
-        dist_matrix = (dist_matrix - mean) / std
+    def _calculate_adjacency_matrix(self):
+        std = np.std(self.adj_mx[~np.isinf(self.adj_mx)])
+        mean = np.mean(self.adj_mx[~np.isinf(self.adj_mx)])
+        dist_matrix = (self.adj_mx - mean) / std
         self.adj_mx = np.exp(- dist_matrix ** 2 / self.sigma2 ** 2)
         self.adj_mx[self.adj_mx < self.thres2] = 0
 
