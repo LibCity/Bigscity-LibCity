@@ -20,6 +20,8 @@ from libcity.data.dataset.dataset_subclass.cstn_dataset import CSTNDataset
 from libcity.data.dataset.dataset_subclass.geosan_dataset import GeoSANDataset
 from libcity.data.dataset.dataset_subclass.gsnet_dataset import GSNetDataset
 from libcity.data.dataset.dataset_subclass.line_dataset import LINEDataset
+from libcity.data.dataset.dataset_subclass.stgode_dataset import STGODEDataset
+from libcity.data.dataset.dataset_subclass.dmstgcn_dataset import DMSTGCNDataset
 
 
 __all__ = [
@@ -45,4 +47,6 @@ __all__ = [
     "GeoSANDataset",
     "GSNetDataset",
     "LINEDataset"
+    "STGODEDataset"
+    "DMSTGCNDataset"
 ]
