@@ -46,7 +46,7 @@ __all__ = [
     "CSTNDataset",
     "GeoSANDataset",
     "GSNetDataset",
-    "LINEDataset"
-    "STGODEDataset"
-    "DMSTGCNDataset"
+    "LINEDataset",
+    "STGODEDataset",
+    "DMSTGCNDataset",
 ]

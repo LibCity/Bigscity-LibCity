@@ -49,5 +49,5 @@ __all__ = [
     "STGODE",
     "STNorm",
     "ASTGNN",
-    "ASTGNNCommon"
+    "ASTGNNCommon",
 ]

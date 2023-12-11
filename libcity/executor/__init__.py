@@ -27,5 +27,5 @@ __all__ = [
     "LINEExecutor",
     "ETAExecutor",
     "GensimExecutor",
-    "ASTGNNExecutor"
+    "ASTGNNExecutor",
 ]
