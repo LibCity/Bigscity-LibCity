@@ -8,8 +8,10 @@ from libcity.executor.traffic_state_executor import TrafficStateExecutor
 class ASTGNNExecutor(TrafficStateExecutor):
     def __init__(self, config, model, data_feature):
         TrafficStateExecutor.__init__(self, config, model, data_feature)
-        self.fine_tune_epochs = config.get("fine_tune_epochs", 1)
+        self.fine_tune_epochs = config.get("fine_tune_epochs", 0)
         self.fine_tune_lr = config.get("fine_tune_lr", 0.001)
+        self.raw_epochs = self.epochs
+        self.epochs = self.epochs + self.fine_tune_epochs
 
     def _train_epoch(self, train_dataloader, epoch_idx, loss_func=None):
         """
@@ -17,7 +19,7 @@ class ASTGNNExecutor(TrafficStateExecutor):
         支持fine tune
         """
         fine_tune = False
-        if epoch_idx >= self.epochs:
+        if epoch_idx >= self.raw_epochs:
             # rebuild optimizer
             self.learning_rate = self.fine_tune_lr
             self.optimizer = self._build_optimizer()

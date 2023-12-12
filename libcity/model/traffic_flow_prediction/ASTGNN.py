@@ -872,7 +872,7 @@ class ASTGNN(AbstractTrafficStateModel):
         en, de, target = self.data_process(batch)
         predict_length = target.shape[2]
         encoder_output = self.encode(en)
-        decoder_start_inputs = de[:, :, :1, :]
+        decoder_start_inputs = de[:, :, :1, :]  # 只取输入的第一个值作为input，之后都用predict出来的值作为input
         decoder_input_list = [decoder_start_inputs]
         for step in range(predict_length):
             decoder_inputs = torch.cat(decoder_input_list, dim=2)
@@ -913,16 +913,15 @@ class ASTGNN(AbstractTrafficStateModel):
         
     def data_process(self, batch):
         x = batch['X'].transpose(1, 2).transpose(2, 3)  # B N F T
-        target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,0 ,:]  # B N F T
-        x = x[:, :, 0:1, :]
-        decoder_input_start = x[:, :, 0:1, -1:] 
-        decoder_input_start = decoder_input_start.squeeze(2)
-        decoder_input = torch.cat((decoder_input_start, target[:, :, :-1]), axis=2)
+        target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: , :self.decoder_output_size, :]  # B N F T
+        x = x[:, :, :self.encoder_input_size, :]
+        decoder_input_start = x[:, :, :self.encoder_input_size, -1:]
+        decoder_input = torch.cat((decoder_input_start, target[:, :, :, :-1]), axis=3)
         x = x.transpose(-1, -2)
-        y = target.unsqueeze(-1)
-        decoder_input = decoder_input.unsqueeze(-1)
+        y = target.transpose(-1, -2)
+        decoder_input = decoder_input.transpose(-1, -2)
         return x, decoder_input, y
     
     def get_label(self, batch):
-        return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,0 ,:].unsqueeze(-1)  # B N F T
+        return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,:self.decoder_output_size ,:].transpose(-1, -2)  # B N T F
         
