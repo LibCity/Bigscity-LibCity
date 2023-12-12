@@ -814,13 +814,13 @@ class ASTGNNCommon(AbstractTrafficStateModel):
     def data_process(self, batch):
         x = batch['X'].transpose(1, 2).transpose(2, 3)  # B N F T
         target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: , :self.decoder_output_size, :]  # B N F T
-        x = x[:, :, :self.encoder_input_size, :]
-        decoder_input_start = x[:, :, :self.encoder_input_size, -1:]
+        en_x = x[:, :, :self.encoder_input_size, :]
+        decoder_input_start = x[:, :, :self.decoder_output_size, -1:]
         decoder_input = torch.cat((decoder_input_start, target[:, :, :, :-1]), axis=3)
-        x = x.transpose(-1, -2)
-        y = target.transpose(-1, -2)
+        en_x = en_x.transpose(-1, -2)
+        target = target.transpose(-1, -2)
         decoder_input = decoder_input.transpose(-1, -2)
-        return x, decoder_input, y
+        return en_x, decoder_input, target
     
     def get_label(self, batch):
         return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,:self.decoder_output_size ,:].transpose(-1, -2)  # B N T F
