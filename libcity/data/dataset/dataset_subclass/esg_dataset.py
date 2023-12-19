@@ -49,7 +49,7 @@ class ESGDataset(TrafficStateGridDataset):
         if self.static_feat_len == None:
             self.static_feat_len = x_train.shape[0]
 
-        self.static_feat = x_train[:self.static_feat_len, 0, ...]
+        self.static_feat = x_train[:self.static_feat_len, 0, ..., :self.output_dim]
         self.static_feat = self.static_feat.swapaxes(2, 1)
         self.static_feat = self.static_feat.reshape([-1, self.static_feat.shape[2]])
         self._logger.info("static_feat.shape={}".format(self.static_feat.shape))
