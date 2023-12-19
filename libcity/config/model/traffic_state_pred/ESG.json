@@ -1,0 +1,32 @@
+{
+  "max_epoch": 300,
+
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_epsilon": 1e-8,
+  "weight_decay": 0.0001,
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 30,
+
+  "input_window": 12,
+  "output_window": 12,
+  "n_layers": 3,
+  "dropout": 0.3,
+  "residual_channels": 32,
+  "end_channels": 128,
+  "n_blocks": 1,
+  "st_embedding_dim": 40,
+  "kernel_set": [2, 6],
+  "dilation_exp": 1,
+  "conv_channels": 32,
+  "gcn_depth": 2,
+  "dy_embedding_dim": 20,
+  "skip_channels": 64,
+  "layer_norm_affline": false,
+  "propalpha": 0.05,
+  "dy_interval": [1, 1, 1],
+  "static_feat_len": null
+}
