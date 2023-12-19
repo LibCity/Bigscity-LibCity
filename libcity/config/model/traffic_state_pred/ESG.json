@@ -27,5 +27,6 @@
   "skip_channels": 64,
   "layer_norm_affline": false,
   "propalpha": 0.05,
-  "dy_interval": [1, 1, 1]
+  "dy_interval": [1, 1, 1],
+  "static_feat_len": null
 }

@@ -300,7 +300,6 @@ class ESG(AbstractTrafficStateModel):
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.feature_dim = self.data_feature.get('feature_dim', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
-        torch.Tensor
         self.static_feat = torch.tensor(self.data_feature.get('static_feat'), device=self.device, dtype=torch.float32)
         self._logger = getLogger()
         self.seq_length = config.get('input_window', 12)

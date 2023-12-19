@@ -47,5 +47,5 @@ __all__ = [
     "MultiSTGCnetCommon",
     "STGODE",
     "STNorm",
-    "ESG"
+    "ESG",
 ]

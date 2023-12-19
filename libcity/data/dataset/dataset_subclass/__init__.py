@@ -49,5 +49,5 @@ __all__ = [
     "LINEDataset",
     "STGODEDataset",
     "DMSTGCNDataset",
-    "ESGDataset"
+    "ESGDataset",
 ]
