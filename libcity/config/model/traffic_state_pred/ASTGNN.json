@@ -14,8 +14,6 @@
   "use_early_stop": false,
   "patience": 5,
 
-  "encoder_input_size": 1,
-  "decoder_output_size": 1,
   "num_layers": 4,
   "d_model": 64,
   "nb_head": 8,
@@ -25,5 +23,6 @@
   "SE": true,
   "TE": true,
   "kernel_size": 3,
-  "smooth_layer_num": 0
+  "smooth_layer_num": 0,
+  "output_dim": 1
 }

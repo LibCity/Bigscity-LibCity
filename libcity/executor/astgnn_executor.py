@@ -42,7 +42,7 @@ class ASTGNNExecutor(TrafficStateExecutor):
     def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
         with torch.no_grad():
             self.model.eval()
-            loss_func = self.model.calculate_test_loss
+            loss_func = self.model.calculate_val_loss
             losses = []
             for batch in eval_dataloader:
                 batch.to_tensor(self.device)

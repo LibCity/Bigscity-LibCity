@@ -643,16 +643,14 @@ class Decoder(nn.Module):
 class ASTGNNCommon(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
-        self.in_dim = self.data_feature.get('feature_dim', 1)
+        self.input_dim = self.data_feature.get('feature_dim', 1)
+        self.output_dim = self.data_feature.get('output_dim', 1)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.adj_mx = self.data_feature.get('adj_mx')
         
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
-        
-        self.encoder_input_size = config.get('encoder_input_size', 1)
-        self.decoder_output_size = config.get('decoder_output_size', 1)
         
         num_for_predict = config.get('output_window', 12)
         
@@ -675,14 +673,14 @@ class ASTGNNCommon(AbstractTrafficStateModel):
 
         num_of_vertices = norm_Adj_matrix.shape[0]
 
-        src_dense = nn.Linear(self.encoder_input_size, d_model)
+        src_dense = nn.Linear(self.input_dim, d_model)
 
         if ScaledSAt:  # employ spatial self attention
             position_wise_gcn = PositionWiseGCNFeedForward(spatialAttentionScaledGCN(norm_Adj_matrix, d_model, d_model), dropout=dropout)
         else:  # 不带attention
             position_wise_gcn = PositionWiseGCNFeedForward(spatialGCN(norm_Adj_matrix, d_model, d_model), dropout=dropout)
 
-        trg_dense = nn.Linear(self.decoder_output_size, d_model)  # target input projection
+        trg_dense = nn.Linear(self.output_dim, d_model)  # target input projection
 
         if aware_temporal_context:  # employ temporal trend-aware attention
             attn_ss = MultiHeadAttentionAwareTemporalContex_q1d_k1d(nb_head, d_model, num_for_predict, kernel_size, dropout=dropout)  # encoder的trend-aware attention用一维卷积
@@ -720,7 +718,7 @@ class ASTGNNCommon(AbstractTrafficStateModel):
 
         decoder = Decoder(decoderLayer, num_layers)
 
-        generator = nn.Linear(d_model, self.decoder_output_size)
+        generator = nn.Linear(d_model, self.output_dim)
         
         self.encoder = encoder
         self.decoder = decoder
@@ -793,29 +791,22 @@ class ASTGNNCommon(AbstractTrafficStateModel):
     def calculate_train_loss(self, batch):
         y_true = self.get_label(batch)
         y_predicted = self.train_predict(batch)
-        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
         
     def calculate_val_loss(self, batch):
         y_true = self.get_label(batch)
         y_predicted = self.predict(batch)
-        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
-        return loss.masked_mae_torch(y_predicted, y_true, 0)
-        
-    def calculate_test_loss(self, batch):
-        y_true = self.get_label(batch)
-        y_predicted = self.predict(batch)
-        y_true = self._scaler.inverse_transform(y_true[..., :self.decoder_output_size])
-        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.decoder_output_size])
+        y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+        y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
         return loss.masked_mae_torch(y_predicted, y_true, 0)
         
     def data_process(self, batch):
         x = batch['X'].transpose(1, 2).transpose(2, 3)  # B N F T
-        target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: , :self.decoder_output_size, :]  # B N F T
-        en_x = x[:, :, :self.encoder_input_size, :]
-        decoder_input_start = x[:, :, :self.decoder_output_size, -1:]
+        target = batch['y'].transpose(1, 2).transpose(2, 3)[: ,: , :self.output_dim, :]  # B N F T
+        en_x = x[:, :, :self.input_dim, :]
+        decoder_input_start = x[:, :, :self.output_dim, -1:]
         decoder_input = torch.cat((decoder_input_start, target[:, :, :, :-1]), axis=3)
         en_x = en_x.transpose(-1, -2)
         target = target.transpose(-1, -2)
@@ -823,5 +814,5 @@ class ASTGNNCommon(AbstractTrafficStateModel):
         return en_x, decoder_input, target
     
     def get_label(self, batch):
-        return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,:self.decoder_output_size ,:].transpose(-1, -2)  # B N T F
+        return batch['y'].transpose(1, 2).transpose(2, 3)[: ,: ,:self.output_dim ,:].transpose(-1, -2)  # B N T F
         
