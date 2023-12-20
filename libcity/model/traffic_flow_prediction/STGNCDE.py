@@ -230,3 +230,12 @@ class STG_NCDE(AbstractTrafficStateModel):
         
         return loss(y_predicted, y_true)
         # return loss.masked_mae_loss(y_pred=y_predicted, y_true=y_true)
+        
+    
+    
+    # def calculate_loss(self, batch):
+    #     y_true = self.get_label(batch)
+    #     y_predicted = self.predict(batch)
+    #     y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
+    #     y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
+    #     return loss.masked_mae_torch(y_predicted, y_true, 0)

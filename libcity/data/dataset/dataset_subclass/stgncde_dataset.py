@@ -13,10 +13,6 @@ class STGNCDEDataset(TrafficStatePointDataset):
         super().__init__(config)
         self.missing_test = self.config.get('missing_test', True)
 
-    def _load_dyna(self, filename):
-         self.data_col = 'traffic_flow'
-         return super()._load_dyna_3d(filename)
-
     def get_data(self):
         x_train, y_train, x_val, y_val, x_test, y_test = [], [], [], [], [], []
         if self.data is None:
@@ -76,10 +72,11 @@ class STGNCDEDataset(TrafficStatePointDataset):
         augmented_X_test.append(torch.Tensor(x_test[..., :]))
         x_test = torch.cat(augmented_X_test, dim=3)
 
-
         train_coeffs = natural_cubic_spline_coeffs(times, x_train.transpose(1,2))
         valid_coeffs = natural_cubic_spline_coeffs(times, x_val.transpose(1,2))
         test_coeffs = natural_cubic_spline_coeffs(times, x_test.transpose(1,2))
+        a,b,c,d = train_coeffs
+        print("bairui shapes:"+str(a.shape)+" "+str(b.shape)+" "+str(c.shape)+" "+str(d.shape))
 
         train_data = torch.utils.data.TensorDataset(*train_coeffs, torch.tensor(y_train))
         self.train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=self.batch_size,
