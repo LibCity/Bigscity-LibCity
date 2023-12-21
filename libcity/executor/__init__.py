@@ -11,7 +11,6 @@ from libcity.executor.abstract_tradition_executor import AbstractTraditionExecut
 from libcity.executor.chebconv_executor import ChebConvExecutor
 from libcity.executor.eta_executor import ETAExecutor
 from libcity.executor.gensim_executor import GensimExecutor
-from libcity.executor.stgncde_executor import STGNCDEExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -27,5 +26,4 @@ __all__ = [
     "LINEExecutor",
     "ETAExecutor",
     "GensimExecutor",
-    "STGNCDEExecutor"
 ]

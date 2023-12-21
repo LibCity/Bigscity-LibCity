@@ -1,0 +1,24 @@
+{
+    "max_epoch": 1000,
+
+    "learner": "adam",
+    "learning_rate": 0.0001,
+
+    "lr_decay": false,
+    "lr_scheduler": "steplr",
+    "step_size": 50,
+    "lr_decay_ratio": 0.5,
+
+    "clip_grad_norm": true,
+    "max_grad_norm": 10,
+    "use_early_stop": true,
+    "patience": 5,
+
+    "blocks": 1,
+    "layers": 4,
+    "kernel_size": 2,
+    "snorm_bool": true,
+    "tnorm_bool": true,
+    "hidden_channels": 16,
+    "n_pred": 3
+  }

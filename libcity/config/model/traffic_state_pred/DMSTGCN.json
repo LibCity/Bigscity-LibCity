@@ -1,0 +1,29 @@
+{
+  "max_epoch": 200,
+
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "lr_epsilon": 1e-8,
+  "weight_decay": 0.0001,
+
+  "lr_patience": 10,
+  "lr_decay_ratio": 0.3,
+  "lr_threshold": 1e-3,
+  "lr_scheduler": "reducelronplateau",
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 20,
+
+  "num_layers": 2,
+  "dropout": 0.3,
+  "residual_channels": 32,
+  "dilation_channels": 32,
+  "end_channels": 512,
+  "kernel_size": 2,
+  "num_blocks": 4,
+  "normalization": "batch",
+  "embedding_dims": 40,
+  "order": 2
+}
