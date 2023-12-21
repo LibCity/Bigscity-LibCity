@@ -6,12 +6,12 @@ import torch.nn.functional as F
 from logging import getLogger
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 from libcity.model import loss
-from libcity.model.controldiffeq import NaturalCubicSpline, cdeint_gde_dev
+from libcity.model.controldiffeq import NaturalCubicSpline, cdeint_gde_dev, natural_cubic_spline_coeffs
 
 class FinalTanh_f(nn.Module):
     def __init__(self, input_channels, hidden_channels, hidden_hidden_channels, num_hidden_layers):
         super(FinalTanh_f, self).__init__()
-        
+        # wo shi bai rui , ni shi shui
         self.input_channels = input_channels
         self.hidden_channels = hidden_channels
         self.hidden_hidden_channels = hidden_hidden_channels
@@ -117,37 +117,18 @@ class VectorField_g(torch.nn.Module):
         z = torch.einsum('bnki,nkio->bno', x_g, weights) + bias     #b, N, dim_out
         return z
 
-class STG_NCDE(AbstractTrafficStateModel):
-    # def __init__(self, args, func_f, func_g, input_channels, hidden_channels, output_channels, initial, device, atol, rtol, solver):
+class STGNCDE(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
-
-         # section 1: data_feature
         self._scaler = self.data_feature.get('scaler')
         self.num_node = self.data_feature.get('num_nodes', 1)
-        self.input_dim = self.data_feature.get('feature_dim', 1)
+        self.input_dim = self.data_feature.get('feature_dim', 1) + 1 # add time dim
         self.output_dim = self.data_feature.get('output_dim', 1)
-
         self._logger = getLogger()
-        # section 2: model config 
-        # self.input_window = config.get('input_window', 1)
-        # self.output_window = config.get('output_window', 1)
         self.device = config.get('device', torch.device('cpu'))
 
-        # self.hidden_size = config.get('hidden_size', 64)
-        # self.num_layers = config.get('num_layers', 1)
-        # self.dropout = config.get('dropout', 0)
-        # section 3: model structure
-        # self.rnn = nn.LSTM(input_size=self.num_nodes * self.feature_dim, hidden_size=self.hidden_size,
-        #                    num_layers=self.num_layers, dropout=self.dropout)
-        # self.fc = nn.Linear(self.hidden_size, self.num_nodes * self.output_dim)
-
-
-        # self.num_node = args.num_nodes
-        # self.input_dim = input_channels
         self.hidden_dim = config.get('hidden_dim', 1)
         self.hid_hid_dim = config.get('hid_hid_dim', 1)
-        # self.output_dim = output_channels
         self.horizon = config.get('horizon', 1)
         self.num_layers = config.get('num_layers', 1)
 
@@ -165,7 +146,6 @@ class STG_NCDE(AbstractTrafficStateModel):
         self.solver = 'rk4'
         self.atol = 1e-9
         self.rtol = 1e-7
-
         #predictor
         self.end_conv = nn.Conv2d(1, self.horizon * self.output_dim, kernel_size=(1, self.hidden_dim), bias=True)
 
@@ -180,17 +160,18 @@ class STG_NCDE(AbstractTrafficStateModel):
             self.start_conv_z = nn.Conv2d(in_channels=self.input_dim,
                                             out_channels=self.hidden_dim,
                                             kernel_size=(1,1))
-
-    def printDevice(self, a):
-        self._logger.info(str(a)+":"+str(a.device))
     
     def predict(self, batch):
-        times = torch.linspace(0,11,12)
-        *coeffs, target = batch
+        times = torch.linspace(0, 11, 12)
         times = times.to(self.device)
+        x = batch['X']
+        augmented_X = []
+        augmented_X.append(times.unsqueeze(0).unsqueeze(0).repeat(x.shape[0],x.shape[2],1).unsqueeze(-1).transpose(1,2))
+        augmented_X.append(x[..., :])
+        x = torch.cat(augmented_X, dim=3)
+        coeffs = natural_cubic_spline_coeffs(times, x.transpose(1,2))
         #source: B, T_1, N, D
         #target: B, T_2, N, D
-        #supports = F.softmax(F.relu(torch.mm(self.nodevec1, self.nodevec1.transpose(0,1))), dim=1)
         spline = NaturalCubicSpline(times, coeffs)
         if self.init_type == 'fc':
             h0 = self.initial_h(spline.evaluate(times[0]))
@@ -207,10 +188,6 @@ class STG_NCDE(AbstractTrafficStateModel):
                                    method=self.solver,
                                    atol=self.atol,
                                    rtol=self.rtol)
-
-        # init_state = self.encoder.init_hidden(source.shape[0])
-        # output, _ = self.encoder(source, init_state, self.node_embeddings)      #B, T, N, hidden
-        # output = output[:, -1:, :, :]                                   #B, 1, N, hidden
         z_T = z_t[-1:,...].transpose(0,1)
 
         #CNN based predictor
@@ -219,23 +196,10 @@ class STG_NCDE(AbstractTrafficStateModel):
         output = output.permute(0, 1, 3, 2)                             #B, T, N, C
 
         return output.to(self.device)
-    
+     
     def calculate_loss(self, batch):
-        *coeffs, y_true = batch  # ground-truth value
-        y_predicted = self.predict(batch)  # prediction results
-        # denormalization the value
+        y_true = batch['y']
+        y_predicted = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        loss = torch.nn.L1Loss().to(self.device)
-        
-        return loss(y_predicted, y_true)
-        # return loss.masked_mae_loss(y_pred=y_predicted, y_true=y_true)
-        
-    
-    
-    # def calculate_loss(self, batch):
-    #     y_true = self.get_label(batch)
-    #     y_predicted = self.predict(batch)
-    #     y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
-    #     y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-    #     return loss.masked_mae_torch(y_predicted, y_true, 0)
+        return loss.masked_mae_torch(y_predicted, y_true, 0)
