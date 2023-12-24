@@ -5,8 +5,9 @@
     "learning_rate": 0.001,
     "lr_epsilon": 1e-8,
     "weight_decay": 1e-3,
+    "seed": 10,
   
-    "lr_decay": false,
+    "lr_decay": true,
     "lr_scheduler": "steplr",
     "step_size": 50,
     "lr_decay_ratio": 0.5,
@@ -15,12 +16,13 @@
     "max_grad_norm": 5,
     "use_early_stop": false,
 
-    "hidden_dim":128,
-    "hig_hid_dim":128,
+    "hidden_dim":64,
+    "hid_hid_dim":64,
     "horizon":12,
-    "num_layers":3,
+    "num_layers":2,
     "default_graph":true,
     "embed_dim":10,
-    "g_type": "agc"
+    "g_type": "agc",
+    "cheb_order": 2
 
   }
