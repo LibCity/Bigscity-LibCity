@@ -25,5 +25,5 @@ __all__ = [
     "ChebConvExecutor",
     "LINEExecutor",
     "ETAExecutor",
-    "GensimExecutor"
+    "GensimExecutor",
 ]
