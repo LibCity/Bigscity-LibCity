@@ -1054,12 +1054,13 @@ class STGNCDE(AbstractTrafficStateModel):
         self.node_embeddings = nn.Parameter(torch.randn(self.num_node, self.embed_dim), requires_grad=True)
         
         self.func_f = FinalTanh_f(input_channels=self.input_dim, hidden_channels=self.hidden_dim,
-                                        hidden_hidden_channels=self.hid_hid_dim,
-                                        num_hidden_layers=self.num_layers)
+                                  hidden_hidden_channels=self.hid_hid_dim,
+                                  num_hidden_layers=self.num_layers)
         self.func_g = VectorField_g(input_channels=self.input_dim, hidden_channels=self.hidden_dim,
-                                        hidden_hidden_channels=self.hid_hid_dim,
-                                        num_hidden_layers=self.num_layers, num_nodes=self.num_node, cheb_k=self.cheb_k, embed_dim=self.embed_dim,
-                                        g_type=config.get('g_type', 'agc'))
+                                    hidden_hidden_channels=self.hid_hid_dim,
+                                    num_hidden_layers=self.num_layers, num_nodes=self.num_node, 
+                                    cheb_k=self.cheb_k, embed_dim=self.embed_dim,
+                                    g_type=config.get('g_type', 'agc'))
         self.solver = 'rk4'
         self.atol = 1e-9
         self.rtol = 1e-7
@@ -1072,11 +1073,11 @@ class STGNCDE(AbstractTrafficStateModel):
             self.initial_z = torch.nn.Linear(self.input_dim, self.hidden_dim)
         elif self.init_type == 'conv':
             self.start_conv_h = nn.Conv2d(in_channels=self.input_dim,
-                                            out_channels=self.hidden_dim,
-                                            kernel_size=(1,1))
+                                          out_channels=self.hidden_dim,
+                                          kernel_size=(1,1))
             self.start_conv_z = nn.Conv2d(in_channels=self.input_dim,
-                                            out_channels=self.hidden_dim,
-                                            kernel_size=(1,1))
+                                          out_channels=self.hidden_dim,
+                                          kernel_size=(1,1))
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
@@ -1112,15 +1113,10 @@ class STGNCDE(AbstractTrafficStateModel):
         elif self.init_type == 'conv':
             h0 = self.start_conv_h(spline.evaluate(times[0]).transpose(1,2).unsqueeze(-1)).transpose(1,2).squeeze()
             z0 = self.start_conv_z(spline.evaluate(times[0]).transpose(1,2).unsqueeze(-1)).transpose(1,2).squeeze()
-        z_t = cdeint_gde_dev(dX_dt=spline.derivative, #dh_dt
-                                   h0=h0,
-                                   z0=z0,
-                                   func_f=self.func_f,
-                                   func_g=self.func_g,
-                                   t=times,
-                                   method=self.solver,
-                                   atol=self.atol,
-                                   rtol=self.rtol)
+        z_t = cdeint_gde_dev(dX_dt=spline.derivative, h0=h0, z0=z0,
+                             func_f=self.func_f, func_g=self.func_g,
+                             t=times, method=self.solver,
+                             atol=self.atol, tol=self.rtol)
         z_T = z_t[-1:,...].transpose(0,1)
 
         #CNN based predictor
@@ -1128,7 +1124,7 @@ class STGNCDE(AbstractTrafficStateModel):
         output = output.squeeze(-1).reshape(-1, self.horizon, self.output_dim, self.num_node)
         output = output.permute(0, 1, 3, 2)                             #B, T, N, C
 
-        return output.to(self.device)
+        return output
      
     def calculate_loss(self, batch):
         y_true = batch['y']
