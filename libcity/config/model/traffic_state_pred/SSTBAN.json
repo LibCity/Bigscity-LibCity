@@ -1,0 +1,20 @@
+{
+  "hidden_size": 64,
+  "num_layers": 1,
+  "dropout": 0,
+  "max_epoch": 3,
+  "learner": "adam",
+
+  "gpu": 1,
+  "L": 3,
+  "K": 16,
+  "d": 8,
+  "mode": "train",
+  "learning_rate": 0.001,
+  "in_channels": 1,
+  "out_channels": 1,
+  "T_miss_len": 12,
+  "node_miss_rate": 0.1,
+  "self_weight_dis": 0.05,
+  "reference": 3
+}
