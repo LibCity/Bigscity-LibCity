@@ -88,7 +88,7 @@
             "STResNetCommon", "ACFMCommon", "ASTGCNCommon", "MSTGCNCommon", "ToGCN", "CONVGCN", "STG2Seq",
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
-            "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm", "DMSTGCN", "ESG"
+            "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm", "DMSTGCN", "ESG", "ASTGNN", "ASTGNNCommon"
         ],
         "allowed_dataset": [
             "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
@@ -118,6 +118,16 @@
         "STNorm": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "ASTGNNCommon": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "ASTGNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "ASTGNN": {
+            "dataset_class": "ASTGCNDataset",
+            "executor": "ASTGNNExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "DCRNN": {

@@ -20,5 +20,5 @@
     "snorm_bool": true,
     "tnorm_bool": true,
     "hidden_channels": 16,
-    "n_pred": 3
+    "output_dim": 3
   }

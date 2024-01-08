@@ -50,12 +50,12 @@ class STNorm(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
         self.in_dim = self.data_feature.get('feature_dim', 1)
+        self.out_dim = self.data_feature.get('output_dim', 1)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
         
-        self.out_dim = config.get('n_pred', 1)
         self.blocks = config.get('blocks', 1)
         self.layers = config.get('layers', 4)
         self.kernel_size = config.get('kernel_size', 2)
