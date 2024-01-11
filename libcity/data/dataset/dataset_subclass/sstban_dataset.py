@@ -55,7 +55,8 @@ class SSTBANDataset(TrafficStatePointDataset):
         x_list, y_list = [], []
         for filename in data_files:
             df = super()._load_dyna(filename)
-            x, y = seq2instance_plus(df[..., :1].astype("float64"), self.input_window, self.output_window)
+            # x, y = seq2instance_plus(df[..., :1].astype("float64"), self.input_window, self.output_window)
+            x, y = self._generate_input_data(df)
             x_list.append(x)
             y_list.append(y)
         x = np.concatenate(x_list)
@@ -73,6 +74,85 @@ class SSTBANDataset(TrafficStatePointDataset):
         self._logger.info("Dataset created")
         self._logger.info("x shape: " + str(x.shape) + ", y shape: " + str(y.shape) + ", te shape: " + str(te.shape))
         return x, y, te
+
+    def _generate_train_val_test_set(self):
+        """
+        生成全量数据集数据信息
+        """
+        # 处理多数据文件问题
+        if isinstance(self.data_files, list):
+            data_files = self.data_files.copy()
+        else:  # str
+            data_files = [self.data_files].copy()
+        x_list, y_list = [], []
+        df = []
+        for filename in data_files:
+            df = super()._load_dyna(filename)
+        test_rate = 1 - self.train_rate - self.eval_rate
+        num_samples = df.shape[0]
+        num_test = round(num_samples * test_rate)
+        num_train = round(num_samples * self.train_rate)
+        num_val = num_samples - num_test - num_train
+
+        train_set = df[:num_train]
+        val_set = df[num_train: num_train + num_val]
+        test_set = df[-num_test:]
+
+        te_train_set = self.timesolts[:num_train]
+        te_val_set = self.timesolts[num_train: num_train + num_val]
+        te_test_set = self.timesolts[-num_test:]
+        data_sets = {"train": train_set, "val": val_set, "test": test_set}
+        te_sets = {"train": te_train_set, "val": te_val_set, "test": te_test_set}
+        return data_sets, te_sets
+
+    def _split_x_y_te(self, data_sets, te_sets):
+        xy = {}
+        te = {}
+        for set_name in data_sets.keys():
+            data_set = data_sets[set_name]
+            x, y = seq2instance_plus(data_set[..., :1].astype("float64"), self.input_window, self.output_window)
+            xy[set_name] = [x, y]
+            # handle te
+            te_set = te_sets[set_name]
+            time = pd.DatetimeIndex(te_set)
+            dayofweek = np.reshape(time.weekday, (-1, 1))
+            time_of_day = (time.hour * 3600 + time.minute * 60 + time.second) \
+                          // (self.time_slice_size * 60)  # total seconds
+            time_of_day = np.reshape(time_of_day, (-1, 1))
+            time = np.concatenate((dayofweek, time_of_day), -1)
+            time = seq2instance(time, self.input_window, self.output_window)
+            time = np.concatenate(time, 1).astype(np.int32)
+            te[set_name] = time
+        x_train, y_train = xy['train'][0], xy['train'][1]
+        x_val, y_val = xy['val'][0], xy['val'][1]
+        x_test, y_test = xy['test'][0], xy['test'][1]
+
+        te_train = te['train']
+        te_val = te['val']
+        te_test = te['test']
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape)
+                          + ", te" + str(te_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape)
+                          + ", te" + str(te_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape)
+                          + ", te" + str(te_test.shape))
+
+        if self.cache_dataset:
+            ensure_dir(self.cache_file_folder)
+            np.savez_compressed(
+                self.cache_file_name,
+                x_train=x_train,
+                y_train=y_train,
+                te_train=te_train,
+                x_test=x_test,
+                y_test=y_test,
+                te_test=te_test,
+                x_val=x_val,
+                y_val=y_val,
+                te_val=te_val
+            )
+            self._logger.info('Saved at ' + self.cache_file_name)
+        return x_train, y_train, te_train, x_val, y_val, te_val, x_test, y_test, te_test
 
     def split_train_val_test(self, x, y, te):
         """
@@ -136,8 +216,10 @@ class SSTBANDataset(TrafficStatePointDataset):
         """
         加载数据集，并划分训练集、测试集、验证集，并缓存数据集
         """
-        x, y, te = self._generate_data()
-        return self.split_train_val_test(x, y, te)
+        # x, y, te = self._generate_data()
+        data_sets, te_sets = self._generate_train_val_test_set()
+        # return self.split_train_val_test(x, y, te)
+        return self._split_x_y_te(data_sets, te_sets)
 
     def _load_cache_train_val_test(self):
         """

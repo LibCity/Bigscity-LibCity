@@ -102,7 +102,7 @@
         ],
         "SSTBAN": {
             "dataset_class": "SSTBANDataset",
-            "executor": "TrafficStateExecutor",
+            "executor": "SSTBANExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "ESG": {

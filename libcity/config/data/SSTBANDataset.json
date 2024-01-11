@@ -1,6 +1,6 @@
 {
   "batch_size": 4,
-  "cache_dataset": true,
+  "cache_dataset": false,
   "num_workers": 0,
   "pad_with_last_sample": true,
   "train_rate": 0.6,

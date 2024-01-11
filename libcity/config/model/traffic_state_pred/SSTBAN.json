@@ -1,9 +1,15 @@
 {
-  "hidden_size": 64,
-  "num_layers": 1,
-  "dropout": 0,
-  "max_epoch": 3,
+  "max_epoch": 50,
   "learner": "adam",
+  "lr_epsilon": 1e-8,
+  "weight_decay": 0.0001,
+
+  "step_size": 10,
+  "lr_scheduler": "steplr",
+  "lr_decay_ratio": 0.9,
+
+  "use_early_stop": true,
+  "patience": 20,
 
   "gpu": 1,
   "L": 3,
@@ -14,7 +20,7 @@
   "in_channels": 1,
   "out_channels": 1,
   "T_miss_len": 12,
-  "node_miss_rate": 0.1,
-  "self_weight_dis": 0.05,
+  "node_miss_rate": 0.5,
+  "self_weight_dis": 0.8,
   "reference": 3
 }

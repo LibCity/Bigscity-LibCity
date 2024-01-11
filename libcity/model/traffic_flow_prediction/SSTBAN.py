@@ -456,17 +456,27 @@ class SSTBAN(AbstractTrafficStateModel):
                 Pred = self.FC_2(X)
                 return Pred, None
 
-    def predict(self, batch):
+    def predict(self, batch, mode="train"):
         x = batch['X']
         te = batch['TE']
-        y_predicted, self.complete_X_enc, self.X_miss = self.forward(x, te, self.mode)
+        if mode == "train":
+            y_predicted, self.complete_X_enc, self.X_miss = self.forward(x, te, mode)
+        else:
+            y_predicted, _ = self.forward(x, te, mode)
         return y_predicted
 
-    def calculate_loss(self, batch):
+    def calculate_loss(self, batch, mode="train"):
+        loss_criterion = nn.L1Loss()
+        loss_criterion_self = nn.MSELoss()
         y_true = batch['y']
-        y_predicted = self.predict(batch)
+        y_predicted = self.predict(batch, mode)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        loss_batch = loss.masked_mae_torch(y_predicted, y_true, 0)
-        loss_self = loss.masked_mse_torch(self.complete_X_enc, self.X_miss, 0)
-        return (1 - self.self_weight) * loss_batch + self.self_weight * loss_self
+        loss_batch = loss_criterion(y_predicted, y_true)
+        # loss_batch = loss.masked_mae_torch(y_predicted, y_true, 0)
+        if mode == "train":
+            loss_self = loss_criterion_self(self.complete_X_enc, self.X_miss)
+            # loss_self = loss.masked_mse_torch(self.complete_X_enc, self.X_miss, 0)
+            return (1 - self.self_weight) * loss_batch + self.self_weight * loss_self
+        else:
+            return loss_batch
