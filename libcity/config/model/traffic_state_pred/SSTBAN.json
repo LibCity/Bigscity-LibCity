@@ -1,5 +1,5 @@
 {
-  "max_epoch": 50,
+  "max_epoch": 100,
   "learner": "adam",
   "lr_epsilon": 1e-8,
   "weight_decay": 0.0001,
@@ -9,7 +9,7 @@
   "lr_decay_ratio": 0.9,
 
   "use_early_stop": true,
-  "patience": 20,
+  "patience": 5,
 
   "gpu": 1,
   "L": 3,
@@ -22,5 +22,6 @@
   "T_miss_len": 12,
   "node_miss_rate": 0.5,
   "self_weight_dis": 0.8,
-  "reference": 3
+  "reference": 3,
+  "bn_decay": 0.1
 }

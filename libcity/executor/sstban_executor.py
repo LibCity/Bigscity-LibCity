@@ -7,20 +7,7 @@ import time
 
 class SSTBANExecutor(TrafficStateExecutor):
     def __init__(self, config, model, data_feature):
-        print("使用 SSTBANExecutor ")
         super().__init__(config, model, data_feature)
-
-    def _build_optimizer(self):
-        """
-        根据全局参数`learner`选择optimizer
-        """
-        print("SSTBAN _build_optimizer")
-        self._logger.info('You select `{}` optimizer.'.format(self.learner.lower()))
-        if self.learner.lower() == 'adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        else:
-            optimizer = super()._build_optimizer()
-        return optimizer
 
     def _valid_epoch(self, eval_dataloader, epoch_idx, loss_func=None):
         """
@@ -34,7 +21,6 @@ class SSTBANExecutor(TrafficStateExecutor):
         Returns:
             float: 评估数据的平均损失值
         """
-        print("SSTBAN _valid_epoch")
         with torch.no_grad():
             self.model.eval()
             loss_func = loss_func if loss_func is not None else self.model.calculate_loss
@@ -55,7 +41,6 @@ class SSTBANExecutor(TrafficStateExecutor):
         Args:
             test_dataloader(torch.Dataloader): Dataloader
         """
-        self._logger.info('Start evaluating(SSTBAN) ...')
         with torch.no_grad():
             self.model.eval()
             # self.evaluator.clear()

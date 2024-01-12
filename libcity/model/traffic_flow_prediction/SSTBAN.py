@@ -352,10 +352,10 @@ class SSTBAN(AbstractTrafficStateModel):
 
         # 2.model config
         gpu = config.get('gpu')
-        bn_decay = config.get('bn_decay')
-        self.L = config.get('L')
-        self.K = config.get('K')
-        self.d = config.get('d')
+        bn_decay = config.get('bn_decay', 0.1)
+        self.L = config.get('L', 3)
+        self.K = config.get('K', 16)
+        self.d = config.get('d', 8)
         self.mode = config.get('mode')
         self.node_miss_rate = config.get('node_miss_rate')
         self.T_miss_len = config.get('T_miss_len')
@@ -472,11 +472,11 @@ class SSTBAN(AbstractTrafficStateModel):
         y_predicted = self.predict(batch, mode)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        loss_batch = loss_criterion(y_predicted, y_true)
-        # loss_batch = loss.masked_mae_torch(y_predicted, y_true, 0)
+        # loss_batch = loss_criterion(y_predicted, y_true)
+        loss_batch = loss.masked_mae_torch(y_predicted, y_true, 0)
         if mode == "train":
-            loss_self = loss_criterion_self(self.complete_X_enc, self.X_miss)
-            # loss_self = loss.masked_mse_torch(self.complete_X_enc, self.X_miss, 0)
+            # loss_self = loss_criterion_self(self.complete_X_enc, self.X_miss)
+            loss_self = loss.masked_mse_torch(self.complete_X_enc, self.X_miss, 0)
             return (1 - self.self_weight) * loss_batch + self.self_weight * loss_self
         else:
             return loss_batch
