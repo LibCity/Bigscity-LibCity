@@ -343,38 +343,37 @@ class SSTBAN(AbstractTrafficStateModel):
         self.X_miss = None
         self.complete_X_enc = None
         # 1.data_feature
-        # self.input_dim = self.data_feature.get('feature_dim', 1)
-        time_slice_size = self.data_feature.get('time_slice_size', 5)
-        self.input_dim = int(1440 / time_slice_size) + 7
+        time_intervals = self.data_feature.get('time_intervals', 300)
+        self.input_dim = int(1440 / (time_intervals / 60)) + 7
         self.num_of_vertices = self.data_feature.get('num_nodes', 1)
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.dataset = self.data_feature.get('dataset_name', 1)
 
         # 2.model config
-        gpu = config.get('gpu')
+        gpu = config.get('gpu', 1)
         bn_decay = config.get('bn_decay', 0.1)
         self.L = config.get('L', 3)
         self.K = config.get('K', 16)
         self.d = config.get('d', 8)
-        self.mode = config.get('mode')
-        self.node_miss_rate = config.get('node_miss_rate')
-        self.T_miss_len = config.get('T_miss_len')
+        self.mode = "train"
+        self.node_miss_rate = config.get('node_miss_rate', 0.5)
+        self.T_miss_len = config.get('T_miss_len', 12)
         self.self_weight = config.get('self_weight_dis', 0.05)
         D = self.K * self.d
-        set_dim = config.get('reference')
-        self.num_his = config.get('num_his')
-        self.num_pred = config.get('num_pred')
+        set_dim = config.get('reference', 3)
+        self.input_window = config.get('input_window', 36)
+        self.output_window = config.get('output_window', 36)
         self.SE = nn.Parameter(torch.FloatTensor(self.num_of_vertices, D))
         self.STEmbedding = STEmbedding(self.input_dim, D, bn_decay, gpu)
         self.STAttBlock_1 = nn.ModuleList(
-            [STAttBlock(self.K, self.d, self.num_his, self.num_of_vertices, set_dim, bn_decay) for _ in range(self.L)])
+            [STAttBlock(self.K, self.d, self.input_window, self.num_of_vertices, set_dim, bn_decay) for _ in range(self.L)])
         self.STAttBlock_self = nn.ModuleList(
-            [STAttBlock_self(self.K, self.d, self.num_his, self.num_of_vertices, set_dim, bn_decay) for _ in range(1)])
+            [STAttBlock_self(self.K, self.d, self.input_window, self.num_of_vertices, set_dim, bn_decay) for _ in range(1)])
         self.STAttBlock_2 = nn.ModuleList(
-            [STAttBlock(self.K, self.d, self.num_pred, self.num_of_vertices, set_dim, bn_decay) for _ in range(self.L)])
+            [STAttBlock(self.K, self.d, self.output_window, self.num_of_vertices, set_dim, bn_decay) for _ in range(self.L)])
         self.transformAttention = transformAttention(self.K, self.d, bn_decay)
-        in_channels = config.get('in_channels')
-        out_channels = config.get('out_channels')
+        in_channels = config.get('in_channels', 1)
+        out_channels = config.get('out_channels', 1)
 
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
@@ -396,8 +395,8 @@ class SSTBAN(AbstractTrafficStateModel):
         X = self.FC_1(X)
         # STE
         STE = self.STEmbedding(self.SE, TE, self.input_dim - 7)
-        STE_his = STE[:, :self.num_his]
-        STE_pred = STE[:, self.num_his:]
+        STE_his = STE[:, :self.input_window]
+        STE_pred = STE[:, self.input_window:]
         T_miss_len = self.T_miss_len
 
         if mode == 'train':
@@ -466,16 +465,12 @@ class SSTBAN(AbstractTrafficStateModel):
         return y_predicted
 
     def calculate_loss(self, batch, mode="train"):
-        loss_criterion = nn.L1Loss()
-        loss_criterion_self = nn.MSELoss()
         y_true = batch['y']
         y_predicted = self.predict(batch, mode)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        # loss_batch = loss_criterion(y_predicted, y_true)
         loss_batch = loss.masked_mae_torch(y_predicted, y_true, 0)
         if mode == "train":
-            # loss_self = loss_criterion_self(self.complete_X_enc, self.X_miss)
             loss_self = loss.masked_mse_torch(self.complete_X_enc, self.X_miss, 0)
             return (1 - self.self_weight) * loss_batch + self.self_weight * loss_self
         else:

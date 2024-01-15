@@ -1,6 +1,6 @@
 {
   "batch_size": 4,
-  "cache_dataset": false,
+  "cache_dataset": true,
   "num_workers": 0,
   "pad_with_last_sample": true,
   "train_rate": 0.6,
@@ -17,10 +17,5 @@
   "len_period": 1,
   "len_trend": 2,
   "interval_period": 1,
-  "interval_trend": 7,
-
-  "time_slice_size": 5,
-  "num_of_vertices": 170,
-  "num_his": 36,
-  "num_pred": 36
+  "interval_trend": 7
 }
