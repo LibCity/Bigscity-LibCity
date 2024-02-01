@@ -9,11 +9,12 @@
   "lrf": 0.01,
 
   "use_early_stop": true,
-  "patience": 500,
+  "patience": 50,
 
   "device": "cuda",
   "map_height": 16,
   "map_width": 8,
+  "patch_size": 8,
   "m_factor": 1,
   "m_factor_2": 1,
   "random_pick": false,
@@ -24,7 +25,6 @@
   "pre_conv": 0,
   "seq_pool": true,
   "shortcut": true,
-  "patch_size": 8,
   "close_channels": 20,
   "trend_channels": 8,
   "close_dim": 128,

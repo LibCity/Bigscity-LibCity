@@ -228,8 +228,13 @@ class STTSNetDataset(TrafficStateGridDataset):
         self.len_closeness = config.get("len_closeness", 10)
         self.len_period = config.get("len_period", 0)
         self.len_trend = config.get("len_trend", 4)
+        self.adjust_ext_timestamp = config.get('adjust_ext_timestamp', False)
         # feature_name
-        self.feature_name = {'xc': 'float', 'xt': 'float', 'x_ext': 'float', 'y': 'float'}
+        if self.load_external:
+            self.feature_name = {'xc': 'float', 'xt': 'float', 'x_ext': 'float', 'y': 'float'}
+        else:
+            self.feature_name = {'xc': 'float', 'xt': 'float', 'y': 'float'}
+
 
     def _load_dyna(self, filename):
         """
@@ -319,7 +324,10 @@ class STTSNetDataset(TrafficStateGridDataset):
             ext_df = self._load_ext()
             # 筛选出符合时间的ext数据
             final_ext_df = []
-            timeslots = [adjust_timeslots(t) for t in timestamps_Y]
+            if self.adjust_ext_timestamp:
+                timeslots = [adjust_timeslots(t) for t in timestamps_Y]
+            else:
+                timeslots = timestamps_Y
             for slot in timeslots:
                 final_ext_df.append(ext_df[self.idx_of_ext_timesolts[slot]])
             # WindSpeed Temperature 0-1 scale
@@ -373,22 +381,39 @@ class STTSNetDataset(TrafficStateGridDataset):
         @param y: ndarray(7776, 2, 16, 8)
         @return:
         """
-        xc, xt, x_ext = x
         num_samples = y.shape[0]
         num_train = round(num_samples * self.train_rate)
-        # train
-        xc_train, xt_train, x_ext_train, y_train = xc[:num_train], xt[:num_train], x_ext[:num_train], y[:num_train]
-        # val
-        xc_val, xt_val, x_ext_val, y_val = xc[num_train:], xt[num_train:], x_ext[num_train:], y[num_train:]
-        # test
-        xc_test, xt_test, x_ext_test = x_test
+        if self.load_external:
+            xc, xt, x_ext = x
+            # train
+            xc_train, xt_train, x_ext_train, y_train = xc[:num_train], xt[:num_train], x_ext[:num_train], y[:num_train]
+            # val
+            xc_val, xt_val, x_ext_val, y_val = xc[num_train:], xt[num_train:], x_ext[num_train:], y[num_train:]
+            # test
+            xc_test, xt_test, x_ext_test = x_test
 
-        self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
-                          ", x_ext: " + str(x_ext_train.shape) + ", y: " + str(y_train.shape))
-        self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
-                          ", x_ext: " + str(x_ext_val.shape) + ", y: " + str(y_val.shape))
-        self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
-                          ", x_ext: " + str(x_ext_test.shape) + ", y: " + str(y_test.shape))
+            self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
+                              ", x_ext: " + str(x_ext_train.shape) + ", y: " + str(y_train.shape))
+            self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
+                              ", x_ext: " + str(x_ext_val.shape) + ", y: " + str(y_val.shape))
+            self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
+                              ", x_ext: " + str(x_ext_test.shape) + ", y: " + str(y_test.shape))
+        else:
+            xc, xt = x
+            # train
+            xc_train, xt_train, x_ext_train, y_train = xc[:num_train], xt[:num_train], None, y[:num_train]
+            # val
+            xc_val, xt_val, x_ext_val, y_val = xc[num_train:], xt[num_train:], None, y[num_train:]
+            # test
+            xc_test, xt_test = x_test
+            x_ext_test = None
+
+            self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
+                              ", y: " + str(y_train.shape))
+            self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
+                              ", y: " + str(y_val.shape))
+            self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
+                              ", y: " + str(y_test.shape))
 
         if self.cache_dataset:
             ensure_dir(self.cache_file_folder)
@@ -432,12 +457,20 @@ class STTSNetDataset(TrafficStateGridDataset):
         xt_test = cache_data['xt_test']
         x_ext_test = cache_data['x_ext_test']
         y_test = cache_data['y_test']
-        self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
-                          ", x_ext: " + str(x_ext_train.shape) + ", y: " + str(y_train.shape))
-        self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
-                          ", x_ext: " + str(x_ext_val.shape) + ", y: " + str(y_val.shape))
-        self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
-                          ", x_ext: " + str(x_ext_test.shape) + ", y: " + str(y_test.shape))
+        if self.load_external:
+            self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
+                              ", x_ext: " + str(x_ext_train.shape) + ", y: " + str(y_train.shape))
+            self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
+                              ", x_ext: " + str(x_ext_val.shape) + ", y: " + str(y_val.shape))
+            self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
+                              ", x_ext: " + str(x_ext_test.shape) + ", y: " + str(y_test.shape))
+        else:
+            self._logger.info("train\t" + "xc: " + str(xc_train.shape) + ", xt: " + str(xt_train.shape) +
+                              ", y: " + str(y_train.shape))
+            self._logger.info("eval\t" + "xc: " + str(xc_val.shape) + ", xt: " + str(xt_val.shape) +
+                              ", y: " + str(y_val.shape))
+            self._logger.info("test\t" + "xc: " + str(xc_test.shape) + ", xt: " + str(xt_test.shape) +
+                              ", y: " + str(y_test.shape))
         return xc_train, xt_train, x_ext_train, y_train, xc_val, xt_val, x_ext_val, y_val, xc_test, xt_test, \
             x_ext_test, y_test
 
@@ -453,9 +486,14 @@ class STTSNetDataset(TrafficStateGridDataset):
             else:
                 xc_train, xt_train, x_ext_train, y_train, xc_val, xt_val, x_ext_val, y_val, xc_test, xt_test, \
                     x_ext_test, y_test = self._generate_train_val_test()
-        train_data = list(zip(xc_train, xt_train, x_ext_train, y_train))
-        eval_data = list(zip(xc_val, xt_val, x_ext_val, y_val))
-        test_data = list(zip(xc_test, xt_test, x_ext_test, y_test))
+        if self.load_external:
+            train_data = list(zip(xc_train, xt_train, x_ext_train, y_train))
+            eval_data = list(zip(xc_val, xt_val, x_ext_val, y_val))
+            test_data = list(zip(xc_test, xt_test, x_ext_test, y_test))
+        else:
+            train_data = list(zip(xc_train, xt_train, y_train))
+            eval_data = list(zip(xc_val, xt_val, y_val))
+            test_data = list(zip(xc_test, xt_test, y_test))
         # 转Dataloader
         self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
             generate_dataloader(train_data, eval_data, test_data, self.feature_name,
@@ -474,4 +512,4 @@ class STTSNetDataset(TrafficStateGridDataset):
         return {"scaler": self.scaler, "adj_mx": self.adj_mx, "ext_dim": self.ext_dim,
                 "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
                 "output_dim": self.output_dim, "num_batches": self.num_batches,
-                "time_intervals": self.time_intervals}
+                "time_intervals": self.time_intervals, "load_external": self.load_external}

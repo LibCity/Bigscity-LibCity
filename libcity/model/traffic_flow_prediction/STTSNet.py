@@ -337,6 +337,9 @@ class STTSNet(AbstractTrafficStateModel):
 
         self._logger = getLogger()
 
+        # data feature
+        self.load_external = data_feature.get('load_external', False)
+
         # parse model config
         map_height = config.get('map_height', 32)
         map_width = config.get('map_width', 32)
@@ -461,7 +464,10 @@ class STTSNet(AbstractTrafficStateModel):
         return out
 
     def predict(self, batch):
-        xc, xt, x_ext = batch['xc'], batch['xt'], batch['x_ext']
+        if self.load_external:
+            xc, xt, x_ext = batch['xc'], batch['xt'], batch['x_ext']
+        else:
+            xc, xt, x_ext = batch['xc'], batch['xt'], None
         return self.forward(xc, xt, x_ext)
 
     def calculate_loss(self, batch):
