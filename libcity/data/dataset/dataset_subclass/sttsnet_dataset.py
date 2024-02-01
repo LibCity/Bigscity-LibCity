@@ -1,4 +1,3 @@
-import copy
 import os
 from copy import copy as cp
 from datetime import datetime
@@ -248,6 +247,8 @@ class STTSNetDataset(TrafficStateGridDataset):
         self.data_all = []
         for filename in data_files:
             df = self._load_dyna(filename)  # (number_of_timeslots, 2, 16, 8)
+            df = df[:, :self.nb_flow]
+            df[df < 0] = 0.
             self.data_all.append(df)
         # 时间戳数据
         self.timestamps = np.char.replace(np.char.replace(np.datetime_as_string(self.timesolts, unit='h'), '-', ''),
@@ -330,6 +331,9 @@ class STTSNetDataset(TrafficStateGridDataset):
             # 最后 meta_feature_train 有 24 个 特征值 温度 + 风速 + 13个天气 + holiday + 8个time_feature = 16 + 8 = 24
             X_train.append(meta_feature_train)
             X_test.append(meta_feature_test)
+        # y to real value
+        Y_train = mmn.inverse_transform(Y_train)  # X is MaxMinNormalized, Y is real value
+        Y_test = mmn.inverse_transform(Y_test)
         return X_train, Y_train, X_test, Y_test, mmn, metadata_dim, timestamp_train, timestamp_test
 
     def _load_ext(self):

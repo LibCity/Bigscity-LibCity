@@ -9,7 +9,7 @@
   "lrf": 0.01,
 
   "use_early_stop": true,
-  "patience": 50,
+  "patience": 500,
 
   "device": "cuda",
   "map_height": 16,
@@ -19,7 +19,6 @@
   "random_pick": false,
  "loss_weight": 1.0,
  "time_class": 24,
-  "shuffle_mode": "",
   "drop_prob": 0.1,
   "conv_channels": 64,
   "pre_conv": 0,
