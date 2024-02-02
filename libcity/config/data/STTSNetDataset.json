@@ -1,0 +1,19 @@
+{
+  "batch_size": 128,
+  "cache_dataset": true,
+  "num_workers": 0,
+  "pad_with_last_sample": false,
+  "train_rate": 0.9,
+  "eval_rate": 0.1,
+  "scaler": "none",
+  "load_external": false,
+  "normal_external": false,
+  "adjust_ext_timestamp": false,
+  "ext_scaler": "none",
+  "len_closeness": 10,
+  "len_period": 0,
+  "len_trend": 4,
+  "nb_flow": 2,
+  "days_test": 28,
+  "prediction_offset": 0
+}

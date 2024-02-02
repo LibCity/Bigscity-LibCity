@@ -1,0 +1,32 @@
+{
+  "max_epoch": 800,
+  "learner": "adam",
+  "learning_rate": 0.005,
+  "weight_decay": 5E-5,
+
+  "lr_decay": true,
+  "lr_scheduler": "lambdalr",
+  "lrf": 0.01,
+
+  "use_early_stop": true,
+  "patience": 50,
+
+  "map_height": 16,
+  "map_width": 8,
+  "patch_size": 8,
+  "drop_prob": 0.1,
+  "conv_channels": 64,
+  "pre_conv": 0,
+  "seq_pool": true,
+  "shortcut": true,
+  "close_channels": 20,
+  "trend_channels": 8,
+  "close_dim": 128,
+  "trend_dim": 128,
+  "close_depth": 2,
+  "trend_depth": 2,
+  "close_head": 2,
+  "trend_head": 2,
+  "close_mlp_dim": 512,
+  "trend_mlp_dim": 512
+}
