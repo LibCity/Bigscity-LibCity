@@ -235,7 +235,6 @@ class STTSNetDataset(TrafficStateGridDataset):
         else:
             self.feature_name = {'xc': 'float', 'xt': 'float', 'y': 'float'}
 
-
     def _load_dyna(self, filename):
         """
         return a 4D tensor of shape (number_of_timeslots, 2, 16, 8), of which `data[i]` is a 3D tensor of shape (2,
@@ -250,14 +249,15 @@ class STTSNetDataset(TrafficStateGridDataset):
         else:  # str
             data_files = [self.data_files].copy()
         self.data_all = []
+        self.timestamps_all = []
         for filename in data_files:
             df = self._load_dyna(filename)  # (number_of_timeslots, 2, 16, 8)
             df = df[:, :self.nb_flow]
             df[df < 0] = 0.
             self.data_all.append(df)
-        # 时间戳数据
-        self.timestamps = np.char.replace(np.char.replace(np.datetime_as_string(self.timesolts, unit='h'), '-', ''),
-                                          'T', '').astype(bytes)
+            # 时间戳数据
+            self.timestamps_all.append(np.char.replace(np.char.replace(np.datetime_as_string(self.timesolts, unit='h'), '-',
+                                                                   ''), 'T', '').astype(bytes))
         return self.load_data()
 
     def load_data(self):
@@ -290,8 +290,8 @@ class STTSNetDataset(TrafficStateGridDataset):
         XC, XP, XT = [], [], []
         Y = []
         timestamps_Y = []
-        for data in data_all_mmn:
-            st = STMatrix(data, self.timestamps, self.T, CheckComplete=False)
+        for data, timestamps in zip(data_all_mmn, self.timestamps_all):
+            st = STMatrix(data, timestamps, self.T, CheckComplete=False)
             _XC, _XP, _XT, _Y, _timestamps_Y = st.create_dataset_3D(len_closeness=self.len_closeness, len_period=
             self.len_period, len_trend=self.len_trend)
             XC.append(_XC)
@@ -444,7 +444,7 @@ class STTSNetDataset(TrafficStateGridDataset):
 
     def _load_cache_train_val_test(self):
         self._logger.info('Loading ' + self.cache_file_name)
-        cache_data = np.load(self.cache_file_name)
+        cache_data = np.load(self.cache_file_name, allow_pickle=True)
         xc_train = cache_data['xc_train']
         xt_train = cache_data['xt_train']
         x_ext_train = cache_data['x_ext_train']
