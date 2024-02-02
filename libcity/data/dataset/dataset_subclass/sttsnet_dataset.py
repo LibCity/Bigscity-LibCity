@@ -4,11 +4,8 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from torch.utils.data import SubsetRandomSampler, DataLoader
 
-from libcity.data.batch import Batch
 from libcity.data.dataset import TrafficStateGridDataset
-from libcity.data.list_dataset import ListDataset
 from libcity.data.utils import generate_dataloader
 from libcity.utils import ensure_dir
 
@@ -222,6 +219,8 @@ class STTSNetDataset(TrafficStateGridDataset):
         days_test = config.get("days_test", 28)
         # number of time intervals in one day
         self.T = int(24 * 60 * 60 / self.time_intervals)
+        # 通过 self.len_test 划分 test 数据集
+        # 剩下的部分通过 train_rate 和 eval_rate 来划分 train 和 eval 部分，所以 train_rate 和 eval_rate 和要为 1
         self.len_test = self.T * days_test
         self.nb_flow = config.get("nb_flow", 2)
         self.prediction_offset = config.get("prediction_offset", 0)
@@ -374,6 +373,8 @@ class STTSNetDataset(TrafficStateGridDataset):
     def split_train_val_test(self, x, y, x_test, y_test):
         """
         将数据根据 train_rate eval_rate 参数来切分数据
+        test 部分已经通过参数 self.len_test 提前切分完成，剩下的部分通过 train_rate 和 eval_rate 来划分 train 和 eval 部分，
+        所以 train_rate 和 eval_rate 和要为 1
 
         @param y_test: ndarray shape = {tuple: 4} (672, 2, 16, 8)
         @param x_test: a list size is 3 [xc(672, 2, 10, 16, 8), xt(672, 2, 4, 16, 8), x_ext(672, 24)]
