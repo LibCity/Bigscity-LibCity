@@ -10,6 +10,7 @@ from torch import nn, einsum
 from torch.nn import functional as F, init
 
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
+from libcity.model import loss
 
 
 class Rc(nn.Module):
@@ -473,6 +474,4 @@ class STTSNet(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
         y_predicted = self.predict(batch)
-        loss_function = torch.nn.MSELoss()
-        loss = loss_function(y_predicted, y_true)
-        return loss
+        return loss.masked_mse_torch(y_predicted, y_true)
