@@ -1,5 +1,6 @@
 from libcity.data.dataset.dataset_subclass.esg_dataset import ESGDataset
 from libcity.data.dataset.dataset_subclass.acfm_dataset import ACFMDataset
+from libcity.data.dataset.dataset_subclass.fogs_dataset import FOGSDataset
 from libcity.data.dataset.dataset_subclass.tgclstm_dataset import TGCLSTMDataset
 from libcity.data.dataset.dataset_subclass.astgcn_dataset import ASTGCNDataset
 from libcity.data.dataset.dataset_subclass.stresnet_dataset import STResNetDataset
@@ -79,5 +80,6 @@ __all__ = [
     "DMSTGCNDataset",
     "ESGDataset",
     "SSTBANDataset",
-    "STTSNetDataset"
+    "STTSNetDataset",
+    "FOGSDataset"
 ]

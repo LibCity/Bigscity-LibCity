@@ -1,0 +1,32 @@
+{
+  "max_epoch": 200,
+
+  "learner": "adam",
+  "learning_rate": 0.003,
+  "lr_epsilon": 1.0e-8,
+  "weight_decay": 0,
+
+  "lr_decay": true,
+  "lr_scheduler": "MultiStepLR",
+  "lr_decay_ratio": 0.3,
+  "steps": [15, 40, 70, 105, 145],
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 50,
+
+  "input_window": 12,
+  "output_window": 12,
+  "hidden_dims": [[64, 64, 64], [64, 64, 64], [64, 64, 64]],
+  "first_layer_embedding_size": 64,
+  "out_layer_dim": 128,
+  "activation": "GLU",
+  "use_mask": true,
+  "temporal_emb": true,
+  "spatial_emb": true,
+  "strides": 4,
+  "use_trend": true,
+  "trend_embedding": false
+
+}

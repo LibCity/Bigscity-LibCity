@@ -1,4 +1,5 @@
 from libcity.executor.dcrnn_executor import DCRNNExecutor
+from libcity.executor.fogs_executor import FOGSExecutor
 from libcity.executor.geml_executor import GEMLExecutor
 from libcity.executor.geosan_executor import GeoSANExecutor
 from libcity.executor.hyper_tuning import HyperTuning
@@ -30,5 +31,6 @@ __all__ = [
     "ETAExecutor",
     "GensimExecutor",
     "SSTBANExecutor",
-    "STTSNetExecutor"
+    "STTSNetExecutor",
+    "FOGSExecutor"
 ]
