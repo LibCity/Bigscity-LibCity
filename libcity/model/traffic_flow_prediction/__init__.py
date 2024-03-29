@@ -25,6 +25,7 @@ from libcity.model.traffic_flow_prediction.ESG import ESG
 from libcity.model.traffic_flow_prediction.SSTBAN import SSTBAN
 from libcity.model.traffic_flow_prediction.STTSNet import STTSNet
 from libcity.model.traffic_flow_prediction.FOGS import FOGS
+from libcity.model.traffic_flow_prediction.RGSL import RGSL
 
 
 __all__ = [
@@ -54,5 +55,6 @@ __all__ = [
     "ESG",
     "SSTBAN",
     "STTSNet",
-    "FOGS"
+    "FOGS",
+    "RGSL"
 ]

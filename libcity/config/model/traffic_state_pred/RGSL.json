@@ -1,0 +1,18 @@
+{
+  "max_epoch": 100,
+
+  "learner": "adam",
+  "learning_rate": 0.003,
+  "lr_epsilon": 1.0e-8,
+  "weight_decay": 0,
+
+  "use_early_stop": true,
+  "patience": 15,
+
+  "input_dim": 1,
+  "output_dim": 1,
+  "rnn_units": 64,
+  "num_layers": 2,
+  "embed_dim": 8,
+  "cheb_k": 2
+}
