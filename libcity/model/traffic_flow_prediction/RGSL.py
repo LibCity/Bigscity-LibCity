@@ -508,11 +508,11 @@ class RGSL(AbstractTrafficStateModel):
         # data
         self.num_node = self.data_feature.get('num_nodes')
         self.num_nodes = self.num_node
-        self.horizon = self.data_feature.get('output_window')
         self.adj_mx = self.data_feature.get('adj_mx')
         self._scaler = self.data_feature.get('scaler')
 
         # model
+        self.horizon = config.get('output_window', 12)
         self.embed_dim = config.get('embed_dim', 8)
         self.cheb_k = config.get('cheb_k', 2)
         self.input_dim = config.get('input_dim', 1)

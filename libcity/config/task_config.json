@@ -102,7 +102,7 @@
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK", "NYCTAXI20140112_FLOW"
         ],
         "RGSL": {
-            "dataset_class": "RGSLDataset",
+            "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
