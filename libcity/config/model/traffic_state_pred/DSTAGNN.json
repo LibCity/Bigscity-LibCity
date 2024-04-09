@@ -1,0 +1,17 @@
+{
+  "max_epoch": 100,
+
+  "learner": "adam",
+  "learning_rate": 0.0001,
+  "use_early_stop": false,
+
+  "in_channels": 1,
+  "nb_block": 4,
+  "K": 3,
+  "nb_chev_filter": 32,
+  "nb_time_filter": 32,
+  "d_model": 512,
+  "d_k": 32,
+  "n_heads": 3,
+  "graph_use": "AG"
+}
