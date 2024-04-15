@@ -33,6 +33,8 @@ LibCity currently supports the following tasks:
 
 ## LibCity News
 
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/12/2024**: We release M-LibCity v0.1, the MindSpore version of LibCity. This initial version supports nine traffic prediction tasks, including traffic state forecasting, trajectory next-hop prediction, and estimated time of arrival. Furthermore, M-LibCity also supports multi-cards parallel acceleration on various backends including GPU and NPU. For more detailed information and additional resources, please visit this [link](https://github.com/LibCity/M-LibCity).
+
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/04/2023**: Our creative design *ZongHeng* based on LibCity won the first prize in the 9th China Graduate Contest on Smart-city Technology and Creative Design! [Weixin](https://mp.weixin.qq.com/s/rAiTaVtnG9Kub_BBW502qw)
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** We published a paper titled *Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]*, including (1) a Unified Storage Format for urban spatial-temporal data, (2) a Technical Development Roadmap for urban spatial-temporal prediction models, (3) Extensive Experiments and Performance Evaluation using 18 models and 20 datasets. [[Paper]](https://arxiv.org/abs/2308.12899).
