@@ -33,6 +33,8 @@ LibCity 目前支持以下任务：
 
 ## LibCity News
 
+[![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **04/12/2024**: 我们推出了LibCity算法库的MindSpore版本—M-LibCity v0.1。目前版本已支持包括交通状态预测、轨迹下一跳预测及到达时间预测等9项关键的交通预测任务。除此之外，M-LibCity还支持在GPU/NPU等多种后端上利用多卡并行对训练和推理进行加速。详细信息和进一步资源，请访问此[链接](https://github.com/LibCity/M-LibCity)。
+
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif) **11/04/2023**: 我们基于LibCity提出的创意项目"纵横"荣获第九届中国研究生智慧城市技术与创意设计大赛一等奖！ [Weixin](https://mp.weixin.qq.com/s/rAiTaVtnG9Kub_BBW502qw)
 
 [![new](https://github.com/RUCAIBox/RecBole/raw/master/asset/new.gif)](https://github.com/RUCAIBox/RecBole/blob/master/asset/new.gif)**08/24/2023:** 我们发表了题为 *Unified Data Management and Comprehensive Performance Evaluation for Urban Spatial-Temporal Prediction [Experiment, Analysis & Benchmark]* 的论文，包括（1）城市时空数据的统一存储格式，（2）城市时空预测模型的技术发展路线图，（3）使用 18 个模型和 20 个数据集进行的广泛实验和性能评估。[[Paper]](https://arxiv.org/abs/2308.12899).
