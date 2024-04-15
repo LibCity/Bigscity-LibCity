@@ -159,6 +159,10 @@ def explained_variance_score_np(preds, labels):
     return explained_variance_score(labels, preds)
 
 
-def smooth_l1_loss(preds, labels):
-    loss_func = torch.nn.SmoothL1Loss()
-    return loss_func(preds, labels)
+def smooth_l1_loss(preds, labels, beta=1.0):
+    residual = preds - labels
+    abs_residual = torch.abs(residual)
+    condition = torch.lt(abs_residual, beta)
+    small_res = 0.5 * (residual ** 2 / beta)
+    large_res = abs_residual - (0.5 * beta)
+    return torch.mean(torch.where(condition, small_res, large_res))
