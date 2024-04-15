@@ -104,7 +104,7 @@ def explained_variance_score_torch(preds, labels):
 
 def masked_rmse_np(preds, labels, null_val=np.nan):
     return np.sqrt(masked_mse_np(preds=preds, labels=labels,
-                   null_val=null_val))
+                                 null_val=null_val))
 
 
 def masked_mse_np(preds, labels, null_val=np.nan):
@@ -157,3 +157,12 @@ def explained_variance_score_np(preds, labels):
     preds = preds.flatten()
     labels = labels.flatten()
     return explained_variance_score(labels, preds)
+
+
+def smooth_l1_loss(preds, labels, beta=1.0):
+    residual = preds - labels
+    abs_residual = torch.abs(residual)
+    condition = torch.lt(abs_residual, beta)
+    small_res = 0.5 * (residual ** 2 / beta)
+    large_res = abs_residual - (0.5 * beta)
+    return torch.mean(torch.where(condition, small_res, large_res))
