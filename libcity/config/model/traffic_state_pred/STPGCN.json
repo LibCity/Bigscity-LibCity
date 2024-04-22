@@ -1,0 +1,14 @@
+{
+  "max_epoch": 200,
+  "learner": "adam",
+  "learning_rate": 0.002,
+
+  "use_early_stop": true,
+  "patience": 150,
+
+  "C": 64,
+  "L": 3,
+  "d": 8,
+  "input_dim": 1,
+  "output_dim": 1
+}
