@@ -28,6 +28,7 @@ from libcity.data.dataset.dataset_subclass.sstban_dataset import SSTBANDataset
 from libcity.data.dataset.dataset_subclass.sttsnet_dataset import STTSNetDataset
 from libcity.data.dataset.dataset_subclass.dstagnn_dataset import DSTAGNNDataset
 from libcity.data.dataset.dataset_subclass.stpgcn_dataset import STPGCNDataset
+from libcity.data.dataset.dataset_subclass.hiest_dataset import HIESTDataset
 
 __all__ = [
     "ACFMDataset",
@@ -59,5 +60,6 @@ __all__ = [
     "STTSNetDataset",
     "FOGSDataset",
     "DSTAGNNDataset",
-    "STPGCNDataset"
+    "STPGCNDataset",
+    "HIESTDataset",
 ]
