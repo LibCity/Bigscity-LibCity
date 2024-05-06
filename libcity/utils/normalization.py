@@ -150,13 +150,13 @@ class StandardIndependCScaler(Scaler):
 
     def inverse_transform(self, data, **kw):
         if type(data) == torch.Tensor:
-            _channel_mean = torch.from_numpy(self._channel_mean).to(data.device)
-            _channel_std = torch.from_numpy(self._channel_std).to(data.device)
+            _channel_mean = torch.from_numpy(self.mean).to(data.device)
+            _channel_std = torch.from_numpy(self.std).to(data.device)
             _channel_mean.requires_grad = False
             _channel_std.requires_grad = False
         else:
-            _channel_mean = self._channel_mean
-            _channel_std = self._channel_std
+            _channel_mean = self.mean
+            _channel_std = self.std
         if kw.__contains__('channel_idx') is False:
             assert (data.shape[-1] == self.dim), 'Bad channel num for this scalar.'
             return (data * _channel_std) + _channel_mean
