@@ -13,7 +13,6 @@ from libcity.model import loss
 class MultiSPANSExecutor(TrafficStateExecutor):
     def __init__(self, config, model, data_feature):
         super().__init__(config, model, data_feature)
-        self.if_test_epoch = self.config.get("if_test_epoch", False)
         self.if_inv_loss = self.config.get("if_inv_loss", True)
         self.if_inv_eval = self.config.get("if_inv_eval", True)
         self.pred_channel_idx = self.config.get("pred_channel_idx", None)
@@ -122,7 +121,7 @@ class MultiSPANSExecutor(TrafficStateExecutor):
             test_result = self.evaluator.save_result(self.evaluate_res_dir)
             return test_result
 
-    def train(self, train_dataloader, eval_dataloader, test_dataloader):
+    def train(self, train_dataloader, eval_dataloader):
         """
         use data to train model with config
 
@@ -163,10 +162,6 @@ class MultiSPANSExecutor(TrafficStateExecutor):
                 message = 'Epoch [{}/{}] train_loss: {:.4f}, val_loss: {:.4f}, lr: {:.6f}, {:.2f}s'. \
                     format(epoch_idx, self.epochs, np.mean(losses), val_loss, log_lr, (end_time - start_time))
                 self._logger.info(message)
-
-            if self.if_test_epoch:
-                self._logger.info("Extensive metrics on test dataset (for reference)")
-                self._test_epoch(test_dataloader, epoch_idx)
 
             if self.hyper_tune:
                 # use ray tune to checkpoint
