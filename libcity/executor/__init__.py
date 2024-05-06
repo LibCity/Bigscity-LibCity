@@ -14,6 +14,7 @@ from libcity.executor.chebconv_executor import ChebConvExecutor
 from libcity.executor.eta_executor import ETAExecutor
 from libcity.executor.gensim_executor import GensimExecutor
 from libcity.executor.sstban_executor import SSTBANExecutor
+from libcity.executor.multispans_executor import MultiSPANSExecutor
 
 
 __all__ = [
@@ -32,5 +33,6 @@ __all__ = [
     "GensimExecutor",
     "SSTBANExecutor",
     "STTSNetExecutor",
-    "FOGSExecutor"
+    "FOGSExecutor",
+    "MultiSPANSExecutor"
 ]
