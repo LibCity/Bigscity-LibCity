@@ -8,6 +8,8 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse import linalg
 import os
+import pdb
+
 
 # torch.autograd.set_detect_anomaly(True)
 def sym_adj(adj):
@@ -101,15 +103,17 @@ class GCN(nn.Module):
         h = F.dropout(h, self.dropout, training=self.training)
         return h
 
+
 class CHGCN(nn.Module):
-    def __init__(self, c_in, c_out, dropout,Mor,global_nodes,regional_nodes,device,n1,n2,n3,n4,support_len, order=1):
+    def __init__(self, c_in, c_out, dropout, Mor, global_nodes, regional_nodes, device, n1, n2, n3, n4, support_len,
+                 order=1):
         super(CHGCN, self).__init__()
-        self.gcn = GCN(c_in, c_out, dropout, support_len,order)
-        
+        self.gcn = GCN(c_in, c_out, dropout, support_len, order)
+
         self.regional_nodes = regional_nodes
         self.global_nodes = global_nodes
         self._device = device
-        self.Mor = Mor.to(device=self._device) 
+        self.Mor = Mor.to(device=self._device)
 
         '''
         n for \eta in the paper
@@ -119,9 +123,9 @@ class CHGCN(nn.Module):
         self.n3 = n3
         self.n4 = n4
 
-    def forward(self, x, support,support_r,Mrg): 
+    def forward(self, x, support, support_r, Mrg):
         # graph convolution on the original graph
-        ho = self.gcn(x,support)
+        ho = self.gcn(x, support)
         # graph convolution on the regional graph
         hr = self.gcn(self.Mor.t().float() @ x, support_r)
 
@@ -129,40 +133,39 @@ class CHGCN(nn.Module):
         xs = Mrg.t().float() @ self.Mor.t().float() @ x
 
         # shape (batch_size, dilation_channels, num_nodes, receptive_field-kernel_size+1)
-        xg = xs.permute(2,1,0,3)
-        xg = torch.reshape(xg,(self.global_nodes,-1))
+        xg = xs.permute(2, 1, 0, 3)
+        xg = torch.reshape(xg, (self.global_nodes, -1))
         # print(xg.size())
-        xgt = xs.permute(3,0,1,2)
-        xgt = torch.reshape(xgt,(-1,self.global_nodes))
+        xgt = xs.permute(3, 0, 1, 2)
+        xgt = torch.reshape(xgt, (-1, self.global_nodes))
 
         # print(xgt.size())
-        Ag_hat = (F.relu(xg@xgt - 0.5)).detach().cpu().numpy()
+        Ag_hat = (F.relu(xg @ xgt - 0.5)).detach().cpu().numpy()
         # build adjacency matrix for the global graph
         adj_mxs = [asym_adj(Ag_hat), asym_adj(np.transpose(Ag_hat))]
         supports_g = [torch.tensor(i).to(self._device) for i in adj_mxs]
-        supports_g = [F.softmax(i,dim=-1).to(self._device) for i in supports_g]
+        supports_g = [F.softmax(i, dim=-1).to(self._device) for i in supports_g]
 
         # graph convolution on the regional graph
         xg = self.gcn(xs, supports_g)
 
-
         # cross-layer information enhancement
-        hr = hr + self.n1*F.relu(Mrg.float()@xg)
-        ho = ho+self.n2*F.relu(self.Mor.float()@hr) 
-        hr = hr+self.n3*F.relu(self.Mor.t().float()@ho)
-        xg = xg+self.n4*F.relu(Mrg.t().float()@hr)
+        hr = hr + self.n1 * F.relu(Mrg.float() @ xg)
+        ho = ho + self.n2 * F.relu(self.Mor.float() @ hr)
+        hr = hr + self.n3 * F.relu(self.Mor.t().float() @ ho)
+        xg = xg + self.n4 * F.relu(Mrg.t().float() @ hr)
 
-        return ho,hr,xg
+        return ho, hr, xg
 
 
-class  HIEST(AbstractTrafficStateModel):
+class HIEST(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         self.adj_mx = data_feature.get('adj_mx')
-        self.Mor = data_feature.get('Mor_mx') 
+        self.Mor = data_feature.get('Mor_mx')
         self.num_nodes = data_feature.get('num_nodes', 1)
         self.regional_nodes = len(self.Mor[0])
         self.global_nodes = config.get('global_nodes', 15)
-        print('global_nodes '+str(self.global_nodes))
+        print('global_nodes ' + str(self.global_nodes))
         self.feature_dim = data_feature.get('feature_dim', 2)
         super().__init__(config, data_feature)
 
@@ -183,15 +186,17 @@ class  HIEST(AbstractTrafficStateModel):
         self.device = config.get('device', torch.device('cpu'))
 
         # transfer the matrix into tensor format
-        self.Mor_mx = torch.from_numpy(self.Mor).detach().to(device=self.device) # Mapping matrix
-        self.ao = torch.from_numpy(self.adj_mx).detach().to(device=self.device) # adjacency matrix for the original graph
-        self.adj_mxr = torch.from_numpy(self.Mor.T @ self.adj_mx @ self.Mor).detach().to(device=self.device) # adjacency matrix for the regional graph
+        self.Mor_mx = torch.from_numpy(self.Mor).detach().to(device=self.device)  # Mapping matrix
+        self.ao = torch.from_numpy(self.adj_mx).detach().to(
+            device=self.device)  # adjacency matrix for the original graph
+        self.adj_mxr = torch.from_numpy(self.Mor.T @ self.adj_mx @ self.Mor).detach().to(
+            device=self.device)  # adjacency matrix for the regional graph
 
         # default values for etas
-        self.n1 = config.get('n1',1)
-        self.n2 = config.get('n2',1)
-        self.n3 = config.get('n3',1)
-        self.n4 = config.get('n4',1)
+        self.n1 = config.get('n1', 1)
+        self.n2 = config.get('n2', 1)
+        self.n3 = config.get('n3', 1)
+        self.n4 = config.get('n4', 1)
 
         # adaptive layer numbers
         self.apt_layer = config.get('apt_layer', True)
@@ -215,19 +220,20 @@ class  HIEST(AbstractTrafficStateModel):
 
         # init the mapping matrix M_rg
         # this is a trainable parameter of our proposed model
-        self.Mrg = torch.nn.init.kaiming_uniform_(torch.nn.Parameter(torch.empty((self.regional_nodes, self.global_nodes),requires_grad=True).to(device=self.device)))
+        self.Mrg = torch.nn.init.kaiming_uniform_(torch.nn.Parameter(
+            torch.empty((self.regional_nodes, self.global_nodes), requires_grad=True).to(device=self.device)))
 
-       
         self.start_conv = nn.Conv2d(in_channels=self.feature_dim,
                                     out_channels=self.residual_channels,
                                     kernel_size=(1, 1))
 
         # construct the adjacency matrix according to the seetings
         self.cal_adj(self.adjtype)
-        self.supports = [torch.tensor(i).to(self.device) for i in self.adj_mx] # adjacency matrix of the original graph
+        self.supports = [torch.tensor(i).to(self.device) for i in self.adj_mx]  # adjacency matrix of the original graph
         # construct the adjacency matrix of the regional graph
-        self.supports_r = [(self.Mor_mx.t().float() @ i.clone().detach() @ self.Mor_mx.float()).to(self.device) for i in self.supports]
-        self.supports_r = [F.softmax(i,dim=-1).to(self.device) for i in self.supports_r]
+        self.supports_r = [(self.Mor_mx.t().float() @ i.clone().detach() @ self.Mor_mx.float()).to(self.device) for i in
+                           self.supports]
+        self.supports_r = [F.softmax(i, dim=-1).to(self.device) for i in self.supports_r]
 
         receptive_field = self.output_dim
 
@@ -235,9 +241,8 @@ class  HIEST(AbstractTrafficStateModel):
         if self.supports is not None:
             self.supports_len += len(self.supports)
 
-        
-        # self.supports_len = 1 
-        print('supports_len '+str(self.supports_len))
+        # self.supports_len = 1
+        print('supports_len ' + str(self.supports_len))
         for b in range(self.blocks):
             additional_scope = self.kernel_size - 1
             new_dilation = 1
@@ -247,7 +252,7 @@ class  HIEST(AbstractTrafficStateModel):
                                                    out_channels=self.dilation_channels,
                                                    kernel_size=(1, self.kernel_size), dilation=new_dilation))
                 # print(self.filter_convs[-1])
-                self.gate_convs.append(nn.Conv1d(in_channels=self.residual_channels,
+                self.gate_convs.append(nn.Conv2d(in_channels=self.residual_channels,
                                                  out_channels=self.dilation_channels,
                                                  kernel_size=(1, self.kernel_size), dilation=new_dilation))
                 # print(self.gate_convs[-1])
@@ -256,7 +261,7 @@ class  HIEST(AbstractTrafficStateModel):
                                                      out_channels=self.residual_channels,
                                                      kernel_size=(1, 1)))
                 # 1x1 convolution for skip connection
-                self.skip_convs.append(nn.Conv1d(in_channels=self.dilation_channels,
+                self.skip_convs.append(nn.Conv2d(in_channels=self.dilation_channels,
                                                  out_channels=self.skip_channels,
                                                  kernel_size=(1, 1)))
                 self.bn.append(nn.BatchNorm2d(self.residual_channels))
@@ -267,8 +272,11 @@ class  HIEST(AbstractTrafficStateModel):
                 receptive_field += additional_scope
                 additional_scope *= 2
                 # Add the HGCN for hierarchical graph convolution
-                self.gconv.append(CHGCN(self.dilation_channels, self.residual_channels,self.dropout,self.Mor_mx,self.global_nodes,self.regional_nodes,device=self.device
-                                          ,n1=self.n1,n2=self.n2,n3=self.n3,n4=self.n4,support_len=self.supports_len,order=self.order))
+                self.gconv.append(
+                    CHGCN(self.dilation_channels, self.residual_channels, self.dropout, self.Mor_mx, self.global_nodes,
+                          self.regional_nodes, device=self.device
+                          , n1=self.n1, n2=self.n2, n3=self.n3, n4=self.n4, support_len=self.supports_len,
+                          order=self.order))
 
         self.end_conv_1 = nn.Conv2d(in_channels=self.skip_channels,
                                     out_channels=self.end_channels,
@@ -285,10 +293,9 @@ class  HIEST(AbstractTrafficStateModel):
         inputs = batch['X']  # (batch_size, input_window, num_nodes, feature_dim)
         inputs = inputs.transpose(1, 3)  # (batch_size, feature_dim, num_nodes, input_window)
         inputs = nn.functional.pad(inputs, (1, 0, 0, 0))  # (batch_size, feature_dim, num_nodes, input_window+1)
-        
+
         # Make elements value range from 0 to 1
-        Mrg = F.softmax(F.relu(self.Mrg), dim=1) 
-        
+        Mrg = F.softmax(F.relu(self.Mrg), dim=1)
 
         in_len = inputs.size(3)
         if in_len < self.receptive_field:
@@ -298,7 +305,6 @@ class  HIEST(AbstractTrafficStateModel):
 
         x = self.start_conv(x)  # (batch_size, residual_channels, num_nodes, self.receptive_field)
         skip = 0
-
 
         for i in range(self.blocks * self.layers):
 
@@ -334,11 +340,10 @@ class  HIEST(AbstractTrafficStateModel):
                 skip = 0
             skip = s + skip
 
+            x, xc, xs = self.gconv[i](x, self.supports, self.supports_r, Mrg)
 
-            x,xc,xs = self.gconv[i](x,self.supports,self.supports_r,Mrg) 
-            
             x = x + residual[:, :, :, -x.size(3):]
-            
+
             x = self.bn[i](x)
             xc = self.bnc[i](xc)
             xs = self.bns[i](xs)
@@ -347,27 +352,26 @@ class  HIEST(AbstractTrafficStateModel):
         x = F.relu(skip)
         x = F.relu(self.end_conv_1(x))
         x = self.end_conv_2(x)
-        return x,xc,xs
+        return x, xc, xs
 
-    
-    def ortLoss(self,hr):
+    def ortLoss(self, hr):
         '''
         The implementation of L_{ort}
         '''
         # hr = (batch_size, end_channels, num_nodes, self.output_dim)
         hr = hr.squeeze(3)
-        hr = hr.permute(2,0,1)
-        hr = torch.reshape(hr,(self.global_nodes,-1))
+        hr = hr.permute(2, 0, 1)
+        hr = torch.reshape(hr, (self.global_nodes, -1))
         # print('hr.size')
         # print(hr.size())
         tmpLoss = 0
         cos = torch.nn.CosineSimilarity(dim=0, eps=1e-6)
-        for i in range(self.global_nodes-1):
-            for j in range(i+1,self.global_nodes):
+        for i in range(self.global_nodes - 1):
+            for j in range(i + 1, self.global_nodes):
                 # print(hr[i].size())
-                tmpLoss += cos(hr[i],hr[j])
+                tmpLoss += cos(hr[i], hr[j])
 
-        tmpLoss = tmpLoss/(self.global_nodes*(self.global_nodes-1)/2)
+        tmpLoss = tmpLoss / (self.global_nodes * (self.global_nodes - 1) / 2)
 
         return tmpLoss
 
@@ -390,38 +394,36 @@ class  HIEST(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
 
-        y_predicted,xr,xg = self.predict(batch)
+        y_predicted, xr, xg = self.predict(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
-        
-        
-        Mrg = F.softmax(F.relu(self.Mrg), dim=1) #-0.5
-       
+
+        Mrg = F.softmax(F.relu(self.Mrg), dim=1)  # -0.5
+
         no = self.Mor_mx.float() @ xr
-        ho = no.permute(2,1,0,3)
-        ho = torch.reshape(ho,(self.num_nodes,-1))
+        ho = no.permute(2, 1, 0, 3)
+        ho = torch.reshape(ho, (self.num_nodes, -1))
         # print(hr.size())
-        hot = no.permute(3,0,1,2)
-        hot = torch.reshape(hot,(-1,self.num_nodes))
+        hot = no.permute(3, 0, 1, 2)
+        hot = torch.reshape(hot, (-1, self.num_nodes))
         # reconstruct the adjacency matrix of the original graph
         ao_hat = torch.sigmoid(ho.float() @ hot.float())
 
-        nr = Mrg.float()@xg
-        hr = nr.permute(2,1,0,3)
-        hr = torch.reshape(hr,(self.regional_nodes,-1))
-        hrt = nr.permute(3,0,1,2)
-        hrt = torch.reshape(hrt,(-1,self.regional_nodes))
+        nr = Mrg.float() @ xg
+        hr = nr.permute(2, 1, 0, 3)
+        hr = torch.reshape(hr, (self.regional_nodes, -1))
+        hrt = nr.permute(3, 0, 1, 2)
+        hrt = torch.reshape(hrt, (-1, self.regional_nodes))
         # reconstruct the adjacency matrix of the original graph
         ar_hat = torch.sigmoid(hr.float() @ hrt.float())
-        
-        
+
         preLoss = loss.masked_mae_torch(y_predicted, y_true, 0)
-        recLoss0 = F.binary_cross_entropy(ao_hat,self.ao,reduction='mean')
-        recLoss = F.binary_cross_entropy(ar_hat,self.adj_mxr.float(),reduction='mean')
+        recLoss0 = F.binary_cross_entropy(ao_hat, self.ao, reduction='mean')
+        recLoss = F.binary_cross_entropy(ar_hat, self.adj_mxr.float(), reduction='mean')
         ortLoss = self.ortLoss(xg)
-        
+
         # self._logger.info('fine_loss: {0} bce_loss:{1} bce_loss0:{2} ortLoss:{3}'.format(preLoss,recLoss,recLoss0,ortLoss))
-        return preLoss + 0.01*recLoss + 0.01*recLoss0 + 0.1*ortLoss
+        return preLoss + 0.01 * recLoss + 0.01 * recLoss0 + 0.1 * ortLoss
 
     def predict(self, batch):
         return self.forward(batch)

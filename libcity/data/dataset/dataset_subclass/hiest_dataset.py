@@ -74,8 +74,6 @@ class Graph:
                     while w != (u, v):
                         w = st.pop()
                         tmp.append(w)
-                        print(w, end=" ")
-                    print()
                     self.res.append(tmp)
 
 
@@ -173,7 +171,6 @@ class HIESTDataset(TrafficStateDataset):
         for i, nodes in enumerate(notMap):
             Mor[nodes][i + len(map)] = 1
 
-        print(Mor.sum(axis=0).shape)
         Mor = Mor / Mor.sum(axis=0)
         self.Mor_mx = Mor
         self._logger.info('generate mapping matrix Mor_mx: {}'.format(self.Mor_mx.shape))
