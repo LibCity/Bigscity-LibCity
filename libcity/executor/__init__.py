@@ -14,7 +14,6 @@ from libcity.executor.chebconv_executor import ChebConvExecutor
 from libcity.executor.eta_executor import ETAExecutor
 from libcity.executor.gensim_executor import GensimExecutor
 from libcity.executor.sstban_executor import SSTBANExecutor
-from libcity.executor.hiest_executor import HIESTExecutor
 
 
 __all__ = [
@@ -34,5 +33,4 @@ __all__ = [
     "SSTBANExecutor",
     "STTSNetExecutor",
     "FOGSExecutor",
-    "HIESTExecutor",
 ]

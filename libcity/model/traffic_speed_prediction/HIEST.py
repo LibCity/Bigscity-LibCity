@@ -394,7 +394,7 @@ class HIEST(AbstractTrafficStateModel):
     def calculate_loss(self, batch):
         y_true = batch['y']
 
-        y_predicted, xr, xg = self.predict(batch)
+        y_predicted, xr, xg = self.forward(batch)
         y_true = self._scaler.inverse_transform(y_true[..., :self.output_dim])
         y_predicted = self._scaler.inverse_transform(y_predicted[..., :self.output_dim])
 
@@ -422,8 +422,8 @@ class HIEST(AbstractTrafficStateModel):
         recLoss = F.binary_cross_entropy(ar_hat, self.adj_mxr.float(), reduction='mean')
         ortLoss = self.ortLoss(xg)
 
-        # self._logger.info('fine_loss: {0} bce_loss:{1} bce_loss0:{2} ortLoss:{3}'.format(preLoss,recLoss,recLoss0,ortLoss))
         return preLoss + 0.01 * recLoss + 0.01 * recLoss0 + 0.1 * ortLoss
 
     def predict(self, batch):
-        return self.forward(batch)
+        output, xr, xg = self.forward(batch)
+        return output
