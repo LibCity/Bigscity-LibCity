@@ -30,9 +30,6 @@
   "saved_model": true,
   "load_best_epoch": true,
   "hyper_tune": false,
-  "if_test_epoch": true,
-  "if_inv_loss": true,
-  "if_inv_eval": true,
   "pred_channel_idx":[0],
   "outfeat_dim":1
 }
