@@ -116,12 +116,6 @@ class Graph:
 
 
 class HIESTDataset(TrafficStatePointDataset):
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.cache_file_name = os.path.join('./libcity/cache/dataset_cache/',
-                                            'point_based_{}.npz'.format(self.parameters_str))
-
     def _load_rel(self):
         """
         加载.rel文件，格式[rel_id, type, origin_id, destination_id, properties(若干列)]
