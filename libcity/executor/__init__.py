@@ -32,5 +32,5 @@ __all__ = [
     "GensimExecutor",
     "SSTBANExecutor",
     "STTSNetExecutor",
-    "FOGSExecutor"
+    "FOGSExecutor",
 ]

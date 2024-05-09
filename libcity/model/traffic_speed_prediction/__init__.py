@@ -20,6 +20,7 @@ from libcity.model.traffic_speed_prediction.D2STGNN import D2STGNN
 from libcity.model.traffic_speed_prediction.FNN import FNN
 from libcity.model.traffic_speed_prediction.STID import STID
 from libcity.model.traffic_speed_prediction.DMSTGCN import DMSTGCN
+from libcity.model.traffic_speed_prediction.HIEST import HIEST
 from libcity.model.traffic_speed_prediction.STAEformer import STAEformer
 
 __all__ = [
@@ -45,5 +46,6 @@ __all__ = [
     "FNN",
     "STID",
     "DMSTGCN",
-    "STAEformer"
+    "HIEST",
+    "STAEformer",
 ]
