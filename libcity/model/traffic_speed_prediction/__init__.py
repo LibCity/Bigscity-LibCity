@@ -49,6 +49,5 @@ __all__ = [
     "DMSTGCN",
     "HIEST",
     "STAEformer",
-    "STAEformer",
     "TESTAM"
 ]

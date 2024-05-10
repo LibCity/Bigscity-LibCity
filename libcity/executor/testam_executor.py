@@ -157,9 +157,6 @@ class TESTAMExecutor(TrafficStateExecutor):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
             if self.lr_decay and self.lr_scheduler_type.lower() == "cosinewarmupscheduler":
                 self.lr_scheduler.step_and_update_lr()
-                # print("调整lr：", self.optimizer.param_groups[0]['lr'])
             else:
                 self.optimizer.step()
-            if i % 100 == 0:
-                print("epoch {} batch {} train loss: {} lr: {}".format(epoch_idx, i, loss.item(), self.optimizer.param_groups[0]['lr']))
         return losses
