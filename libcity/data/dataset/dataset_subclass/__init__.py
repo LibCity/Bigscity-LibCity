@@ -61,5 +61,6 @@ __all__ = [
     "FOGSDataset",
     "DSTAGNNDataset",
     "STPGCNDataset",
+    "HIESTDataset",
     "STAEformerDataset"
 ]
