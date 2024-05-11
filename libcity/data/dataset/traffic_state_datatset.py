@@ -597,7 +597,7 @@ class TrafficStateDataset(AbstractDataset):
             np.ndarray: 融合后的外部数据和交通状态数据, (len_time, num_nodes, feature_dim_plus)
         """
         num_samples, num_nodes, feature_dim = df.shape
-        is_time_nan = pd.DatetimeIndex(self.timesolts).isnull().any()
+        is_time_nan = np.isnan(self.timesolts).any()
         data_list = [df]
         if self.add_time_in_day and not is_time_nan:
             time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
