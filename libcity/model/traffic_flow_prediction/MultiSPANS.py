@@ -203,15 +203,6 @@ class LaplacianPE(nn.Module):  # from [Dwivedi and Bresson, 2020] code from PDfo
         return lap_pos_enc
 
 
-class WLPE(nn.Module):  # from graph-bert
-    def __init__(self, n_dim, embed_dim):
-        super().__init__()
-        raise NotImplementedError
-
-    def forward(self, x):
-        raise NotImplementedError
-
-
 class CentralityPE(nn.Module):  # from Graphormer
     """
         for link (unweight) graph
@@ -309,65 +300,6 @@ class Infomap_Multi_Mask_Generator(Mask_Bias_Generator):
             masks.append(out)
         masks = torch.stack(masks, dim=2)
         self._mask = masks
-
-
-class Infomap_Multilevel_Bias_Generator(Mask_Bias_Generator):
-    """
-        Input: static graph_data (nx.Digraph or dense_adj_mx)
-        Output: bias , shape=(node_num,node_num), dtype=float
-    """
-
-    def __init__(self, num_node, graph_data, bias_scale_type=0):
-        super(Infomap_Multilevel_Bias_Generator, self).__init__(True, num_node, num_node)
-        self.im = Infomap(silent=True, num_trials=20)
-        self.bias_scale_type = bias_scale_type
-        # only for static graph
-        if type(graph_data) is (nx.DiGraph or nx.Graph):
-            self.G = graph_data
-        else:
-            self.G = nx.DiGraph(graph_data)  # dense_adj_mx
-        self.im.add_networkx_graph(self.G)
-        self._gen_bias()
-
-    def _gen_bias(self):
-        self.im.run()
-        # read tree
-        bias_type = self.bias_scale_type
-        im = self.im
-        num_nodes = im.num_nodes
-        itr = im.get_tree(depth_level=1, states=True)
-        path_modcentral_dict = dict()
-        path_nodeid_dict = dict()
-        for each in itr:
-            path_modcentral_dict[each.path] = each.modular_centrality
-            if each.is_leaf:
-                path_nodeid_dict[each.path] = each.node_id
-
-        single_layer_att_bias = torch.zeros([num_nodes, num_nodes], dtype=torch.float64)
-
-        nodes = im.get_nodes(depth_level=1, states=True)
-        for each in nodes:
-            path = each.path
-            nd_from = torch.Tensor([path_nodeid_dict[path], ]).type(torch.long)
-            for i in range(len(path), 0, -1):  # 0 for min attention layer
-                now_path = path[:i]
-                common_prefix = now_path[:-1]
-                ## bias type
-                if bias_type == 0:
-                    b1 = path_modcentral_dict[now_path]
-                elif bias_type == 1:
-                    b1 = math.exp(path_modcentral_dict[now_path])
-                else:
-                    b1 = 1
-
-                nd_to = []
-                for key in path_nodeid_dict.keys():
-                    if key[:len(common_prefix)] == common_prefix:  # key!=now_path
-                        nd_to.append(path_nodeid_dict[key])
-                nd_to = torch.Tensor(nd_to).type(torch.long)
-                single_layer_att_bias[nd_from, nd_to] += b1
-                single_layer_att_bias[nd_to, nd_from] += b1
-        self._bias = single_layer_att_bias / 2
 
 
 def get_static_multihead_mask(num_head, mask_generator_list: list, device=torch.device('cpu')):
@@ -856,28 +788,6 @@ class depatching_conv(nn.Module):
 
         return xt
 
-
-class patching_TST(nn.Module):
-    # Patching
-    # in: [bs x nvars x seq_len]
-    # out: [bs x nvars x patch_len x patch_num]
-    def __init__(self, patch_len, padding_patch, context_window, stride=2):
-        super(patching_TST, self).__init__()
-        self.patch_len = patch_len
-        self.stride = stride
-        self.padding_patch = padding_patch
-        self.patch_num = int((context_window - patch_len) / stride + 1)
-        if padding_patch == 'end':  # can be modified to general case
-            self.padding_patch_layer = nn.ReplicationPad1d((0, stride))
-            self.patch_num += 1
-
-    def forward(self, z: torch.Tensor):
-        # do patching
-        if self.padding_patch == 'end':
-            z = self.padding_patch_layer(z)
-        z = z.unfold(dimension=-1, size=self.patch_len, step=self.stride)  # z: [bs x nvars x patch_num x patch_len]
-        z = z.permute(0, 1, 3, 2)
-        return z, self.patch_num  # z: [bs x nvars x patch_len x patch_num]
 
 class MultiSPANS(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):

@@ -130,8 +130,8 @@ class LogScaler(Scaler):
 
 class StandardIndependCScaler(Scaler):
     """
-        Z-score归一化
-        每个channel单独进行
+    Z-score归一化
+    每个channel单独进行
     """
 
     def __init__(self, x_train):
@@ -141,22 +141,22 @@ class StandardIndependCScaler(Scaler):
         for d in range(self.dim):
             self._channel_mean.append(x_train[..., d].mean())
             self._channel_std.append(x_train[..., d].std())
-        self.mean = np.array(self._channel_mean)
-        self.std = np.array(self._channel_std)
+        self._channel_mean = np.array(self._channel_mean)
+        self._channel_std = np.array(self._channel_std)
 
     def transform(self, data, **kw):
         assert (data.shape[-1] == self.dim), 'Bad channel num for this scalar.'
-        return (data - self.mean) / self.std
+        return (data - self._channel_mean) / self._channel_std
 
     def inverse_transform(self, data, **kw):
         if type(data) == torch.Tensor:
-            _channel_mean = torch.from_numpy(self.mean).to(data.device)
-            _channel_std = torch.from_numpy(self.std).to(data.device)
+            _channel_mean = torch.from_numpy(self._channel_mean).to(data.device)
+            _channel_std = torch.from_numpy(self._channel_std).to(data.device)
             _channel_mean.requires_grad = False
             _channel_std.requires_grad = False
         else:
-            _channel_mean = self.mean
-            _channel_std = self.std
+            _channel_mean = self._channel_mean
+            _channel_std = self._channel_std
         if kw.__contains__('channel_idx') is False:
             assert (data.shape[-1] == self.dim), 'Bad channel num for this scalar.'
             return (data * _channel_std) + _channel_mean
