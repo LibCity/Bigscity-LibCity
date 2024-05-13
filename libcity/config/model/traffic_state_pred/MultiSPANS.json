@@ -1,0 +1,26 @@
+{
+    "embed_dim": 64,
+    "skip_conv_flag": false,
+    "residual_conv_flag": false,
+    "skip_dim": 64,
+    "num_layers": 3,
+    "num_heads": 8,
+
+    "conv_kernels": [1,2,3,6],
+    "conv_stride": 1,
+    "conv_if_gc": true,
+    "norm_type": "BatchNorm",
+
+    "gconv_hop_num": 3,
+    "gconv_alpha": 0,
+    
+    "att_dropout": 0.1,
+    "ffn_dropout": 0.1,
+    "Satt_pe_type": "laplacian",
+    "Spe_learnable": false,
+    "Tatt_pe_type": "sincos",
+    "Tpe_learnable": false,
+    "Smask_flag": true,
+    "block_forward_mode": 0,
+    "sstore_attn": false
+}

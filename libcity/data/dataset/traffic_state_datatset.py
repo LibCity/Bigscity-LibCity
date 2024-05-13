@@ -7,7 +7,7 @@ from logging import getLogger
 from libcity.data.dataset import AbstractDataset
 from libcity.data.utils import generate_dataloader
 from libcity.utils import StandardScaler, NormalScaler, NoneScaler, \
-    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
+    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir, StandardIndependCScaler
 
 
 class TrafficStateDataset(AbstractDataset):
@@ -903,6 +903,9 @@ class TrafficStateDataset(AbstractDataset):
         elif scaler_type == "standard":
             scaler = StandardScaler(mean=x_train.mean(), std=x_train.std())
             self._logger.info('StandardScaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
+        elif scaler_type == "standardindependc":
+            scaler = StandardIndependCScaler(x_train=x_train)
+            self._logger.info('StandardIndependCScaler dim: ' + str(scaler.dim))
         elif scaler_type == "minmax01":
             scaler = MinMax01Scaler(
                 maxx=max(x_train.max(), y_train.max()), minn=min(x_train.min(), y_train.min()))
