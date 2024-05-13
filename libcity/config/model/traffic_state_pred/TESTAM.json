@@ -1,0 +1,28 @@
+{
+  "max_epoch": 100,
+
+  "learner": "adam",
+  "learning_rate": 1e-3,
+  "lr_beta1": 0.9,
+  "lr_beta2": 0.98,
+  "lr_epsilon": 1e-9,
+
+  "lr_decay": true,
+  "lr_scheduler": "cosinewarmupscheduler",
+  "n_warmup_steps": 4000,
+  "lr_mul": 1,
+
+  "use_early_stop": true,
+  "patience": 15,
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+
+  "dropout": 0.0,
+  "prob_mul": false,
+  "input_dim": 2,
+  "hidden_size": 32,
+  "layers": 3,
+  "is_quantile": true,
+  "quantile": 0.7
+}
