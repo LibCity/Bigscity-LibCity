@@ -118,7 +118,7 @@
         },
         "MultiSPANS": {
             "dataset_class": "TrafficStatePointDataset",
-            "executor": "MultiSPANSExecutor",
+            "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
         "STPGCN": {
