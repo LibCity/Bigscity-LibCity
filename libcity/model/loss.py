@@ -14,7 +14,7 @@ def masked_mae_loss(y_pred, y_true):
     return loss.mean()
 
 
-def masked_mae_torch(preds, labels, null_val=np.nan):
+def masked_mae_torch(preds, labels, null_val=np.nan, reduce=True):
     labels[torch.abs(labels) < 1e-4] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
@@ -26,7 +26,10 @@ def masked_mae_torch(preds, labels, null_val=np.nan):
     loss = torch.abs(torch.sub(preds, labels))
     loss = loss * mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
-    return torch.mean(loss)
+    if reduce:
+        return torch.mean(loss)
+    else:
+        return loss
 
 
 def log_cosh_loss(preds, labels):
