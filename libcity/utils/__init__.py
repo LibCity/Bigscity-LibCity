@@ -38,5 +38,5 @@ __all__ = [
     "LogScaler",
     "set_random_seed",
     "add_general_args",
-    "add_hyper_args",
+    "add_hyper_args"
 ]

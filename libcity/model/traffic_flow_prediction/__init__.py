@@ -62,5 +62,5 @@ __all__ = [
     "RGSL",
     "DSTAGNN",
     "STPGCN",
-    "MultiSPANS"
+    "MultiSPANS",
 ]
