@@ -1,6 +1,7 @@
 from libcity.data.dataset.dataset_subclass.fogs_dataset import FOGSDataset
 from libcity.data.dataset.dataset_subclass.esg_dataset import ESGDataset
 from libcity.data.dataset.dataset_subclass.acfm_dataset import ACFMDataset
+from libcity.data.dataset.dataset_subclass.hiest_dataset import HIESTDataset
 from libcity.data.dataset.dataset_subclass.tgclstm_dataset import TGCLSTMDataset
 from libcity.data.dataset.dataset_subclass.astgcn_dataset import ASTGCNDataset
 from libcity.data.dataset.dataset_subclass.stresnet_dataset import STResNetDataset
@@ -29,6 +30,7 @@ from libcity.data.dataset.dataset_subclass.sttsnet_dataset import STTSNetDataset
 from libcity.data.dataset.dataset_subclass.dstagnn_dataset import DSTAGNNDataset
 from libcity.data.dataset.dataset_subclass.stpgcn_dataset import STPGCNDataset
 from libcity.data.dataset.dataset_subclass.staeformer_dataset import STAEformerDataset
+from libcity.data.dataset.dataset_subclass.simst_dataset import SimSTDataset
 
 __all__ = [
     "ACFMDataset",
@@ -62,5 +64,6 @@ __all__ = [
     "DSTAGNNDataset",
     "STPGCNDataset",
     "HIESTDataset",
-    "STAEformerDataset"
+    "STAEformerDataset",
+    "SimSTDataset",
 ]
