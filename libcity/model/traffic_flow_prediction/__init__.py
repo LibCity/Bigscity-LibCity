@@ -29,6 +29,7 @@ from libcity.model.traffic_flow_prediction.RGSL import RGSL
 from libcity.model.traffic_flow_prediction.DSTAGNN import DSTAGNN
 from libcity.model.traffic_flow_prediction.STPGCN import STPGCN
 from libcity.model.traffic_flow_prediction.MultiSPANS import MultiSPANS
+from libcity.model.traffic_flow_prediction.SimST import SimST
 
 
 __all__ = [
@@ -63,4 +64,5 @@ __all__ = [
     "DSTAGNN",
     "STPGCN",
     "MultiSPANS",
+    "SimST",
 ]

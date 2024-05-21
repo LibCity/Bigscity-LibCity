@@ -1,0 +1,24 @@
+{
+  "max_epoch": 150,
+
+  "learner": "adam",
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+
+  "lr_decay": true,
+  "lr_scheduler": "ReduceLROnPlateau",
+  "lr_decay_ratio": 0.31622776601683794,
+  "lr_patience": 10,
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 20,
+
+  "node_dim": 20,
+  "in_dim": 5,
+  "init_dim": 64,
+  "end_dim": 512,
+  "layer": 2,
+  "dropout": 0.1
+}
