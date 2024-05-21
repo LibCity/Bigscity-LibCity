@@ -89,7 +89,7 @@
             "DMVSTNet", "ATDM", "GMAN", "GTS", "STDN", "HGCN", "STSGCN", "STAGGCN", "STNN", "ResLSTM", "DGCN",
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
             "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm", "DMSTGCN", "ESG", "SSTBAN", "STTSNet",
-            "FOGS", "RGSL", "DSTAGNN", "STPGCN", "HIEST", "STAEformer", "TESTAM", "SimST"
+            "FOGS", "RGSL", "DSTAGNN", "STPGCN", "HIEST", "STAEformer", "TESTAM", "MultiSPANS", "SimST",
         ],
         "allowed_dataset": [
             "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
@@ -118,6 +118,11 @@
         },
         "STAEformer": {
             "dataset_class": "STAEformerDataset",
+            "executor": "TrafficStateExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "MultiSPANS": {
+            "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
             "evaluator": "TrafficStateEvaluator"
         },
