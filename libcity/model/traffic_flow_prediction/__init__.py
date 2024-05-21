@@ -28,6 +28,7 @@ from libcity.model.traffic_flow_prediction.FOGS import FOGS
 from libcity.model.traffic_flow_prediction.RGSL import RGSL
 from libcity.model.traffic_flow_prediction.DSTAGNN import DSTAGNN
 from libcity.model.traffic_flow_prediction.STPGCN import STPGCN
+from libcity.model.traffic_flow_prediction.MultiSPANS import MultiSPANS
 
 
 __all__ = [
@@ -60,5 +61,6 @@ __all__ = [
     "FOGS",
     "RGSL",
     "DSTAGNN",
-    "STPGCN"
+    "STPGCN",
+    "MultiSPANS",
 ]
