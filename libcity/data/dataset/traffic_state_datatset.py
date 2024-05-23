@@ -967,7 +967,8 @@ class TrafficStateDataset(AbstractDataset):
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
         # 在测试集上添加随机扰动
-        x_test = self._add_noise(x_test)
+        if self.robustness_test:
+            x_test = self._add_noise(x_test)
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim
