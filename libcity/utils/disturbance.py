@@ -10,7 +10,7 @@ def get_disturb_indices(data, rate):
     return indices, num_elements_to_noise
 
 
-def zero_padding(data, rate, dim=None):
+def zero_noise(data, rate, dim=None):
     if dim is None:
         dim = data.shape[-1]
     for i in range(dim):

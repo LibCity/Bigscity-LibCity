@@ -7,7 +7,7 @@ from logging import getLogger
 from libcity.data.dataset import AbstractDataset
 from libcity.data.utils import generate_dataloader
 from libcity.utils import StandardScaler, NormalScaler, NoneScaler, \
-    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir, zero_padding, gaussian_noise
+    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir, zero_noise, gaussian_noise
 
 
 class TrafficStateDataset(AbstractDataset):
@@ -936,9 +936,9 @@ class TrafficStateDataset(AbstractDataset):
         Returns:
             x_test_disturbed: 添加噪声后的测试数据X
         """
-        if self.noise_type == "none":
-            self._logger.info('zero padding \trate: ' + str(self.disturb_rate))
-            x_test_disturbed = zero_padding(x_test, self.disturb_rate, self.output_dim)
+        if self.noise_type == "zero":
+            self._logger.info('zero noise \trate: ' + str(self.disturb_rate))
+            x_test_disturbed = zero_noise(x_test, self.disturb_rate, self.output_dim)
         elif self.noise_type == "gaussian":
             self._logger.info('gaussian noise \trate: ' + str(self.disturb_rate) +
                               ", mean: " + str(self.noise_mean) + ", std: " + str(self.noise_SD))
