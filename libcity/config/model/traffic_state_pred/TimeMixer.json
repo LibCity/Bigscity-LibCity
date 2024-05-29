@@ -1,0 +1,16 @@
+{
+  "label_len": 0,
+  "down_sampling_layers": 1,
+  "down_sampling_window": 2,
+  "down_sampling_method": "avg",
+  "channel_independence": 0,
+  "e_layers": 5,
+  "d_model": 128,
+  "d_ff": 256,
+  "use_norm": 0,
+  "freq": "h",
+  "embed": "timeF",
+  "decomp_method": "moving_avg",
+  "moving_avg": 25,
+  "dropout": 0.1
+}

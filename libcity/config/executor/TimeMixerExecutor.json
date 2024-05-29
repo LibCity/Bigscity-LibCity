@@ -1,0 +1,30 @@
+{
+  "gpu": true,
+  "gpu_id": 0,
+  "max_epoch": 10,
+  "train_loss": "none",
+  "epoch": 0,
+
+  "learner": "adam",
+  "learning_rate": 0.003,
+  "weight_decay": 0,
+  "lr_epsilon": 1e-8,
+  "lr_beta1": 0.9,
+  "lr_beta2": 0.999,
+  "lr_alpha": 0.99,
+  "lr_momentum": 0,
+
+  "lr_decay": true,
+  "lr_scheduler": "onecyclelr",
+  "pct_start": 0.2,
+
+  "clip_grad_norm": false,
+  "max_grad_norm": 1.0,
+  "use_early_stop": true,
+  "patience": 10,
+  "log_level": "INFO",
+  "log_every": 1,
+  "saved_model": true,
+  "load_best_epoch": true,
+  "hyper_tune": false
+}
