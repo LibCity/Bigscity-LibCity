@@ -1,16 +1,4 @@
 {
-  "max_epoch": 10,
-
-  "learner": "adam",
-  "learning_rate": 0.003,
-
-  "lr_decay": true,
-  "lr_scheduler": "onecyclelr",
-  "pct_start": 0.2,
-
-  "use_early_stop": true,
-  "patience": 10,
-
   "label_len": 0,
   "down_sampling_layers": 1,
   "down_sampling_window": 2,
