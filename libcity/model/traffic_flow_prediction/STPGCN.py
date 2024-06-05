@@ -303,12 +303,13 @@ class TAPE(nn.Module):
 
         self.dow_emb = nn.Embedding(config.week_len, config.d)
         self.tod_emb = nn.Embedding(config.day_len, config.d)
-def forward(self, pos_w, pos_d):
+
+
+    def forward(self, pos_w, pos_d):
         # B,T,i -> B,T,1,C
         dow = self.dow_emb(pos_w).unsqueeze(2)
         tod = self.tod_emb(pos_d).unsqueeze(2)
         return dow + tod
-
 
 
 class SRPE(nn.Module):
@@ -355,7 +356,6 @@ class GeneratePad(nn.Module):
 
 class STPGCN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-
         class ModelConfig:
 
             def __init__(self, config, data_feature) -> None:

@@ -139,6 +139,9 @@ class STAEformer(AbstractTrafficStateModel):
         dropout = config.get('dropout', 0.1)
         use_mixed_proj = config.get('use_mixed_proj', True)
 
+        self.add_time_in_day = config.get("add_time_in_day", False)
+        self.add_day_in_week = config.get("add_day_in_week", False)
+
         self.num_nodes = num_nodes
         self.in_steps = in_steps
         self.out_steps = out_steps
@@ -162,9 +165,9 @@ class STAEformer(AbstractTrafficStateModel):
         self.use_mixed_proj = use_mixed_proj
 
         self.input_proj = nn.Linear(input_dim, input_embedding_dim)
-        if tod_embedding_dim > 0:
+        if self.add_time_in_day:
             self.tod_embedding = nn.Embedding(steps_per_day, tod_embedding_dim)
-        if dow_embedding_dim > 0:
+        if self.add_day_in_week:
             self.dow_embedding = nn.Embedding(7, dow_embedding_dim)
         if spatial_embedding_dim > 0:
             self.node_emb = nn.Parameter(
@@ -202,20 +205,20 @@ class STAEformer(AbstractTrafficStateModel):
         # x: (batch_size, in_steps, num_nodes, input_dim+tod+dow=3)
         batch_size = x.shape[0]
 
-        if self.tod_embedding_dim > 0:
+        if self.add_time_in_day:
             tod = x[..., 1]
-        if self.dow_embedding_dim > 0:
+        if self.add_day_in_week:
             dow = x[..., 2]
         x = x[..., : self.input_dim]
 
         x = self.input_proj(x)  # (batch_size, in_steps, num_nodes, input_embedding_dim)
         features = [x]
-        if self.tod_embedding_dim > 0:
+        if self.add_time_in_day:
             tod_emb = self.tod_embedding(
                 (tod * self.steps_per_day).long()
             )  # (batch_size, in_steps, num_nodes, tod_embedding_dim)
             features.append(tod_emb)
-        if self.dow_embedding_dim > 0:
+        if self.add_day_in_week:
             dow_emb = self.dow_embedding(
                 dow.long()
             )  # (batch_size, in_steps, num_nodes, dow_embedding_dim)
