@@ -24,5 +24,6 @@
   "hidden_size": 32,
   "layers": 3,
   "is_quantile": true,
-  "quantile": 0.7
+  "quantile": 0.7,
+  "vocab_size": 288
 }
