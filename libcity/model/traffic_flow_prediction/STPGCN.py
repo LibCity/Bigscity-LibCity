@@ -304,7 +304,6 @@ class TAPE(nn.Module):
         self.dow_emb = nn.Embedding(config.week_len, config.d)
         self.tod_emb = nn.Embedding(config.day_len, config.d)
 
-
     def forward(self, pos_w, pos_d):
         # B,T,i -> B,T,1,C
         dow = self.dow_emb(pos_w).unsqueeze(2)
@@ -366,12 +365,12 @@ class STPGCN(AbstractTrafficStateModel):
                 self.range_mask = data_feature.get("range_mask")
                 self.spatial_distance = data_feature.get("spatial_distance")
                 self.V = data_feature.get("num_nodes")
+                self.num_features = data_feature.get("feature_dim")
 
                 # model config param
-                self.num_features = config.get("input_dim", 1)
                 self.D = self.num_features
-                self.T = config.get("output_window", 12)
-                self.num_prediction = self.T
+                self.T = config.get("input_window", 12)
+                self.num_prediction = config.get("output_window", 12)
                 self.C = config.get("C", 64)
                 self.L = config.get("L", 3)
                 self.d = config.get("d", 8)
@@ -387,9 +386,9 @@ class STPGCN(AbstractTrafficStateModel):
 
         # data
         self._scaler = self.data_feature.get('scaler')
+        self.output_dim = self.data_feature.get('output_dim')
 
         # model config
-        self.output_dim = config.get('output_dim', 1)
 
         config = ModelConfig(config, self.data_feature)
         self.config = config
@@ -415,7 +414,6 @@ class STPGCN(AbstractTrafficStateModel):
         srpe = self.SRPE()
         trpe = self.TRPE()
         zeros_x, zeros_tape = self.PAD(x)
-
         x = self.net(x, sape, tape, srpe, trpe, zeros_x, zeros_tape, self.range_mask)
         return x
 
