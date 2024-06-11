@@ -10,18 +10,18 @@ import torch.nn.functional as F
 
 
 class STPGConv(nn.Module):
-    def __init__(self, config):
+    def __init__(self, C, d, V, t_size, device):
         super(STPGConv, self).__init__()
 
-        self.C = config.C
-        self.d = config.d
-        self.V = config.V
-        self.t_size = config.t_size
+        self.C = C
+        self.d = d
+        self.V = V
+        self.t_size = t_size
 
-        self.x_proj = nn.Linear(self.C, self.C * 2).to(config.device)
-        self.se_proj = nn.Linear(self.d, self.C * 2, bias=False).to(config.device)
-        self.te_proj = nn.Linear(self.d, self.C * 2, bias=False).to(config.device)
-        self.ln = nn.LayerNorm(self.C * 2).to(config.device)
+        self.x_proj = nn.Linear(self.C, self.C * 2).to(device)
+        self.se_proj = nn.Linear(self.d, self.C * 2, bias=False).to(device)
+        self.te_proj = nn.Linear(self.d, self.C * 2, bias=False).to(device)
+        self.ln = nn.LayerNorm(self.C * 2).to(device)
 
     def forward(self, x, S, sape, tape):
         # x:B,t,V,C
@@ -52,10 +52,10 @@ class STPGConv(nn.Module):
 
 
 class Gaussian_component(nn.Module):
-    def __init__(self, config):
+    def __init__(self, d, device, ):
         super(Gaussian_component, self).__init__()
-        self.d = config.d
-        self.device = config.device
+        self.d = d
+        self.device = device
         self.mu = nn.Parameter(torch.randn(1, self.d)).to(self.device)
         self.inv_sigma = nn.Parameter(torch.randn(1, self.d)).to(self.device)
 
@@ -73,16 +73,17 @@ class Gaussian_component(nn.Module):
 class STPRI(nn.Module):
     """Spatial-Temporal Position-aware Relation Inference"""
 
-    def __init__(self, config):
+    def __init__(self, d, V, t_size, device):
         super(STPRI, self).__init__()
 
-        self.d = config.d
-        self.V = config.V
-        self.t_size = config.t_size
+        self.d = d
+        self.V = V
+        self.t_size = t_size
+        self.device = device
 
         self.gc_lst = []
         for i in range(6):
-            self.gc_lst.append(Gaussian_component(config))
+            self.gc_lst.append(Gaussian_component(self.d, self.device))
 
     def forward(self, sape, tape_i, tape_j, srpe, trpe):
         """
@@ -150,10 +151,10 @@ class GLU(nn.Module):
 class GFS(nn.Module):
     """gated feature selection module"""
 
-    def __init__(self, config):
+    def __init__(self, T, C, device):
         super(GFS, self).__init__()
-        self.fc = nn.Conv2d(in_channels=config.T, out_channels=config.C, kernel_size=(1, config.C)).to(config.device)
-        self.glu = GLU(config.C).to(config.device)
+        self.fc = nn.Conv2d(in_channels=T, out_channels=C, kernel_size=(1, C)).to(device)
+        self.glu = GLU(C).to(device)
 
     def forward(self, x):
         """
@@ -167,27 +168,27 @@ class GFS(nn.Module):
 
 
 class OutputLayer(nn.Module):
-    def __init__(self, config, **kwargs):
+    def __init__(self, V, num_features, num_prediction, C, L, **kwargs):
         super(OutputLayer, self).__init__(**kwargs)
-        self.V = config.V
-        self.D = config.num_features
-        self.P = config.num_prediction
-        self.C = config.C
-        self.fc = nn.Conv2d(in_channels=self.C * (config.L + 1), out_channels=self.P * self.D, kernel_size=(1, 1))
+        self.V = V
+        self.D = num_features
+        self.P = num_prediction
+        self.C = C
+        self.fc = nn.Conv2d(in_channels=self.C * (L + 1), out_channels=self.P * self.D, kernel_size=(1, 1))
 
     def forward(self, x):
         # x:B,C',V,1 -> B,PD,V,1 -> B,P,V,D
         x = self.fc(x)
         if self.D > 1:
-            x = x.reshape((0, self.P, self.D, self.V))
-            x = x.transpose((0, 1, 3, 2))
+            x = x.reshape((-1, self.P, self.D, self.V))
+            x = x.permute((0, 1, 3, 2))
         return x
 
 
 class InputLayer(nn.Module):
-    def __init__(self, config, **kwargs):
+    def __init__(self, D, C, **kwargs):
         super(InputLayer, self).__init__(**kwargs)
-        self.fc = nn.Linear(in_features=config.D, out_features=config.C)
+        self.fc = nn.Linear(in_features=D, out_features=C)
 
     def forward(self, x):
         x = self.fc(x)
@@ -198,32 +199,33 @@ class InputLayer(nn.Module):
 class STPGCNs(nn.Module):
     """Spatial-Temporal Position-aware Graph Convolution"""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, L, d, C, V, T, t_size, D, device, num_features, num_prediction, **kwargs):
         super(STPGCNs, self).__init__(**kwargs)
 
-        self.config = config
-        self.L = config.L
-        self.d = config.d
-        self.C = config.C
-        self.V = config.V
-        self.T = config.T
-        self.t_size = config.t_size
+        self.D = D
+        self.L = L
+        self.d = d
+        self.C = C
+        self.V = V
+        self.T = T
+        self.t_size = t_size
+        self.device = device
 
-        self.input_layer = InputLayer(self.config)
-        self.fs = GFS(self.config)
+        self.input_layer = InputLayer(self.D, self.C)
+        self.fs = GFS(self.T, self.C, self.device)
 
         self.ri_lst = []
         self.gc_lst = []
         self.fs_lst = []
         for i in range(self.L):
-            self.ri_lst.append(STPRI(self.config))
+            self.ri_lst.append(STPRI(self.d, self.V, self.t_size, self.device))
 
-            self.gc_lst.append(STPGConv(self.config))
+            self.gc_lst.append(STPGConv(self.C, d, V, t_size, device))
 
-            self.fs_lst.append(GFS(self.config))
+            self.fs_lst.append(GFS(self.T, self.C, self.device))
 
         self.glu = GLU(self.C * 4)
-        self.output_layer = OutputLayer(self.config)
+        self.output_layer = OutputLayer(self.V, num_features, num_prediction, self.C, self.L)
 
     def forward(self, x, sape, tape, srpe, trpe, zeros_x, zeros_tape, range_mask):
         """
@@ -285,10 +287,10 @@ class STPGCNs(nn.Module):
 class SAPE(nn.Module):
     """Spatial Absolute-Position Embedding"""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, V, d, **kwargs):
         super(SAPE, self).__init__(**kwargs)
 
-        self.sape = nn.Embedding(config.V, config.d)
+        self.sape = nn.Embedding(V, d)
 
     def forward(self):
         # return self.sape.data()
@@ -298,11 +300,11 @@ class SAPE(nn.Module):
 class TAPE(nn.Module):
     """Temporal Absolute-Position Embedding"""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, week_len, day_len, d, **kwargs):
         super(TAPE, self).__init__(**kwargs)
 
-        self.dow_emb = nn.Embedding(config.week_len, config.d)
-        self.tod_emb = nn.Embedding(config.day_len, config.d)
+        self.dow_emb = nn.Embedding(week_len, d)
+        self.tod_emb = nn.Embedding(day_len, d)
 
     def forward(self, pos_w, pos_d):
         # B,T,i -> B,T,1,C
@@ -314,11 +316,11 @@ class TAPE(nn.Module):
 class SRPE(nn.Module):
     """Spatial Relative-Position Embedding"""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, spatial_distance, device, alpha, d, **kwargs):
         super(SRPE, self).__init__(**kwargs)
 
-        self.SDist = torch.from_numpy(config.spatial_distance).to(config.device).long().squeeze(-1)
-        self.srpe = nn.Embedding(config.alpha + 1, config.d)
+        self.SDist = torch.from_numpy(spatial_distance).to(device).long().squeeze(-1)
+        self.srpe = nn.Embedding(alpha + 1, d)
 
     def forward(self):
         return self.srpe(self.SDist)
@@ -327,11 +329,11 @@ class SRPE(nn.Module):
 class TRPE(nn.Module):
     """Temporal Relative-Position Embedding"""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, t_size, device, d, **kwargs):
         super(TRPE, self).__init__(**kwargs)
 
-        self.TDist = torch.from_numpy(np.expand_dims(range(config.t_size), -1)).to(config.device).long()
-        self.trpe = nn.Embedding(config.t_size, config.d)
+        self.TDist = torch.from_numpy(np.expand_dims(range(t_size), -1)).to(device).long()
+        self.trpe = nn.Embedding(t_size, d)
 
     def forward(self):
         # return self.trpe.data()[self.TDist]
@@ -339,13 +341,13 @@ class TRPE(nn.Module):
 
 
 class GeneratePad(nn.Module):
-    def __init__(self, config, **kwargs):
+    def __init__(self, device, C, V, d, beta, **kwargs):
         super(GeneratePad, self).__init__(**kwargs)
-        self.device = config.device
-        self.C = config.C
-        self.V = config.V
-        self.d = config.d
-        self.pad_size = config.beta
+        self.device = device
+        self.C = C
+        self.V = V
+        self.d = d
+        self.pad_size = beta
 
     def forward(self, x):
         B = x.shape[0]
@@ -355,55 +357,40 @@ class GeneratePad(nn.Module):
 
 class STPGCN(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
-        class ModelConfig:
-
-            def __init__(self, config, data_feature) -> None:
-                # device
-                self.device = config.get('device', torch.device('cpu'))
-
-                # from data feature
-                self.range_mask = data_feature.get("range_mask")
-                self.spatial_distance = data_feature.get("spatial_distance")
-                self.V = data_feature.get("num_nodes")
-                self.num_features = data_feature.get("feature_dim")
-
-                # model config param
-                self.D = self.num_features
-                self.T = config.get("input_window", 12)
-                self.num_prediction = config.get("output_window", 12)
-                self.C = config.get("C", 64)
-                self.L = config.get("L", 3)
-                self.d = config.get("d", 8)
-                self.alpha = config.get("alpha", 4)
-                self.beta = config.get("beta", 2)
-                self.t_size = self.beta + 1
-                self.week_len = 7
-                self.day_len = config.get("points_per_hour") * 24
-
         super().__init__(config, data_feature)
 
         self._logger = getLogger()
+        self.device = config.get('device', torch.device('cpu'))
 
         # data
         self._scaler = self.data_feature.get('scaler')
         self.output_dim = self.data_feature.get('output_dim')
+        self.range_mask = self.data_feature.get("range_mask")
+        self.spatial_distance = self.data_feature.get("spatial_distance")
+        self.V = self.data_feature.get("num_nodes")
+        self.num_features = self.data_feature.get("output_dim")
 
         # model config
+        self.D = self.num_features
+        self.T = config.get("input_window", 12)
+        self.num_prediction = config.get("output_window", 12)
+        self.C = config.get("C", 64)
+        self.L = config.get("L", 3)
+        self.d = config.get("d", 8)
+        self.alpha = config.get("alpha", 4)
+        self.beta = config.get("beta", 2)
+        self.t_size = self.beta + 1
+        self.week_len = 7
+        self.day_len = config.get("points_per_hour") * 24
+        self.range_mask = torch.Tensor(self.range_mask).to(self.device)
 
-        config = ModelConfig(config, self.data_feature)
-        self.config = config
-        self.T = config.T
-        self.V = config.V
-        self.C = config.C
-        self.L = config.L
-        self.range_mask = torch.Tensor(config.range_mask).to(config.device)
-
-        self.PAD = GeneratePad(self.config)
-        self.SAPE = SAPE(self.config).to(config.device)
-        self.TAPE = TAPE(self.config).to(config.device)
-        self.SRPE = SRPE(self.config).to(config.device)
-        self.TRPE = TRPE(self.config).to(config.device)
-        self.net = STPGCNs(self.config).to(config.device)
+        self.PAD = GeneratePad(self.device, self.C, self.V, self.d, self.beta)
+        self.SAPE = SAPE(self.V, self.d).to(self.device)
+        self.TAPE = TAPE(self.week_len, self.day_len, self.d).to(self.device)
+        self.SRPE = SRPE(self.spatial_distance, self.device, self.alpha, self.d).to(self.device)
+        self.TRPE = TRPE(self.t_size, self.device, self.d).to(self.device)
+        self.net = STPGCNs(self.L, self.d, self.C, self.V, self.T, self.t_size, self.D, self.device, self.num_features,
+                           self.num_prediction).to(self.device)
 
     def forward(self, x, pos_w, pos_d):
         # x:B,T,V,D
