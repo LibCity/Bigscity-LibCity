@@ -201,7 +201,7 @@ class HIEST(AbstractTrafficStateModel):
         # adaptive layer numbers
         self.apt_layer = config.get('apt_layer', True)
         if self.apt_layer:
-            self.layers = np.int(
+            self.layers = np.int64(
                 np.round(np.log((((self.input_window - 1) / (self.blocks * (self.kernel_size - 1))) + 1)) / np.log(2)))
             print('# of layers change to %s' % self.layers)
 
@@ -359,8 +359,7 @@ class HIEST(AbstractTrafficStateModel):
         The implementation of L_{ort}
         '''
         # hr = (batch_size, end_channels, num_nodes, self.output_dim)
-        hr = hr.squeeze(3)
-        hr = hr.permute(2, 0, 1)
+        hr = hr.permute(2, 0, 1, 3)
         hr = torch.reshape(hr, (self.global_nodes, -1))
         # print('hr.size')
         # print(hr.size())
