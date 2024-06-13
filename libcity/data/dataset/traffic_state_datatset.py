@@ -7,7 +7,7 @@ from logging import getLogger
 from libcity.data.dataset import AbstractDataset
 from libcity.data.utils import generate_dataloader
 from libcity.utils import StandardScaler, NormalScaler, NoneScaler, \
-    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir
+    MinMax01Scaler, MinMax11Scaler, LogScaler, ensure_dir, zero_noise, gaussian_noise
 
 
 class TrafficStateDataset(AbstractDataset):
@@ -35,6 +35,11 @@ class TrafficStateDataset(AbstractDataset):
         self.add_day_in_week = self.config.get('add_day_in_week', False)
         self.input_window = self.config.get('input_window', 12)
         self.output_window = self.config.get('output_window', 12)
+        self.robustness_test = self.config.get('robustness_test', False)
+        self.disturb_rate = self.config.get('disturb_rate', 0.5)
+        self.noise_type = self.config.get('noise_type', 'none')
+        self.noise_mean = self.config.get('noise_mean', [0])
+        self.noise_SD = self.config.get('noise_SD', [0])
         self.parameters_str = \
             str(self.dataset) + '_' + str(self.input_window) + '_' + str(self.output_window) + '_' \
             + str(self.train_rate) + '_' + str(self.eval_rate) + '_' + str(self.scaler_type) + '_' \
@@ -921,6 +926,28 @@ class TrafficStateDataset(AbstractDataset):
             raise ValueError('Scaler type error!')
         return scaler
 
+    def _add_noise(self, x_test):
+        """
+        根据全局参数`noise_type`选择噪声类型，并随机加入到测试数据X
+
+        Args:
+            x_test: 测试数据X
+
+        Returns:
+            x_test_disturbed: 添加噪声后的测试数据X
+        """
+        if self.noise_type == "zero":
+            self._logger.info('zero noise \trate: ' + str(self.disturb_rate))
+            x_test_disturbed = zero_noise(x_test, self.disturb_rate, self.output_dim)
+        elif self.noise_type == "gaussian":
+            self._logger.info('gaussian noise \trate: ' + str(self.disturb_rate) +
+                              ", mean: " + str(self.noise_mean) + ", std: " + str(self.noise_SD))
+            x_test_disturbed = gaussian_noise(x_test, self.disturb_rate,
+                                              self.noise_mean, self.noise_SD, self.output_dim)
+        else:
+            raise ValueError('noise type error!')
+        return x_test_disturbed
+
     def get_data(self):
         """
         返回数据的DataLoader，包括训练数据、测试数据、验证数据
@@ -939,6 +966,9 @@ class TrafficStateDataset(AbstractDataset):
                 x_train, y_train, x_val, y_val, x_test, y_test = self._load_cache_train_val_test()
             else:
                 x_train, y_train, x_val, y_val, x_test, y_test = self._generate_train_val_test()
+        # 在测试集上添加随机扰动
+        if self.robustness_test:
+            x_test = self._add_noise(x_test)
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim

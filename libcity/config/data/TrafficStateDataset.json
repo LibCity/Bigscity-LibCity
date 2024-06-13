@@ -12,5 +12,10 @@
   "input_window": 12,
   "output_window": 12,
   "add_time_in_day": false,
-  "add_day_in_week": false
+  "add_day_in_week": false,
+  "robustness_test": false,
+  "noise_type": "gaussian",
+  "disturb_rate": 0.5,
+  "noise_mean": [5],
+  "noise_SD": [10]
 }
