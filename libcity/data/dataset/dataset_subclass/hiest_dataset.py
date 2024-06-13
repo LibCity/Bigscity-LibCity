@@ -43,8 +43,10 @@ class Graph:
         stack = [(u, self.graph[u], 0, False, -1)]
 
         while stack:
+            # u, self.graph[u], children, 标记是否在if disc[v] == -1分支中断了，v
             u, g, children, flag, v = stack.pop(-1)
             if flag:
+                # 继续把break后没走完的路走完
                 # Check if the subtree rooted with v has a connection to
                 # one of the ancestors of u
                 # Case 1 -- per Strongly Connected Components Article
@@ -64,14 +66,16 @@ class Graph:
             low[u] = self.Time
             self.Time += 1
             while g:
-                v = g.pop(0)
+                v = g.pop(-1)
                 # If v is not visited yet, then make it a child of u
                 # in DFS tree and recur for it
                 if disc[v] == -1:
                     parent[v] = u
                     children += 1
                     st.append((u, v))  # store the edge in stack
+                    # 把没遍历完的点入栈，下次继续遍历
                     stack.append((u, g, children, True, v))
+                    # 把子节点入栈，继续向下搜索
                     stack.append((v, self.graph[v], 0, False, -1))
                     break
 
