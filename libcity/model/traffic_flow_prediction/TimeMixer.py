@@ -97,18 +97,40 @@ class PositionalEmbedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
-    def __init__(self, c_in, d_model):
+    def __init__(self, c_in, d_model, feature_dim=1):
         super(TokenEmbedding, self).__init__()
         padding = 1 if torch.__version__ >= '1.5.0' else 2
-        self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
-                                   kernel_size=3, padding=padding, padding_mode='circular', bias=False)
+        # TODO 修改 Conv2d
+        # self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
+        #                            kernel_size=3, padding=padding, padding_mode='circular', bias=False)
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv1d):
+        #         nn.init.kaiming_normal_(
+        #             m.weight, mode='fan_in', nonlinearity='leaky_relu')
+
+        self.tokenConv = nn.Conv2d(in_channels=c_in, out_channels=d_model, kernel_size=(feature_dim, 3),
+                                   padding=(0, padding), padding_mode='circular', bias=False)
         for m in self.modules():
-            if isinstance(m, nn.Conv1d):
+            if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(
                     m.weight, mode='fan_in', nonlinearity='leaky_relu')
+        self.printed = False
 
     def forward(self, x):
-        x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
+        # BTNF -> BNFT
+        # 0123 -> 0231
+        if not self.printed:
+            print("TokenEmbedding input: ", x.shape)  # (64,12,170)
+            print("input param: ", x.permute(0, 2, 1).shape)  # (64, 170, 12)
+        # B 128 1 T -> permute B T 128 1
+        # 0123          0 3 1 2
+        # x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
+        x = self.tokenConv(x.permute(0, 2, 3, 1)).transpose(0, 3, 1, 2)
+        x = torch.squeeze(x, -1)
+        if not self.printed:
+            # [64, 12, 128]
+            print("TokenEmbedding output: ", x.shape)
+            self.printed = True
         return x
 
 
@@ -527,24 +549,24 @@ class MultiScaleSeasonMixing(nn.Module):
     Bottom-up mixing season pattern
     """
 
-    def __init__(self, configs):
+    def __init__(self, seq_len, down_sampling_window, down_sampling_layers):
         super(MultiScaleSeasonMixing, self).__init__()
 
         self.down_sampling_layers = torch.nn.ModuleList(
             [
                 nn.Sequential(
                     torch.nn.Linear(
-                        configs.seq_len // (configs.down_sampling_window ** i),
-                        configs.seq_len // (configs.down_sampling_window ** (i + 1)),
+                        seq_len // (down_sampling_window ** i),
+                        seq_len // (down_sampling_window ** (i + 1)),
                     ),
                     nn.GELU(),
                     torch.nn.Linear(
-                        configs.seq_len // (configs.down_sampling_window ** (i + 1)),
-                        configs.seq_len // (configs.down_sampling_window ** (i + 1)),
+                        seq_len // (down_sampling_window ** (i + 1)),
+                        seq_len // (down_sampling_window ** (i + 1)),
                     ),
 
                 )
-                for i in range(configs.down_sampling_layers)
+                for i in range(down_sampling_layers)
             ]
         )
 
@@ -571,23 +593,23 @@ class MultiScaleTrendMixing(nn.Module):
     Top-down mixing trend pattern
     """
 
-    def __init__(self, configs):
+    def __init__(self, seq_len, down_sampling_window, down_sampling_layers):
         super(MultiScaleTrendMixing, self).__init__()
 
         self.up_sampling_layers = torch.nn.ModuleList(
             [
                 nn.Sequential(
                     torch.nn.Linear(
-                        configs.seq_len // (configs.down_sampling_window ** (i + 1)),
-                        configs.seq_len // (configs.down_sampling_window ** i),
+                        seq_len // (down_sampling_window ** (i + 1)),
+                        seq_len // (down_sampling_window ** i),
                     ),
                     nn.GELU(),
                     torch.nn.Linear(
-                        configs.seq_len // (configs.down_sampling_window ** i),
-                        configs.seq_len // (configs.down_sampling_window ** i),
+                        seq_len // (down_sampling_window ** i),
+                        seq_len // (down_sampling_window ** i),
                     ),
                 )
-                for i in reversed(range(configs.down_sampling_layers))
+                for i in reversed(range(down_sampling_layers))
             ])
 
     def forward(self, trend_list):
@@ -612,40 +634,41 @@ class MultiScaleTrendMixing(nn.Module):
 
 
 class PastDecomposableMixing(nn.Module):
-    def __init__(self, configs):
+    def __init__(self, seq_len, pred_len, down_sampling_window, d_model, dropout, channel_independence, decomp_method,
+                 moving_avg, top_k, d_ff, down_sampling_layers):
         super(PastDecomposableMixing, self).__init__()
-        self.seq_len = configs.seq_len
-        self.pred_len = configs.pred_len
-        self.down_sampling_window = configs.down_sampling_window
+        self.seq_len = seq_len
+        self.pred_len = pred_len
+        self.down_sampling_window = down_sampling_window
 
-        self.layer_norm = nn.LayerNorm(configs.d_model)
-        self.dropout = nn.Dropout(configs.dropout)
-        self.channel_independence = configs.channel_independence
+        self.layer_norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.channel_independence = channel_independence
 
-        if configs.decomp_method == 'moving_avg':
-            self.decompsition = series_decomp(configs.moving_avg)
-        elif configs.decomp_method == "dft_decomp":
-            self.decompsition = DFT_series_decomp(configs.top_k)
+        if decomp_method == 'moving_avg':
+            self.decompsition = series_decomp(moving_avg)
+        elif decomp_method == "dft_decomp":
+            self.decompsition = DFT_series_decomp(top_k)
         else:
             raise ValueError('decompsition is error')
 
-        if configs.channel_independence == 0:
+        if channel_independence == 0:
             self.cross_layer = nn.Sequential(
-                nn.Linear(in_features=configs.d_model, out_features=configs.d_ff),
+                nn.Linear(in_features=d_model, out_features=d_ff),
                 nn.GELU(),
-                nn.Linear(in_features=configs.d_ff, out_features=configs.d_model),
+                nn.Linear(in_features=d_ff, out_features=d_model),
             )
 
         # Mixing season
-        self.mixing_multi_scale_season = MultiScaleSeasonMixing(configs)
+        self.mixing_multi_scale_season = MultiScaleSeasonMixing(seq_len, down_sampling_window, down_sampling_layers)
 
         # Mxing trend
-        self.mixing_multi_scale_trend = MultiScaleTrendMixing(configs)
+        self.mixing_multi_scale_trend = MultiScaleTrendMixing(seq_len, down_sampling_window, down_sampling_layers)
 
         self.out_cross_layer = nn.Sequential(
-            nn.Linear(in_features=configs.d_model, out_features=configs.d_ff),
+            nn.Linear(in_features=d_model, out_features=d_ff),
             nn.GELU(),
-            nn.Linear(in_features=configs.d_ff, out_features=configs.d_model),
+            nn.Linear(in_features=d_ff, out_features=d_model),
         )
 
     def forward(self, x_list):
@@ -683,31 +706,6 @@ class PastDecomposableMixing(nn.Module):
 class TimeMixer(AbstractTrafficStateModel):
 
     def __init__(self, config, data_feature):
-
-        class TimeMixerConfig:
-
-            def __init__(self, config, data_feature) -> None:
-                # data
-                self.enc_in = data_feature.get('num_nodes')
-                self.c_out = data_feature.get('num_nodes')
-                # model
-                self.seq_len = config.get("input_window", 96)
-                self.pred_len = config.get("output_window", 12)
-                self.label_len = config.get("label_len", 0)
-                self.down_sampling_layers = config.get("down_sampling_layers", 1)
-                self.down_sampling_window = config.get("down_sampling_window", 2)
-                self.down_sampling_method = config.get("down_sampling_method", "avg")
-                self.channel_independence = config.get("channel_independence", 0)
-                self.e_layers = config.get("e_layers", 5)
-                self.d_model = config.get("d_model", 128)
-                self.d_ff = config.get("d_ff", 256)
-                self.use_norm = config.get("use_norm", 0)
-                self.freq = config.get("freq", "h")
-                self.embed = config.get("embed", "timeF")
-                self.decomp_method = config.get("decomp_method", "moving_avg")
-                self.moving_avg = config.get("moving_avg", 25)
-                self.dropout = config.get("dropout", 0.1)
-
         super().__init__(config, data_feature)
 
         self._logger = getLogger()
@@ -715,40 +713,55 @@ class TimeMixer(AbstractTrafficStateModel):
 
         # data
         self._scaler = self.data_feature.get('scaler')
+        self.enc_in = data_feature.get('num_nodes')
+        self.c_out = data_feature.get('num_nodes')
 
         # model config
-        configs = TimeMixerConfig(config, self.data_feature)
+        self.seq_len = config.get("input_window", 96)
+        self.pred_len = config.get("output_window", 12)
+        self.label_len = config.get("label_len", 0)
+        self.down_sampling_layers = config.get("down_sampling_layers", 1)
+        self.down_sampling_window = config.get("down_sampling_window", 2)
+        self.down_sampling_method = config.get("down_sampling_method", "avg")
+        self.channel_independence = config.get("channel_independence", 0)
+        self.e_layers = config.get("e_layers", 5)
+        self.d_model = config.get("d_model", 128)
+        self.d_ff = config.get("d_ff", 256)
+        self.use_norm = config.get("use_norm", 0)
+        self.freq = config.get("freq", "h")
+        self.embed = config.get("embed", "timeF")
+        self.decomp_method = config.get("decomp_method", "moving_avg")
+        self.moving_avg = config.get("moving_avg", 25)
+        self.dropout = config.get("dropout", 0.1)
         self.output_dim = config.get('output_dim', 1)
-        self.configs = configs
-        self.seq_len = configs.seq_len
-        self.label_len = configs.label_len
-        self.pred_len = configs.pred_len
-        self.down_sampling_window = configs.down_sampling_window
-        self.channel_independence = configs.channel_independence
-        self.pdm_blocks = nn.ModuleList([PastDecomposableMixing(configs)
-                                         for _ in range(configs.e_layers)])
+        self.top_k = config.get("top_k", 5)
 
-        self.preprocess = series_decomp(configs.moving_avg)
-        self.enc_in = configs.enc_in
+        self.pdm_blocks = nn.ModuleList([PastDecomposableMixing(self.seq_len, self.pred_len, self.down_sampling_window,
+                                                                self.d_model, self.dropout, self.channel_independence,
+                                                                self.decomp_method, self.moving_avg, self.top_k,
+                                                                self.d_ff, self.down_sampling_layers)
+                                         for _ in range(self.e_layers)])
+
+        self.preprocess = series_decomp(self.moving_avg)
 
         if self.channel_independence == 1:
-            self.enc_embedding = DataEmbedding_wo_pos(1, configs.d_model, configs.embed, configs.freq,
-                                                      configs.dropout)
+            self.enc_embedding = DataEmbedding_wo_pos(1, self.d_model, self.embed, self.freq,
+                                                      self.dropout)
         else:
-            self.enc_embedding = DataEmbedding_wo_pos(configs.enc_in, configs.d_model, configs.embed, configs.freq,
-                                                      configs.dropout)
+            self.enc_embedding = DataEmbedding_wo_pos(self.enc_in, self.d_model, self.embed, self.freq,
+                                                      self.dropout)
 
-        self.layer = configs.e_layers
+        self.layer = self.e_layers
 
-        if self.configs.down_sampling_method == 'max':
-            self.down_pool = torch.nn.MaxPool1d(self.configs.down_sampling_window, return_indices=False)
-        elif self.configs.down_sampling_method == 'avg':
-            self.down_pool = torch.nn.AvgPool1d(self.configs.down_sampling_window)
-        elif self.configs.down_sampling_method == 'conv':
+        if self.down_sampling_method == 'max':
+            self.down_pool = torch.nn.MaxPool1d(self.down_sampling_window, return_indices=False)
+        elif self.down_sampling_method == 'avg':
+            self.down_pool = torch.nn.AvgPool1d(self.down_sampling_window)
+        elif self.down_sampling_method == 'conv':
             padding = 1 if torch.__version__ >= '1.5.0' else 2
-            self.down_pool = nn.Conv1d(in_channels=self.configs.enc_in, out_channels=self.configs.enc_in,
+            self.down_pool = nn.Conv1d(in_channels=self.enc_in, out_channels=self.enc_in,
                                        kernel_size=3, padding=padding,
-                                       stride=self.configs.down_sampling_window,
+                                       stride=self.down_sampling_window,
                                        padding_mode='circular',
                                        bias=False)
         else:
@@ -757,42 +770,42 @@ class TimeMixer(AbstractTrafficStateModel):
         self.predict_layers = torch.nn.ModuleList(
             [
                 torch.nn.Linear(
-                    configs.seq_len // (configs.down_sampling_window ** i),
-                    configs.pred_len,
+                    self.seq_len // (self.down_sampling_window ** i),
+                    self.pred_len,
                 )
-                for i in range(configs.down_sampling_layers + 1)
+                for i in range(self.down_sampling_layers + 1)
             ]
         )
 
         if self.channel_independence == 1:
             self.projection_layer = nn.Linear(
-                configs.d_model, 1, bias=True)
+                self.d_model, 1, bias=True)
         else:
             self.projection_layer = nn.Linear(
-                configs.d_model, configs.c_out, bias=True)
+                self.d_model, self.c_out, bias=True)
 
             self.out_res_layers = torch.nn.ModuleList([
                 torch.nn.Linear(
-                    configs.seq_len // (configs.down_sampling_window ** i),
-                    configs.seq_len // (configs.down_sampling_window ** i),
+                    self.seq_len // (self.down_sampling_window ** i),
+                    self.seq_len // (self.down_sampling_window ** i),
                 )
-                for i in range(configs.down_sampling_layers + 1)
+                for i in range(self.down_sampling_layers + 1)
             ])
 
             self.regression_layers = torch.nn.ModuleList(
                 [
                     torch.nn.Linear(
-                        configs.seq_len // (configs.down_sampling_window ** i),
-                        configs.pred_len,
+                        self.seq_len // (self.down_sampling_window ** i),
+                        self.pred_len,
                     )
-                    for i in range(configs.down_sampling_layers + 1)
+                    for i in range(self.down_sampling_layers + 1)
                 ]
             )
 
         self.normalize_layers = torch.nn.ModuleList(
             [
-                Normalize(self.configs.enc_in, affine=True, non_norm=True if configs.use_norm == 0 else False)
-                for i in range(configs.down_sampling_layers + 1)
+                Normalize(self.enc_in, affine=True, non_norm=True if self.use_norm == 0 else False)
+                for i in range(self.down_sampling_layers + 1)
             ]
         )
 
@@ -818,25 +831,25 @@ class TimeMixer(AbstractTrafficStateModel):
 
     def __multi_scale_process_inputs(self, x_enc, x_mark_enc):
         # B,T,C -> B,C,T
-        x_enc = x_enc.permute(0, 2, 1)
+        x_enc = x_enc.permute(0, 2, 1, 3)
 
         x_enc_ori = x_enc
         x_mark_enc_mark_ori = x_mark_enc
 
         x_enc_sampling_list = []
         x_mark_sampling_list = []
-        x_enc_sampling_list.append(x_enc.permute(0, 2, 1))
+        x_enc_sampling_list.append(x_enc.permute(0, 2, 1, 3))
         x_mark_sampling_list.append(x_mark_enc)
 
-        for i in range(self.configs.down_sampling_layers):
+        for i in range(self.down_sampling_layers):
             x_enc_sampling = self.down_pool(x_enc_ori)
 
             x_enc_sampling_list.append(x_enc_sampling.permute(0, 2, 1))
             x_enc_ori = x_enc_sampling
 
             if x_mark_enc_mark_ori is not None:
-                x_mark_sampling_list.append(x_mark_enc_mark_ori[:, ::self.configs.down_sampling_window, :])
-                x_mark_enc_mark_ori = x_mark_enc_mark_ori[:, ::self.configs.down_sampling_window, :]
+                x_mark_sampling_list.append(x_mark_enc_mark_ori[:, ::self.down_sampling_window, :])
+                x_mark_enc_mark_ori = x_mark_enc_mark_ori[:, ::self.down_sampling_window, :]
 
         x_enc = x_enc_sampling_list
         if x_mark_enc_mark_ori is not None:
@@ -900,7 +913,7 @@ class TimeMixer(AbstractTrafficStateModel):
                 dec_out = self.predict_layers[i](enc_out.permute(0, 2, 1)).permute(
                     0, 2, 1)  # align temporal dimension
                 dec_out = self.projection_layer(dec_out)
-                dec_out = dec_out.reshape(B, self.configs.c_out, self.pred_len).permute(0, 2, 1).contiguous()
+                dec_out = dec_out.reshape(B, self.c_out, self.pred_len).permute(0, 2, 1).contiguous()
                 dec_out_list.append(dec_out)
 
         else:
@@ -919,7 +932,7 @@ class TimeMixer(AbstractTrafficStateModel):
 
     def predict(self, batch):
         x = batch['X']  # B T N 1
-        x = torch.squeeze(x, -1)  # BTN1 -> BTN
+        # x = torch.squeeze(x, -1)  # BTN1 -> BTN
         pred = self.forward(x, None, None, None)  # BTN
         pred = torch.unsqueeze(pred, -1)  # BTN -> BTN1
         return pred
