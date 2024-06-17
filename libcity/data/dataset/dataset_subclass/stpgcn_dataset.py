@@ -38,7 +38,7 @@ class STPGCNDataset(TrafficStatePointDataset):
                                             'point_based_{}.npz'.format(self.parameters_str))
 
         self.feature_name = {'X': 'float', 'y': 'float', 'pos_w': 'int', 'pos_d': 'int'}
-        self.points_per_hour = config.get('points_per_hour', 12)
+        self.points_per_hour = self.time_intervals // 60
         self.alpha = config.get('alpha', 4)
         self.beta = config.get('beta', 2)
         self.t_size = self.beta + 1
@@ -60,7 +60,7 @@ class STPGCNDataset(TrafficStatePointDataset):
         """
         return {"scaler": self.scaler, "ext_dim": self.ext_dim, "spatial_distance": self.spatial_distance,
                 "range_mask": self.range_mask, "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,
-                "output_dim": self.output_dim, "num_batches": self.num_batches}
+                "output_dim": self.output_dim, "num_batches": self.num_batches, "points_per_hour": self.points_per_hour}
 
     def _load_cache_train_val_test(self):
         self._logger.info('Loading ' + self.cache_file_name)
