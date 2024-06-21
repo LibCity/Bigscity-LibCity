@@ -97,40 +97,18 @@ class PositionalEmbedding(nn.Module):
 
 
 class TokenEmbedding(nn.Module):
-    def __init__(self, c_in, d_model, feature_dim=1):
+    def __init__(self, c_in, d_model):
         super(TokenEmbedding, self).__init__()
         padding = 1 if torch.__version__ >= '1.5.0' else 2
-        # TODO 修改 Conv2d
-        # self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
-        #                            kernel_size=3, padding=padding, padding_mode='circular', bias=False)
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv1d):
-        #         nn.init.kaiming_normal_(
-        #             m.weight, mode='fan_in', nonlinearity='leaky_relu')
-
-        self.tokenConv = nn.Conv2d(in_channels=c_in, out_channels=d_model, kernel_size=(feature_dim, 3),
-                                   padding=(0, padding), padding_mode='circular', bias=False)
+        self.tokenConv = nn.Conv1d(in_channels=c_in, out_channels=d_model,
+                                   kernel_size=3, padding=padding, padding_mode='circular', bias=False)
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, nn.Conv1d):
                 nn.init.kaiming_normal_(
                     m.weight, mode='fan_in', nonlinearity='leaky_relu')
-        self.printed = False
 
     def forward(self, x):
-        # BTNF -> BNFT
-        # 0123 -> 0231
-        if not self.printed:
-            print("TokenEmbedding input: ", x.shape)  # (64,12,170)
-            print("input param: ", x.permute(0, 2, 1).shape)  # (64, 170, 12)
-        # B 128 1 T -> permute B T 128 1
-        # 0123          0 3 1 2
-        # x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
-        x = self.tokenConv(x.permute(0, 2, 3, 1)).transpose(0, 3, 1, 2)
-        x = torch.squeeze(x, -1)
-        if not self.printed:
-            # [64, 12, 128]
-            print("TokenEmbedding output: ", x.shape)
-            self.printed = True
+        x = self.tokenConv(x.permute(0, 2, 1)).transpose(1, 2)
         return x
 
 
@@ -713,8 +691,9 @@ class TimeMixer(AbstractTrafficStateModel):
 
         # data
         self._scaler = self.data_feature.get('scaler')
-        self.enc_in = data_feature.get('num_nodes')
-        self.c_out = data_feature.get('num_nodes')
+        self.enc_in = self.data_feature.get('num_nodes')
+        self.c_out = self.data_feature.get('num_nodes')
+        self.feature_dim = self.data_feature.get('feature_dim')
 
         # model config
         self.seq_len = config.get("input_window", 96)
@@ -748,7 +727,8 @@ class TimeMixer(AbstractTrafficStateModel):
             self.enc_embedding = DataEmbedding_wo_pos(1, self.d_model, self.embed, self.freq,
                                                       self.dropout)
         else:
-            self.enc_embedding = DataEmbedding_wo_pos(self.enc_in, self.d_model, self.embed, self.freq,
+            self.enc_embedding = DataEmbedding_wo_pos(self.enc_in * self.feature_dim, self.d_model, self.embed,
+                                                      self.freq,
                                                       self.dropout)
 
         self.layer = self.e_layers
@@ -759,7 +739,8 @@ class TimeMixer(AbstractTrafficStateModel):
             self.down_pool = torch.nn.AvgPool1d(self.down_sampling_window)
         elif self.down_sampling_method == 'conv':
             padding = 1 if torch.__version__ >= '1.5.0' else 2
-            self.down_pool = nn.Conv1d(in_channels=self.enc_in, out_channels=self.enc_in,
+            self.down_pool = nn.Conv1d(in_channels=self.enc_in * self.feature_dim,
+                                       out_channels=self.enc_in * self.feature_dim,
                                        kernel_size=3, padding=padding,
                                        stride=self.down_sampling_window,
                                        padding_mode='circular',
@@ -782,7 +763,7 @@ class TimeMixer(AbstractTrafficStateModel):
                 self.d_model, 1, bias=True)
         else:
             self.projection_layer = nn.Linear(
-                self.d_model, self.c_out, bias=True)
+                self.d_model, self.c_out * self.feature_dim, bias=True)
 
             self.out_res_layers = torch.nn.ModuleList([
                 torch.nn.Linear(
@@ -815,6 +796,8 @@ class TimeMixer(AbstractTrafficStateModel):
         out_res = self.out_res_layers[i](out_res)
         out_res = self.regression_layers[i](out_res).permute(0, 2, 1)
         dec_out = dec_out + out_res
+        B, T, N = dec_out.shape
+        dec_out = dec_out.view(B, T, int(N / self.feature_dim), self.feature_dim)
         return dec_out
 
     def pre_enc(self, x_list):
@@ -829,17 +812,13 @@ class TimeMixer(AbstractTrafficStateModel):
                 out2_list.append(x_2)
             return (out1_list, out2_list)
 
-    def __multi_scale_process_inputs(self, x_enc, x_mark_enc):
+    def __multi_scale_process_inputs(self, x_enc):
         # B,T,C -> B,C,T
-        x_enc = x_enc.permute(0, 2, 1, 3)
+        x_enc = x_enc.permute(0, 2, 1)
 
         x_enc_ori = x_enc
-        x_mark_enc_mark_ori = x_mark_enc
 
-        x_enc_sampling_list = []
-        x_mark_sampling_list = []
-        x_enc_sampling_list.append(x_enc.permute(0, 2, 1, 3))
-        x_mark_sampling_list.append(x_mark_enc)
+        x_enc_sampling_list = [x_enc.permute(0, 2, 1)]
 
         for i in range(self.down_sampling_layers):
             x_enc_sampling = self.down_pool(x_enc_ori)
@@ -847,52 +826,29 @@ class TimeMixer(AbstractTrafficStateModel):
             x_enc_sampling_list.append(x_enc_sampling.permute(0, 2, 1))
             x_enc_ori = x_enc_sampling
 
-            if x_mark_enc_mark_ori is not None:
-                x_mark_sampling_list.append(x_mark_enc_mark_ori[:, ::self.down_sampling_window, :])
-                x_mark_enc_mark_ori = x_mark_enc_mark_ori[:, ::self.down_sampling_window, :]
-
         x_enc = x_enc_sampling_list
-        if x_mark_enc_mark_ori is not None:
-            x_mark_enc = x_mark_sampling_list
-        else:
-            x_mark_enc = x_mark_enc
 
-        return x_enc, x_mark_enc
+        return x_enc
 
-    def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
-
-        x_enc, x_mark_enc = self.__multi_scale_process_inputs(x_enc, x_mark_enc)
+    def forecast(self, x_enc):
+        B, T, N, F = x_enc.shape
+        x_enc = x_enc.view(B, T, N * F)
+        x_enc = self.__multi_scale_process_inputs(x_enc)
 
         x_list = []
-        x_mark_list = []
-        if x_mark_enc is not None:
-            for i, x, x_mark in zip(range(len(x_enc)), x_enc, x_mark_enc):
-                B, T, N = x.size()
-                x = self.normalize_layers[i](x, 'norm')
-                if self.channel_independence == 1:
-                    x = x.permute(0, 2, 1).contiguous().reshape(B * N, T, 1)
-                x_list.append(x)
-                x_mark = x_mark.repeat(N, 1, 1)
-                x_mark_list.append(x_mark)
-        else:
-            for i, x in zip(range(len(x_enc)), x_enc, ):
-                B, T, N = x.size()
-                x = self.normalize_layers[i](x, 'norm')
-                if self.channel_independence == 1:
-                    x = x.permute(0, 2, 1).contiguous().reshape(B * N, T, 1)
-                x_list.append(x)
+        for i, x in zip(range(len(x_enc)), x_enc, ):
+            B, T, N = x.size()
+            x = self.normalize_layers[i](x, 'norm')
+            if self.channel_independence == 1:
+                x = x.permute(0, 2, 1).contiguous().reshape(B * N, T, 1)
+            x_list.append(x)
 
         # embedding
         enc_out_list = []
         x_list = self.pre_enc(x_list)
-        if x_mark_enc is not None:
-            for i, x, x_mark in zip(range(len(x_list[0])), x_list[0], x_mark_list):
-                enc_out = self.enc_embedding(x, x_mark)  # [B,T,C]
-                enc_out_list.append(enc_out)
-        else:
-            for i, x in zip(range(len(x_list[0])), x_list[0]):
-                enc_out = self.enc_embedding(x, None)  # [B,T,C]
-                enc_out_list.append(enc_out)
+        for i, x in zip(range(len(x_list[0])), x_list[0]):
+            enc_out = self.enc_embedding(x, None)  # [B,T,C]
+            enc_out_list.append(enc_out)
 
         # Past Decomposable Mixing as encoder for past
         for i in range(self.layer):
@@ -913,7 +869,7 @@ class TimeMixer(AbstractTrafficStateModel):
                 dec_out = self.predict_layers[i](enc_out.permute(0, 2, 1)).permute(
                     0, 2, 1)  # align temporal dimension
                 dec_out = self.projection_layer(dec_out)
-                dec_out = dec_out.reshape(B, self.c_out, self.pred_len).permute(0, 2, 1).contiguous()
+                dec_out = dec_out.reshape(B, self.c_out * self.feature_dim, self.pred_len).permute(0, 2, 1).contiguous()
                 dec_out_list.append(dec_out)
 
         else:
@@ -925,17 +881,13 @@ class TimeMixer(AbstractTrafficStateModel):
 
         return dec_out_list
 
-    def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask=None):
-        # x_enc: B T N
-        dec_out_list = self.forecast(x_enc, x_mark_enc, x_dec, x_mark_dec)
+    def forward(self, x_enc):
+        # x_enc: B T N F
+        dec_out_list = self.forecast(x_enc)
         return dec_out_list
 
     def predict(self, batch):
-        x = batch['X']  # B T N 1
-        # x = torch.squeeze(x, -1)  # BTN1 -> BTN
-        pred = self.forward(x, None, None, None)  # BTN
-        pred = torch.unsqueeze(pred, -1)  # BTN -> BTN1
-        return pred
+        return self.forward(batch['X'])
 
     def calculate_loss(self, batch):
         y_true = batch['y']
