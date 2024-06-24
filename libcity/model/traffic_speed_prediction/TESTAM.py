@@ -566,7 +566,7 @@ class TESTAM(AbstractTrafficStateModel):
         layers = config.get("layers", 3)
         self.is_quantile = config.get("is_quantile", False)
         self.quantile = config.get("quantile", 0.7)
-        self.vocab_size = config.get("vocab_size", 288)
+        self.vocab_size = 24 * 60 * 60 // config.get("time_intervals", 300)
 
         self.dropout = dropout
         self.prob_mul = prob_mul
