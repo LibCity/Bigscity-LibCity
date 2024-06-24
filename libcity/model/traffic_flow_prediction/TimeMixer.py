@@ -727,7 +727,7 @@ class TimeMixer(AbstractTrafficStateModel):
             self.enc_embedding = DataEmbedding_wo_pos(1, self.d_model, self.embed, self.freq,
                                                       self.dropout)
         else:
-            self.enc_embedding = DataEmbedding_wo_pos(self.enc_in * self.feature_dim, self.d_model, self.embed,
+            self.enc_embedding = DataEmbedding_wo_pos(self.enc_in, self.d_model, self.embed,
                                                       self.freq,
                                                       self.dropout)
 
@@ -739,8 +739,8 @@ class TimeMixer(AbstractTrafficStateModel):
             self.down_pool = torch.nn.AvgPool1d(self.down_sampling_window)
         elif self.down_sampling_method == 'conv':
             padding = 1 if torch.__version__ >= '1.5.0' else 2
-            self.down_pool = nn.Conv1d(in_channels=self.enc_in * self.feature_dim,
-                                       out_channels=self.enc_in * self.feature_dim,
+            self.down_pool = nn.Conv1d(in_channels=self.enc_in,
+                                       out_channels=self.enc_in,
                                        kernel_size=3, padding=padding,
                                        stride=self.down_sampling_window,
                                        padding_mode='circular',
@@ -763,7 +763,7 @@ class TimeMixer(AbstractTrafficStateModel):
                 self.d_model, 1, bias=True)
         else:
             self.projection_layer = nn.Linear(
-                self.d_model, self.c_out * self.feature_dim, bias=True)
+                self.d_model, self.c_out, bias=True)
 
             self.out_res_layers = torch.nn.ModuleList([
                 torch.nn.Linear(
@@ -790,14 +790,16 @@ class TimeMixer(AbstractTrafficStateModel):
             ]
         )
 
+        self.pre_layer = torch.nn.Linear(in_features=self.feature_dim, out_features=1)
+        self.out_layer = torch.nn.Linear(in_features=1, out_features=self.feature_dim)
+
     def out_projection(self, dec_out, i, out_res):
         dec_out = self.projection_layer(dec_out)
         out_res = out_res.permute(0, 2, 1)
         out_res = self.out_res_layers[i](out_res)
         out_res = self.regression_layers[i](out_res).permute(0, 2, 1)
         dec_out = dec_out + out_res
-        B, T, N = dec_out.shape
-        dec_out = dec_out.view(B, T, int(N / self.feature_dim), self.feature_dim)
+        dec_out = self.out_layer(dec_out.unsqueeze(-1))
         return dec_out
 
     def pre_enc(self, x_list):
@@ -831,8 +833,7 @@ class TimeMixer(AbstractTrafficStateModel):
         return x_enc
 
     def forecast(self, x_enc):
-        B, T, N, F = x_enc.shape
-        x_enc = x_enc.view(B, T, N * F)
+        x_enc = self.pre_layer(x_enc).squeeze(-1)
         x_enc = self.__multi_scale_process_inputs(x_enc)
 
         x_list = []
