@@ -381,7 +381,7 @@ class STPGCN(AbstractTrafficStateModel):
         self.beta = config.get("beta", 2)
         self.t_size = self.beta + 1
         self.week_len = 7
-        self.day_len = config.get("points_per_hour") * 24
+        self.day_len = self.data_feature.get("points_per_hour") * 24
         self.range_mask = torch.Tensor(self.range_mask).to(self.device)
 
         self.PAD = GeneratePad(self.device, self.C, self.V, self.d, self.beta)
