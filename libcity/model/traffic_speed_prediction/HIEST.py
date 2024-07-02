@@ -201,7 +201,7 @@ class HIEST(AbstractTrafficStateModel):
         # adaptive layer numbers
         self.apt_layer = config.get('apt_layer', True)
         if self.apt_layer:
-            self.layers = np.int(
+            self.layers = np.int64(
                 np.round(np.log((((self.input_window - 1) / (self.blocks * (self.kernel_size - 1))) + 1)) / np.log(2)))
             print('# of layers change to %s' % self.layers)
 
@@ -318,6 +318,7 @@ class HIEST(AbstractTrafficStateModel):
             # ---------------------------------------> + ------------->	*skip*
             # (dilation, init_dilation) = self.dilations[i]
             # residual = dilation_func(x, dilation, init_dilation, i)
+
             residual = x
             # (batch_size, residual_channels, num_nodes, self.receptive_field)
             # dilated convolution
@@ -359,9 +360,8 @@ class HIEST(AbstractTrafficStateModel):
         The implementation of L_{ort}
         '''
         # hr = (batch_size, end_channels, num_nodes, self.output_dim)
-        hr = hr.squeeze(3)
-        hr = hr.permute(2, 0, 1)
-        hr = torch.reshape(hr, (self.global_nodes, -1))
+        hr = hr.permute(2, 0, 1, 3)
+        hr = torch.reshape(hr, (self.global_nodes, -1, self.output_dim))
         # print('hr.size')
         # print(hr.size())
         tmpLoss = 0
@@ -370,9 +370,8 @@ class HIEST(AbstractTrafficStateModel):
             for j in range(i + 1, self.global_nodes):
                 # print(hr[i].size())
                 tmpLoss += cos(hr[i], hr[j])
-
         tmpLoss = tmpLoss / (self.global_nodes * (self.global_nodes - 1) / 2)
-
+        tmpLoss = torch.mean(tmpLoss)
         return tmpLoss
 
     def cal_adj(self, adjtype):
