@@ -9,6 +9,7 @@ from libcity.data.dataset.traffic_state_od_dataset import TrafficStateOdDataset
 from libcity.data.dataset.eta_dataset import ETADataset
 from libcity.data.dataset.map_matching_dataset import MapMatchingDataset
 from libcity.data.dataset.roadnetwork_dataset import RoadNetWorkDataset
+from libcity.data.dataset.traffic_impute_dataset import TrafficImputeDataset
 
 __all__ = [
     "AbstractDataset",
@@ -21,5 +22,6 @@ __all__ = [
     "TrafficStateGridOdDataset",
     "ETADataset",
     "MapMatchingDataset",
-    "RoadNetWorkDataset"
+    "RoadNetWorkDataset",
+    "TrafficImputeDataset",
 ]
