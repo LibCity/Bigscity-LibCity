@@ -566,12 +566,14 @@ class TESTAM(AbstractTrafficStateModel):
         layers = config.get("layers", 3)
         self.is_quantile = config.get("is_quantile", False)
         self.quantile = config.get("quantile", 0.7)
+        self.vocab_size = 24 * 60 * 60 // config.get("time_intervals", 300)
 
         self.dropout = dropout
         self.prob_mul = prob_mul
         self.supports_len = 2
 
-        self.identity_expert = TemporalModel(hidden_size, num_nodes, in_dim=in_dim - 1, layers=layers, dropout=dropout)
+        self.identity_expert = TemporalModel(hidden_size, num_nodes, in_dim=in_dim - 1, layers=layers, dropout=dropout,
+                                             vocab_size=self.vocab_size)
         self.adaptive_expert = STModel(hidden_size, self.supports_len, num_nodes, in_dim=in_dim, layers=layers,
                                        dropout=dropout)
         self.attention_expert = AttentionModel(hidden_size, in_dim=in_dim, layers=layers, dropout=dropout)
@@ -596,8 +598,8 @@ class TESTAM(AbstractTrafficStateModel):
         new_supports = [g1, g2]
 
         time_index = input[:, -1, 0]  # B, T
-        cur_time_index = (time_index * 288).long()
-        next_time_index = ((time_index * 288 + 12) % 288).long()
+        cur_time_index = (time_index * self.vocab_size).long()
+        next_time_index = ((time_index * self.vocab_size + 12) % self.vocab_size).long()
         o_identity, h_identity = self.identity_expert(cur_time_index, input[:, 0])
         _, h_future = self.identity_expert(next_time_index)
 
