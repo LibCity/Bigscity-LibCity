@@ -16,6 +16,7 @@ from libcity.executor.gensim_executor import GensimExecutor
 from libcity.executor.sstban_executor import SSTBANExecutor
 from libcity.executor.testam_executor import TESTAMExecutor
 from libcity.executor.timemixer_executor import TimeMixerExecutor
+from libcity.executor.STSSL_executor import STSSLExecutor
 
 
 __all__ = [
@@ -37,4 +38,5 @@ __all__ = [
     "FOGSExecutor",
     "TESTAMExecutor",
     "TimeMixerExecutor",
+    "STSSLExecutor"
 ]

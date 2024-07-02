@@ -1,0 +1,20 @@
+{
+  "batch_size": 64,
+  "cache_dataset": true,
+  "num_workers": 0,
+  "pad_with_last_sample": true,
+  "train_rate": 0.7,
+  "eval_rate": 0.1,
+  "scaler": "minmax11",
+  "len_closeness": 8,
+  "len_period": 3,
+  "len_trend": 0,
+  "pad_forward_period": 4,
+  "pad_back_period": 0,
+  "pad_forward_trend": 0,
+  "pad_back_trend": 0,
+  "interval_period": 1,
+  "interval_trend": 7,
+  "use_row_column": true,
+  "external_time": true
+}
