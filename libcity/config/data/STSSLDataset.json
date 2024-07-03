@@ -10,7 +10,7 @@
   "len_period": 3,
   "len_trend": 0,
   "pad_forward_period": 4,
-  "pad_back_period": 0,
+  "pad_back_period": 4,
   "pad_forward_trend": 0,
   "pad_back_trend": 0,
   "interval_period": 1,

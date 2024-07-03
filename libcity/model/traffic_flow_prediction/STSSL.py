@@ -557,7 +557,7 @@ class STSSL(AbstractTrafficStateModel):
         # spatial heterogenrity modeling branch
         self.shm = SpatialHeteroModel(config.get('d_model', 64), config.get('nmb_prototype', 6),
                                       config.get('batch_size', 32), config.get('shm_temp', 0.5))
-        self.mae = masked_mae_loss(mask_value=0)
+        self.mae = masked_mae_loss(mask_value=5.0)
 
         self.graph = torch.from_numpy(self.data_feature.get('adj_mx'))
         self.graph = self.graph.cuda()
