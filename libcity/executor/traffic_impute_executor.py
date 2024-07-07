@@ -39,7 +39,7 @@ class TrafficImputeExecutor(TrafficStateExecutor):
             y_preds = np.concatenate(y_preds, axis=0)
             y_truths = np.concatenate(y_truths, axis=0)  # concatenate on batch
             eval_masks = np.concatenate(eval_masks, axis=0)
-            outputs = {'prediction': y_preds, 'truth': y_truths}
+            outputs = {'prediction': y_preds, 'truth': y_truths, 'eval_mask': eval_masks}
             filename = \
                 time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime(time.time())) + '_' \
                 + self.config['model'] + '_' + self.config['dataset'] + '_predictions.npz'
