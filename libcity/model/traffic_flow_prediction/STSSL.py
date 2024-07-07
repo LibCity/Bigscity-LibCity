@@ -519,22 +519,6 @@ class FCLayer(nn.Module):
         return self.linear(x)
 
 
-def mae_torch(pred, true, mask_value=None):
-    if mask_value != None:
-        mask = torch.gt(true, mask_value)
-        pred = torch.masked_select(pred, mask)
-        true = torch.masked_select(true, mask)
-    return torch.mean(torch.abs(true - pred))
-
-
-def masked_mae_loss(mask_value):
-    def loss(preds, labels):
-        mae = mae_torch(pred=preds, true=labels, mask_value=mask_value)
-        return mae
-
-    return loss
-
-
 class STSSL(AbstractTrafficStateModel):
     def __init__(self, config, data_feature):
         super().__init__(config, data_feature)
@@ -560,7 +544,7 @@ class STSSL(AbstractTrafficStateModel):
         # spatial heterogenrity modeling branch
         self.shm = SpatialHeteroModel(config.get('d_model', 64), config.get('nmb_prototype', 6),
                                       config.get('batch_size', 32), config.get('shm_temp', 0.5))
-        self.mae = masked_mae_loss(mask_value=5.0)
+        self.mae = lambda x, y: loss.masked_mae_torch(x, y, 0, mask_val=5.001)
 
         self.graph = torch.from_numpy(self.data_feature.get('adj_mx'))
         self.graph = self.graph.cuda()

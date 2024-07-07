@@ -22,5 +22,18 @@
   "clip_grad_norm": true,
   "max_grad_norm": 5,
   "use_row_column": false,
-  "output_window": 1
+  "output_window": 1,
+
+  "load_external": false,
+  "len_closeness": 8,
+  "len_period": 3,
+  "len_trend": 0,
+  "pad_forward_period": 4,
+  "pad_back_period": 4,
+  "pad_forward_trend": 0,
+  "pad_back_trend": 0,
+  "interval_period": 1,
+  "interval_trend": 7,
+  "metrics": ["IN_masked_MAE", "IN_masked_MAPE", "OUT_masked_MAE", "OUT_masked_MAPE"],
+  "eval_mask_val": 5.001
 }

@@ -103,9 +103,9 @@
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK", "NYCTAXI20140112_FLOW"
         ],
         "STSSL": {
-            "dataset_class": "STSSLDataset",
+            "dataset_class": "ACFMDataset",
             "executor": "STSSLExecutor",
-            "evaluator": "TrafficStateInOutEvaluator"
+            "evaluator": "TrafficStateEvaluator"
         },
         "TimeMixer": {
             "dataset_class": "TrafficStatePointDataset",

@@ -31,7 +31,6 @@ from libcity.data.dataset.dataset_subclass.dstagnn_dataset import DSTAGNNDataset
 from libcity.data.dataset.dataset_subclass.stpgcn_dataset import STPGCNDataset
 from libcity.data.dataset.dataset_subclass.staeformer_dataset import STAEformerDataset
 from libcity.data.dataset.dataset_subclass.simst_dataset import SimSTDataset
-from libcity.data.dataset.dataset_subclass.stssl_dataset import STSSLDataset
 
 __all__ = [
     "ACFMDataset",
@@ -66,5 +65,4 @@ __all__ = [
     "STPGCNDataset",
     "HIESTDataset",
     "STAEformerDataset",
-    "SimSTDataset",
 ]
