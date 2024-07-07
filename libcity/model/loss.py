@@ -20,13 +20,13 @@ def masked_mae_torch(preds, labels, null_val=np.nan, reduce=True, eval_mask=None
         mask = ~torch.isnan(labels)
     else:
         mask = labels.ne(null_val)
+    if eval_mask is not None:
+        mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
     loss = torch.abs(torch.sub(preds, labels))
     loss = loss * mask
-    if eval_mask is not None:
-        loss = loss * eval_mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     if reduce:
         return torch.mean(loss)
@@ -65,13 +65,13 @@ def masked_mape_torch(preds, labels, null_val=np.nan, eps=0, eval_mask=None):
         mask = ~torch.isnan(labels)
     else:
         mask = labels.ne(null_val)
+    if eval_mask is not None:
+        mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
     loss = torch.abs((preds - labels) / labels)
     loss = loss * mask
-    if eval_mask is not None:
-        loss = loss * eval_mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
 
@@ -82,13 +82,13 @@ def masked_mse_torch(preds, labels, null_val=np.nan, eval_mask=None):
         mask = ~torch.isnan(labels)
     else:
         mask = labels.ne(null_val)
+    if eval_mask is not None:
+        mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
     mask = torch.where(torch.isnan(mask), torch.zeros_like(mask), mask)
     loss = torch.square(torch.sub(preds, labels))
     loss = loss * mask
-    if eval_mask is not None:
-        loss = loss * eval_mask
     loss = torch.where(torch.isnan(loss), torch.zeros_like(loss), loss)
     return torch.mean(loss)
 
