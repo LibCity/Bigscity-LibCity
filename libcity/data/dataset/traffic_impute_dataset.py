@@ -12,7 +12,7 @@ class TrafficImputeDataset(TrafficStateDataset):
         self.missing_pattern = config.get("missing_pattern", "point")
         self.missing_ratio = config.get("missing_ratio", None)
         super().__init__(config)
-        self.feature_name = {'X': 'float', 'y': 'float', 'mask': 'bool'}
+        self.feature_name = {'X': 'float', 'y': 'float', 'mask': 'int'}
 
     def _load_dyna(self, filename):
         """
