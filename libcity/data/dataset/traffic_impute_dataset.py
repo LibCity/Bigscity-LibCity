@@ -97,6 +97,35 @@ class TrafficImputeDataset(TrafficStateDataset):
 
         return x, y
 
+    def _load_cache_train_val_test(self):
+        """
+        加载之前缓存好的训练集、测试集、验证集
+
+        Returns:
+            tuple: tuple contains:
+                x_train: (num_samples, input_length, ..., feature_dim) \n
+                y_train: (num_samples, input_length, ..., feature_dim) \n
+                x_val: (num_samples, input_length, ..., feature_dim) \n
+                y_val: (num_samples, input_length, ..., feature_dim) \n
+                x_test: (num_samples, input_length, ..., feature_dim) \n
+                y_test: (num_samples, input_length, ..., feature_dim)
+        """
+        self._logger.info('Loading ' + self.cache_file_name)
+        cat_data = np.load(self.cache_file_name)
+        x_train = cat_data['x_train']
+        y_train = cat_data['y_train']
+        mask_train = cat_data['mask_train']
+        x_test = cat_data['x_test']
+        y_test = cat_data['y_test']
+        mask_test = cat_data['mask_test']
+        x_val = cat_data['x_val']
+        y_val = cat_data['y_val']
+        mask_val = cat_data['mask_val']
+        self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape))
+        self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
+        self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
+        return x_train, y_train, mask_train, x_val, y_val, mask_val, x_test, y_test, mask_test
+
     def _split_train_val_test(self, x, y):
         """
         划分训练集、测试集、验证集，并缓存数据集
