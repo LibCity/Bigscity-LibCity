@@ -18,7 +18,7 @@
   "max_epoch": 100,
   "learning_rate": 0.001,
   "use_early_stop": true,
-  "patience": 15,
+  "patience": 20,
   "clip_grad_norm": true,
   "max_grad_norm": 5,
   "use_row_column": false,

@@ -208,7 +208,7 @@ class TemporalHeteroModel(nn.Module):
         lbl_rl = torch.ones(batch_size, num_nodes)
         lbl_fk = torch.zeros(batch_size, num_nodes)
         lbl = torch.cat((lbl_rl, lbl_fk), dim=1)
-        if device=='cuda' or device.type == 'cuda':
+        if device == 'cuda' or device.type == 'cuda':
             self.lbl = lbl.cuda()
 
         self.n = batch_size
@@ -524,13 +524,14 @@ def mae_torch(pred, true, mask_value=None):
         mask = torch.gt(true, mask_value)
         pred = torch.masked_select(pred, mask)
         true = torch.masked_select(true, mask)
-    return torch.mean(torch.abs(true-pred))
+    return torch.mean(torch.abs(true - pred))
 
 
 def masked_mae_loss(mask_value):
     def loss(preds, labels):
         mae = mae_torch(pred=preds, true=labels, mask_value=mask_value)
         return mae
+
     return loss
 
 
@@ -543,9 +544,11 @@ class STSSL(AbstractTrafficStateModel):
         self.yita = config.get('yita', 0.6)
         self.percent = config.get('percent', 0.1)
         # spatial temporal encoder
-        self.encoder = STEncoder(Kt=3, Ks=3, blocks=[[2, int(config.get('d_model', 64) // 2), config.get('d_model', 64)],
-                                                     [config.get('d_model', 64), int(config.get('d_model', 64) // 2), config.get('d_model', 64)]],
-                                 input_length=self.len_closeness+self.len_period+self.len_trend,
+        self.encoder = STEncoder(Kt=3, Ks=3,
+                                 blocks=[[2, int(config.get('d_model', 64) // 2), config.get('d_model', 64)],
+                                         [config.get('d_model', 64), int(config.get('d_model', 64) // 2),
+                                          config.get('d_model', 64)]],
+                                 input_length=self.len_closeness + self.len_period + self.len_trend,
                                  num_nodes=self.data_feature.get('num_nodes', 1), droprate=config.get('dropout', 0.2))
 
         # traffic flow prediction branch
@@ -563,15 +566,11 @@ class STSSL(AbstractTrafficStateModel):
         self.graph = self.graph.cuda()
         self.scaler = self.data_feature.get('scaler')
 
-
         self.W = self.data_feature.get('len_row')
         self.H = self.data_feature.get('len_column')
 
-        # self.loss_tm1 = self.loss_t = np.ones(3)  # (1.0, 1.0, 1.0)
-
     def forward(self, batch):
         x = batch['X']
-        # x =  x.view(x.size(0), x.size(1),-1, x.size(-1))
 
         repr1 = self.encoder(x, self.graph)  # view1: n,l,v,c; graph: v,v
 
@@ -631,21 +630,18 @@ class STSSL(AbstractTrafficStateModel):
         return self.shm(z1, z2)
 
     def predict(self, batch):
-        z1,z2 = self.forward(batch)
-        ret = self._predict(z1,z2)
-        # ret = ret.view(ret.size(0), ret.size(1), self.W, self.H, ret.size(-1))
+        z1, z2 = self.forward(batch)
+        ret = self._predict(z1, z2)
         return ret
 
     def calculate_loss_with_weight(self, batch, loss_weights):
         repr1, repr2 = self.forward(batch)  # nvc
         y_true = batch['y']
-        # y_true =  y_true.view(y_true.size(0), y_true.size(1),-1, y_true.size(-1))
         loss, sep_loss = self.loss(repr1, repr2, y_true, self.scaler, loss_weights)
         return loss, sep_loss
 
     def calculate_loss(self, batch):
         repr1, repr2 = self.forward(batch)  # nvc
         y_true = batch['y']
-        # y_true =  y_true.view(y_true.size(0), y_true.size(1),-1, y_true.size(-1))
         loss, sep_loss = self.loss(repr1, repr2, y_true, self.scaler, np.ones(3))
         return loss

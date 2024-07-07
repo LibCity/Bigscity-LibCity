@@ -32,7 +32,7 @@ def masked_mae_torch(preds, labels, null_val=np.nan, reduce=True):
         return loss
 
 def masked_mae_torch_with_mask_value(preds, labels, null_val=np.nan, reduce=True, mask_value=5):
-    labels[torch.abs(labels) < mask_value] = 0
+    labels[torch.abs(labels) <= mask_value] = 0
     if np.isnan(null_val):
         mask = ~torch.isnan(labels)
     else:
@@ -88,7 +88,7 @@ def masked_mape_torch(preds, labels, null_val=np.nan, eps=0):
     return torch.mean(loss)
 
 def masked_mape_torch_with_mask_value(preds, labels, null_val=np.nan, eps=0, mask_value=5):
-    labels[torch.abs(labels) < mask_value] = 0
+    labels[torch.abs(labels) <= mask_value] = 0
     if np.isnan(null_val) and eps != 0:
         loss = torch.abs((preds - labels) / (labels + eps))
         return torch.mean(loss)
