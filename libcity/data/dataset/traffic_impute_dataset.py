@@ -12,7 +12,7 @@ class TrafficImputeDataset(TrafficStateDataset):
         self.missing_pattern = config.get("missing_pattern", "point")
         self.missing_ratio = config.get("missing_ratio", None)
         super().__init__(config)
-        self.feature_name = {'X': 'float', 'y': 'float', 'mask': 'int'}
+        self.feature_name = {'X': 'float', 'y': 'float', 'mask': 'bool'}
 
     def _load_dyna(self, filename):
         """
@@ -186,6 +186,9 @@ class TrafficImputeDataset(TrafficStateDataset):
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim
+        x_train = x_train * (1 - mask_train)
+        x_val = x_val * (1 - mask_val)
+        x_test = x_test * (1 - mask_test)
         self.scaler = self._get_scalar(self.scaler_type,
                                        x_train[..., :self.output_dim], y_train[..., :self.output_dim])
         self.ext_scaler = self._get_scalar(self.ext_scaler_type,
@@ -206,9 +209,7 @@ class TrafficImputeDataset(TrafficStateDataset):
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
-        x_train = x_train * (1 - mask_train)
-        x_val = x_val * (1 - mask_val)
-        x_test = x_test * (1 - mask_test)
+
         train_data = list(zip(x_train, y_train, mask_train))
         eval_data = list(zip(x_val, y_val, mask_val))
         test_data = list(zip(x_test, y_test, mask_test))

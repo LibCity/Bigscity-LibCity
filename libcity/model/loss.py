@@ -21,6 +21,7 @@ def masked_mae_torch(preds, labels, null_val=np.nan, reduce=True, eval_mask=None
     else:
         mask = labels.ne(null_val)
     if eval_mask is not None:
+        eval_mask = eval_mask.bool()
         mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
@@ -66,6 +67,7 @@ def masked_mape_torch(preds, labels, null_val=np.nan, eps=0, eval_mask=None):
     else:
         mask = labels.ne(null_val)
     if eval_mask is not None:
+        eval_mask = eval_mask.bool()
         mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
@@ -83,6 +85,7 @@ def masked_mse_torch(preds, labels, null_val=np.nan, eval_mask=None):
     else:
         mask = labels.ne(null_val)
     if eval_mask is not None:
+        eval_mask = eval_mask.bool()
         mask &= eval_mask
     mask = mask.float()
     mask /= torch.mean(mask)
