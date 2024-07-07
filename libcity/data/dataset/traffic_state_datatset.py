@@ -906,7 +906,8 @@ class TrafficStateDataset(AbstractDataset):
             scaler = NormalScaler(maxx=max(x_train.max(), y_train.max()))
             self._logger.info('NormalScaler max: ' + str(scaler.max))
         elif scaler_type == "standard":
-            scaler = StandardScaler(mean=x_train.mean(), std=x_train.std())
+            non_zero_data = x_train[x_train != 0.0]
+            scaler = StandardScaler(mean=non_zero_data.mean(), std=non_zero_data.std())
             self._logger.info('StandardScaler mean: ' + str(scaler.mean) + ', std: ' + str(scaler.std))
         elif scaler_type == "minmax01":
             scaler = MinMax01Scaler(
