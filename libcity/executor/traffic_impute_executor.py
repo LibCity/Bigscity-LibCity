@@ -28,7 +28,7 @@ class TrafficImputeExecutor(TrafficStateExecutor):
                 batch.to_tensor(self.device)
                 output = self.model.predict(batch)
                 y_true = self._scaler.inverse_transform(batch['y'][..., :self.output_dim])
-                eval_mask = batch['mask']
+                eval_mask = batch['mask'][..., :self.output_dim]
                 y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
                 y_truths.append(y_true.cpu().numpy())
                 y_preds.append(y_pred.cpu().numpy())
