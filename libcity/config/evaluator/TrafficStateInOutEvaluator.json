@@ -1,5 +1,0 @@
-{
-  "metrics": ["IN_masked_MAE", "IN_masked_MAPE", "OUT_masked_MAE", "OUT_masked_MAPE"],
-  "evaluator_mode": "single",
-  "save_mode": ["csv"]
-}
