@@ -215,13 +215,13 @@ class TrafficImputeDataset(TrafficStateDataset):
         # 数据归一化
         self.feature_dim = x_train.shape[-1]
         self.ext_dim = self.feature_dim - self.output_dim
-        x_train = x_train * (1 - mask_train)
-        x_val = x_val * (1 - mask_val)
-        x_test = x_test * (1 - mask_test)
         self.scaler = self._get_scalar(self.scaler_type,
                                        x_train[..., :self.output_dim], y_train[..., :self.output_dim])
         self.ext_scaler = self._get_scalar(self.ext_scaler_type,
                                            x_train[..., self.output_dim:], y_train[..., self.output_dim:])
+        x_train[..., :self.output_dim] = x_train[..., :self.output_dim] * (1 - mask_train)[..., :self.output_dim]
+        x_val[..., :self.output_dim] = x_val[..., :self.output_dim] * (1 - mask_val)[..., :self.output_dim]
+        x_test[..., :self.output_dim] = x_test[..., :self.output_dim] * (1 - mask_test)[..., :self.output_dim]
         x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
         y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
         x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
@@ -238,7 +238,6 @@ class TrafficImputeDataset(TrafficStateDataset):
         # 把训练集的X和y聚合在一起成为list，测试集验证集同理
         # x_train/y_train: (num_samples, input_length, ..., feature_dim)
         # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
-
         train_data = list(zip(x_train, y_train, mask_train))
         eval_data = list(zip(x_val, y_val, mask_val))
         test_data = list(zip(x_test, y_test, mask_test))
