@@ -34,5 +34,5 @@
   "pad_back_trend": 0,
   "interval_period": 1,
   "interval_trend": 7,
-  "eval_mask_val": 5.001
+  "mask_val": 5.001
 }
