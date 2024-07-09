@@ -1,0 +1,14 @@
+{
+  "max_epoch": 200,
+  "learner": "adam",
+  "learning_rate": 0.01,
+  "lr_epsilon": 0.001,
+  "lr_decay": true,
+  "lr_scheduler": "multisteplr",
+  "lr_decay_ratio": 0.1,
+  "milestones": [50,100],
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 20
+}
