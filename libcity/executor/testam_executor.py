@@ -100,15 +100,21 @@ class TESTAMExecutor(TrafficStateExecutor):
 
             real = batch['y']
             out, gate, res = self.model.predict(batch)
-            predict = self._scaler.inverse_transform(out[..., :self.output_dim])
+            out = out.transpose(1, 3)
+            predict = self._scaler.inverse_transform(out[..., :self.output_dim]).transpose(1, 3)
             real = self._scaler.inverse_transform(real)
             # BTNF -> BFNT
             real = real[..., :self.output_dim].transpose(1, 3)
-            ind_loss = loss.masked_mae_torch(self._scaler.inverse_transform(res), real.permute(0, 2, 3, 1), 0.0,
+            tmp_real = real.permute(0, 2, 3, 1)
+            ind_loss_real = torch.cat([tmp_real, tmp_real, tmp_real], dim=-1) if self.output_dim > 1 else tmp_real
+            ind_loss = loss.masked_mae_torch(self._scaler.inverse_transform(res), ind_loss_real, 0.0,
                                              reduce=False)
             if self.is_quantile:
                 gated_loss = loss.masked_mae_torch(predict, real, reduce=False).permute(0, 2, 3, 1)
-                l_worst_avoidance, l_best_choice = get_quantile_label(gated_loss, gate, real)
+                avg_loss = gated_loss.mean(dim=-1, keepdim=True)  # 平均损失
+                tmp_real = real.mean(dim=1, keepdim=True)
+                # l_worst_avoidance, l_best_choice = get_quantile_label(gated_loss, gate, real)
+                l_worst_avoidance, l_best_choice = get_quantile_label(avg_loss, gate, tmp_real)
             else:
                 l_worst_avoidance, l_best_choice = get_label(ind_loss, gate, real)
             worst_avoidance = -.5 * l_worst_avoidance * torch.log(gate)
