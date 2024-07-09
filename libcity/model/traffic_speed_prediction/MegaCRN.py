@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 
+from libcity.model import loss
 from libcity.model.abstract_traffic_state_model import AbstractTrafficStateModel
 
 
@@ -131,17 +132,17 @@ class MegaCRN(AbstractTrafficStateModel):
         # data
         self.num_nodes = self.data_feature.get('num_nodes')
         self._scaler = self.data_feature.get('scaler')
-        #
+        self.output_dim = self.data_feature.get('output_dim')
+        self.input_dim = self.output_dim
+
         # model
         self.rnn_units = config.get("rnn_units", 64)
-        self.output_dim = config.get("output_dim", 1)
         self.horizon = config.get("output_window", 12)
         self.num_layers = config.get("num_layers", 1)
         self.cheb_k = config.get("cheb_k", 3)
         self.ycov_dim = config.get("ycov_dim", 1)
         self.cl_decay_steps = config.get("cl_decay_steps", 2000)
         self.use_curriculum_learning = config.get("use_curriculum_learning", True)
-        self.input_dim = config.get("dim_in", 1)
 
         # memory
         self.mem_num = config.get("mem_num", 20)
@@ -158,6 +159,12 @@ class MegaCRN(AbstractTrafficStateModel):
 
         # output
         self.proj = nn.Sequential(nn.Linear(self.decoder_dim, self.output_dim, bias=True))
+
+        # loss
+        self.lamb = config.get("lamb", 0.01)
+        self.lamb1 = config.get("lamb1", 0.01)
+        self.separate_loss = nn.TripletMarginLoss(margin=1.0)
+        self.compact_loss = loss.masked_mse_torch
 
     def compute_sampling_threshold(self, batches_seen):
         return self.cl_decay_steps / (self.cl_decay_steps + np.exp(batches_seen / self.cl_decay_steps))
@@ -221,9 +228,30 @@ class MegaCRN(AbstractTrafficStateModel):
         y1 = y1.float()
         return x0.to(self.device), y0.to(self.device), y1.to(self.device)  # x, y, y_cov
 
-    def predict(self, batch):
+    def predict_pre_handle(self, batch):
         x = batch['X']
         y = batch['y']
         x, y, ycov = self.prepare_x_y(x, y)
         batches_seen = batch.batches_seen if hasattr(batch, "batches_seen") else None
+        return x, ycov, y, batches_seen
+
+    def predict(self, batch):
+        x, ycov, y, batches_seen = self.predict_pre_handle(batch)
+        output, _, _, _, _ = self.forward(x, ycov, y, batches_seen)
+        return output
+
+    def loss_predict(self, batch):
+        x, ycov, y, batches_seen = self.predict_pre_handle(batch)
         return self.forward(x, ycov, y, batches_seen)
+
+    def calculate_loss(self, batch):
+        y = batch['y']
+        output, h_att, query, pos, neg = self.loss_predict(batch)
+        y_true = self._scaler.inverse_transform(y[..., :self.output_dim])
+        y_pred = self._scaler.inverse_transform(output[..., :self.output_dim])
+        loss1 = loss.masked_mae_torch(y_pred, y_true, null_val=0.0)
+        loss2 = self.separate_loss(query, pos.detach(), neg.detach())
+        loss3 = self.compact_loss(query, pos.detach())
+        return loss1 + self.lamb * loss2 + self.lamb1 * loss3
+
+

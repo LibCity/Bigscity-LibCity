@@ -7,5 +7,6 @@
   "use_curriculum_learning": true,
   "mem_num": 20,
   "mem_dim": 64,
-  "dim_in": 1
+  "lamb": 0.01,
+  "lamb1": 0.01
 }

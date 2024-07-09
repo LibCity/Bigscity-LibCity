@@ -10,7 +10,5 @@
   "clip_grad_norm": true,
   "max_grad_norm": 5,
   "use_early_stop": true,
-  "patience": 20,
-  "lamb": 0.01,
-  "lamb1": 0.01
+  "patience": 20
 }
