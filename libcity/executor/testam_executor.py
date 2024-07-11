@@ -113,7 +113,6 @@ class TESTAMExecutor(TrafficStateExecutor):
                 gated_loss = loss.masked_mae_torch(predict, real, reduce=False).permute(0, 2, 3, 1)
                 avg_loss = gated_loss.mean(dim=-1, keepdim=True)  # 平均损失
                 tmp_real = real.mean(dim=1, keepdim=True)
-                # l_worst_avoidance, l_best_choice = get_quantile_label(gated_loss, gate, real)
                 l_worst_avoidance, l_best_choice = get_quantile_label(avg_loss, gate, tmp_real)
             else:
                 l_worst_avoidance, l_best_choice = get_label(ind_loss, gate, real)
