@@ -371,7 +371,7 @@ class STPGCN(AbstractTrafficStateModel):
         self.num_features = self.data_feature.get("output_dim")
 
         # model config
-        self.D = self.num_features
+        self.D = self.data_feature.get("feature_dim")
         self.T = config.get("input_window", 12)
         self.num_prediction = config.get("output_window", 12)
         self.C = config.get("C", 64)
