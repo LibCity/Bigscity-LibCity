@@ -134,13 +134,13 @@ class MegaCRN(AbstractTrafficStateModel):
         self._scaler = self.data_feature.get('scaler')
         self.output_dim = self.data_feature.get('output_dim')
         self.input_dim = self.output_dim
+        self.ycov_dim = self.data_feature.get("ext_dim")
 
         # model
         self.rnn_units = config.get("rnn_units", 64)
         self.horizon = config.get("output_window", 12)
         self.num_layers = config.get("num_layers", 1)
         self.cheb_k = config.get("cheb_k", 3)
-        self.ycov_dim = config.get("ycov_dim", 1)
         self.cl_decay_steps = config.get("cl_decay_steps", 2000)
         self.use_curriculum_learning = config.get("use_curriculum_learning", True)
 
