@@ -251,11 +251,13 @@ class TemporalModel(nn.Module):
             - Notes: in the trivial traffic forecasting problem, we have total 288 = 24 * 60 / 5 (5 min interval)
     """
 
-    def __init__(self, hidden_size, num_nodes, layers, dropout, in_dim=1, vocab_size=288, activation=nn.ReLU()):
+    def __init__(self, hidden_size, num_nodes, layers, dropout, in_dim=1, vocab_size=288, activation=nn.ReLU(),
+                 output_dim=1):
         super(TemporalModel, self).__init__()
         self.vocab_size = vocab_size
         self.act = activation
         self.embedding = TemporalInformationEmbedding(hidden_size, vocab_size=vocab_size)
+        self.in_dim = in_dim
         self.spd_proj = nn.Linear(in_dim, hidden_size)
         self.spd_cat = nn.Linear(hidden_size * 2, hidden_size)  # Cat speed information and TIM information
 
@@ -271,16 +273,20 @@ class TemporalModel(nn.Module):
             self.attn_layers.append(SkipConnection(cp(module), cp(norm)))
             self.ff.append(SkipConnection(cp(ff), cp(norm)))
 
-        self.proj = nn.Linear(hidden_size, 1)
+        self.proj = nn.Linear(hidden_size, output_dim)
 
     def forward(self, x, speed=None):
+        # x cur_time_index or next_time_index B 1 T
         TIM = self.embedding(x)
         # For the traffic forecasting, we introduce learnable node features
         # The user may modify this node feature into meta-learning based representation, which enables the ability to adopt the model into different dataset
-        x_nemb = torch.einsum('btc, nc -> bntc', TIM, self.node_features)
+        x_nemb = torch.einsum('btc, nc -> bntc', TIM, self.node_features)  # BTN 32
         if speed is None:
-            speed = torch.zeros_like(x_nemb[..., 0])
-        x_spd = self.spd_proj(speed.unsqueeze(dim=-1))
+            speed = torch.zeros_like(x_nemb[..., :self.in_dim])
+        else:
+            speed = speed.permute(0, 2, 3, 1)
+        # x_spd = self.spd_proj(speed.unsqueeze(dim=-1))
+        x_spd = self.spd_proj(speed)
         x_nemb = self.spd_cat(torch.cat([x_spd, x_nemb], dim=-1))
 
         attns = []
@@ -352,7 +358,8 @@ class STModel(nn.Module):
 
         out = self.proj(self.act(x))
 
-        return x_start - out[..., :-1], out[..., [-1]], hiddens
+        final_dim = -1 if self.out_dim <= 1 else -(self.out_dim - 1)
+        return x_start - out[..., :final_dim], out, hiddens
 
 
 class AttentionModel(nn.Module):
@@ -560,23 +567,28 @@ class TESTAM(AbstractTrafficStateModel):
         # model
         dropout = config.get("dropout", 0.3)
         prob_mul = config.get("prob_mul", False)
-        in_dim = config.get("input_dim", 2)
+        self.feature_dim = self.data_feature.get('feature_dim')
+        self.ext_dim = self.data_feature.get("ext_dim")
+        self.input_dim = self.feature_dim - self.ext_dim
         self.output_dim = config.get("output_dim", 1)
         hidden_size = config.get("hidden_size", 32)
         layers = config.get("layers", 3)
         self.is_quantile = config.get("is_quantile", False)
         self.quantile = config.get("quantile", 0.7)
+        self.vocab_size = 24 * 60 * 60 // config.get("time_intervals", 300)
 
         self.dropout = dropout
         self.prob_mul = prob_mul
         self.supports_len = 2
 
-        self.identity_expert = TemporalModel(hidden_size, num_nodes, in_dim=in_dim - 1, layers=layers, dropout=dropout)
-        self.adaptive_expert = STModel(hidden_size, self.supports_len, num_nodes, in_dim=in_dim, layers=layers,
-                                       dropout=dropout)
-        self.attention_expert = AttentionModel(hidden_size, in_dim=in_dim, layers=layers, dropout=dropout)
+        self.identity_expert = TemporalModel(hidden_size, num_nodes, in_dim=self.input_dim, layers=layers,
+                                             dropout=dropout, vocab_size=self.vocab_size, output_dim=self.output_dim)
+        self.adaptive_expert = STModel(hidden_size, self.supports_len, num_nodes, in_dim=self.feature_dim,
+                                       layers=layers, dropout=dropout, out_dim=self.output_dim)
+        self.attention_expert = AttentionModel(hidden_size, in_dim=self.feature_dim, layers=layers, dropout=dropout,
+                                               out_dim=self.output_dim)
 
-        self.gate_network = MemoryGate(hidden_size, num_nodes)
+        self.gate_network = MemoryGate(hidden_size, num_nodes, input_dim=self.feature_dim)
 
         for model in [self.identity_expert, self.adaptive_expert, self.attention_expert]:
             for n, p in model.named_parameters():
@@ -595,10 +607,11 @@ class TESTAM(AbstractTrafficStateModel):
         g2 = torch.softmax(torch.relu(torch.mm(n2, n1.T)), dim=-1)
         new_supports = [g1, g2]
 
+        # time_index = input[:, -self.ext_dim:, 0]  # B, T
         time_index = input[:, -1, 0]  # B, T
-        cur_time_index = (time_index * 288).long()
-        next_time_index = ((time_index * 288 + 12) % 288).long()
-        o_identity, h_identity = self.identity_expert(cur_time_index, input[:, 0])
+        cur_time_index = (time_index * self.vocab_size).long()
+        next_time_index = ((time_index * self.vocab_size + 12) % self.vocab_size).long()
+        o_identity, h_identity = self.identity_expert(cur_time_index, input[:, :self.input_dim])
         _, h_future = self.identity_expert(next_time_index)
 
         _, o_adaptive, h_adaptive = self.adaptive_expert(input, h_future, new_supports)
@@ -610,7 +623,7 @@ class TESTAM(AbstractTrafficStateModel):
         B, N, T, _ = o_identity.size()
         gate_in = [h_identity[-1], h_adaptive[-1], h_attention]
         gate = torch.softmax(self.gate_network(input.permute(0, 2, 3, 1), gate_in), dim=-1)
-        out = torch.zeros_like(o_identity).view(-1, 1)
+        out = torch.zeros_like(o_identity).view(-1, self.input_dim)
 
         outs = [o_identity, o_adaptive, o_attention]
         counts = []
@@ -620,14 +633,14 @@ class TESTAM(AbstractTrafficStateModel):
         routes = routes.view(-1)
 
         for i in range(len(outs)):
-            cur_out = outs[i].view(-1, 1)
+            cur_out = outs[i].view(-1, self.input_dim)
             indices = torch.eq(routes, i).nonzero(as_tuple=True)[0]
             out[indices] = cur_out[indices]
             counts.append(len(indices))
         if self.prob_mul:
             out = out * (route_prob_max).unsqueeze(dim=-1)
 
-        out = out.view(B, N, T, 1)
+        out = out.view(B, N, T, self.input_dim)
 
         out = out.permute(0, 3, 1, 2)
         # out: BFNT
@@ -635,6 +648,7 @@ class TESTAM(AbstractTrafficStateModel):
         # ind_out: BNTF
         if self.training or gate_out:
             return out, gate, ind_out
+
         else:
             # BFNT -> BTNF
             return out.transpose(1, 3)

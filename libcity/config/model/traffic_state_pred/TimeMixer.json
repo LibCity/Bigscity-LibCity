@@ -12,5 +12,6 @@
   "embed": "timeF",
   "decomp_method": "moving_avg",
   "moving_avg": 25,
-  "dropout": 0.1
+  "dropout": 0.1,
+  "top_k": 5
 }

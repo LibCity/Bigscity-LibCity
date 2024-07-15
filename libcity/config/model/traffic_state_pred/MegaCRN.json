@@ -1,0 +1,11 @@
+{
+  "rnn_units": 64,
+  "num_layers": 1,
+  "cheb_k": 3,
+  "cl_decay_steps": 2000,
+  "use_curriculum_learning": true,
+  "mem_num": 20,
+  "mem_dim": 64,
+  "lamb": 0.01,
+  "lamb1": 0.01
+}
