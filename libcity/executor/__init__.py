@@ -17,6 +17,7 @@ from libcity.executor.sstban_executor import SSTBANExecutor
 from libcity.executor.testam_executor import TESTAMExecutor
 from libcity.executor.timemixer_executor import TimeMixerExecutor
 from libcity.executor.megacrn_executor import MegaCRNExecutor
+from libcity.executor.trafformer_executor import TrafformerExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -38,4 +39,5 @@ __all__ = [
     "TESTAMExecutor",
     "TimeMixerExecutor",
     "MegaCRNExecutor",
+    "TrafformerExecutor",
 ]

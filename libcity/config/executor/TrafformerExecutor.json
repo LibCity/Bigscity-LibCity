@@ -1,0 +1,14 @@
+{
+  "gpu": true,
+  "gpu_id": 0,
+  "max_epoch": 100,
+  "learner": "adam",
+  "learning_rate": 0.002,
+  "weight_decay": 0.0001,
+  "lr_decay": false,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": true,
+  "patience": 10,
+  "gradient_accumulation_steps": 16
+}
