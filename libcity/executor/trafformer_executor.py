@@ -34,7 +34,6 @@ class TrafformerExecutor(TrafficStateExecutor):
             if self.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
             self.cur_step += 1
-            # print("当前batch: ", self.cur_step)
             if self.cur_step % self.gradient_accumulation_steps == 0:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
