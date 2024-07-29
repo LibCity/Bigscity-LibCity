@@ -31,6 +31,7 @@ from libcity.model.traffic_flow_prediction.STPGCN import STPGCN
 from libcity.model.traffic_flow_prediction.MultiSPANS import MultiSPANS
 from libcity.model.traffic_flow_prediction.SimST import SimST
 from libcity.model.traffic_flow_prediction.TimeMixer import TimeMixer
+from libcity.model.traffic_flow_prediction.STSSL import STSSL
 
 
 __all__ = [
@@ -67,4 +68,5 @@ __all__ = [
     "MultiSPANS",
     "SimST",
     "TimeMixer",
+    "STSSL"
 ]

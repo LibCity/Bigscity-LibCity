@@ -1,0 +1,38 @@
+{
+  "batch_size": 32,
+
+  "d_input": 2,
+  "d_output": 2,
+  "d_model": 64,
+  "dropout": 0.2,
+  "percent": 0.1,
+  "shm_temp": 0.5,
+  "nmb_prototype": 6,
+  "yita": 0.6,
+  "device": "cuda",
+  "scaler": "standard",
+
+  "use_dwa": true,
+  "temp": 4,
+
+  "max_epoch": 100,
+  "learning_rate": 0.001,
+  "use_early_stop": true,
+  "patience": 20,
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_row_column": false,
+  "output_window": 1,
+
+  "load_external": false,
+  "len_closeness": 8,
+  "len_period": 3,
+  "len_trend": 0,
+  "pad_forward_period": 4,
+  "pad_back_period": 4,
+  "pad_forward_trend": 0,
+  "pad_back_trend": 0,
+  "interval_period": 1,
+  "interval_trend": 7,
+  "mask_val": 5.001
+}
