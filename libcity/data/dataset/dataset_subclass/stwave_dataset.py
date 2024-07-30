@@ -18,7 +18,6 @@ class STWaveDataset(TrafficStatePointDataset):
     def __init__(self, config):
         self.normalized_k = config.get("normalized_k", 0.1)
         super().__init__(config)
-        self.feature_name = {'X': 'float', 'y': 'float'}
         self.heads = config.get("heads", 8)
         self.dims = config.get("dims", 16)
 
