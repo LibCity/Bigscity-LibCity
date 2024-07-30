@@ -26,9 +26,9 @@ class Chomp1d(nn.Module):
 
 
 class TemEmbedding(nn.Module):
-    def __init__(self, D):
+    def __init__(self, D, a_dim):
         super(TemEmbedding, self).__init__()
-        self.ff_te = FeedForward([295, D, D])
+        self.ff_te = FeedForward([a_dim + 7, D, D])
 
     def forward(self, TE, T=288):
         '''
@@ -41,7 +41,7 @@ class TemEmbedding(nn.Module):
         for i in range(TE.shape[0]):
             dayofweek[i] = F.one_hot(TE[..., 0][i].to(torch.int64) % 7, 7)
         for j in range(TE.shape[0]):
-            timeofday[j] = F.one_hot(TE[..., 1][j].to(torch.int64) % 288, T)
+            timeofday[j] = F.one_hot(TE[..., 1][j].to(torch.int64) % T, T)
         TE = torch.cat((dayofweek, timeofday), dim=-1)  # [B,T,295]
         TE = TE.unsqueeze(dim=2)  # [B,T,1,295]
         TE = self.ff_te(TE)  # [B,T,1,F]
@@ -342,6 +342,7 @@ class STWave(AbstractTrafficStateModel):
         output_len = config.get("output_window", 12)
         self.wave = config.get("wave", "coif1")
         self.level = config.get("level", 1)
+        self.vocab_size = 24 * 60 * 60 // config.get("time_intervals", 300)
 
         features = heads * dims
         I = torch.arange(localadj.shape[0]).unsqueeze(-1)
@@ -356,15 +357,15 @@ class STWave(AbstractTrafficStateModel):
         self.pre_h = nn.Conv2d(input_len, output_len, (1, 1))
         self.pre = nn.Conv2d(input_len, output_len, (1, 1))
 
-        self.start_emb_l = FeedForward([self.feature_dim, features, features])
-        self.start_emb_h = FeedForward([self.feature_dim, features, features])
-        self.end_emb = FeedForward([features, features, self.feature_dim])
-        self.end_emb_l = FeedForward([features, features, self.feature_dim])
-        self.te_emb = TemEmbedding(features)
+        self.start_emb_l = FeedForward([self.output_dim, features, features])
+        self.start_emb_h = FeedForward([self.output_dim, features, features])
+        self.end_emb = FeedForward([features, features, self.output_dim])
+        self.end_emb_l = FeedForward([features, features, self.output_dim])
+        self.te_emb = TemEmbedding(features, self.vocab_size)
 
     def forward(self, XL, XH, TE):
         xl, xh = self.start_emb_l(XL), self.start_emb_h(XH)
-        te = self.te_emb(TE)
+        te = self.te_emb(TE, self.vocab_size)
 
         for enc in self.dual_enc:
             xl, xh = enc(xl, xh, te[:, :self.input_len, :, :])
@@ -394,9 +395,12 @@ class STWave(AbstractTrafficStateModel):
         return xl, xh
 
     def prepare_param(self, batch):
-        x = batch['X']
+        x = batch['X']  # BTNF
+        y = batch['y']
+        x, xte = x[:, :, :, :self.output_dim], x[:, :, :, self.output_dim:]
+        yte = y[:, :, :, self.output_dim:]
         xl, xh = self.disentangle(x, self.wave, self.level)
-        te = batch['TE'][:, :, 0, :]
+        te = torch.cat([xte, yte], dim=1)[:, :, 0, :]
         return xl, xh, te
 
     def loss_predict(self, batch):

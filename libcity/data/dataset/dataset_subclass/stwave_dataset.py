@@ -1,6 +1,6 @@
 import math
 import os
-
+import datetime
 import numpy as np
 import pandas as pd
 from fastdtw import fastdtw
@@ -10,7 +10,6 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 
 from libcity.data.dataset import TrafficStatePointDataset
-from libcity.data.utils import generate_dataloader
 from libcity.utils import ensure_dir
 
 
@@ -19,8 +18,7 @@ class STWaveDataset(TrafficStatePointDataset):
     def __init__(self, config):
         self.normalized_k = config.get("normalized_k", 0.1)
         super().__init__(config)
-        self.feature_name = {'X': 'float', 'y': 'float', 'TE': 'int'}
-        self.vocab_size = 24 * 60 * 60 // config.get("time_intervals", 300)
+        self.feature_name = {'X': 'float', 'y': 'float'}
         self.heads = config.get("heads", 8)
         self.dims = config.get("dims", 16)
 
@@ -68,6 +66,55 @@ class STWaveDataset(TrafficStatePointDataset):
         adj_mx = get_adjacency_matrix(distance_df, sensor_id_to_ind, self.normalized_k)
         adj_mx += np.eye(len(sensor_ids))
         self.adj_mx = adj_mx
+
+    def _add_external_information(self, df, ext_data=None):
+        return self._add_external_information_3d(df, ext_data)
+
+    def _add_external_information_3d(self, df, ext_data=None):
+        """
+        增加外部信息（一周中的星期几/day of week，一天中的某个时刻/time of day，外部数据）
+
+        Args:
+            df(np.ndarray): 交通状态数据多维数组, (len_time, num_nodes, feature_dim)
+            ext_data(np.ndarray): 外部数据
+
+        Returns:
+            np.ndarray: 融合后的外部数据和交通状态数据, (len_time, num_nodes, feature_dim_plus)
+        """
+        num_samples, num_nodes, feature_dim = df.shape
+        is_time_nan = pd.DatetimeIndex(self.timesolts).isnull().any()
+        data_list = [df]
+        if self.add_time_in_day and not is_time_nan:
+            time_ind = (self.timesolts - self.timesolts.astype("datetime64[D]")) / np.timedelta64(1, "D")
+            time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+            data_list.append(time_in_day)
+        if self.add_day_in_week and not is_time_nan:
+            dayofweek = []
+            for day in self.timesolts.astype("datetime64[D]"):
+                dayofweek.append(datetime.datetime.strptime(str(day), '%Y-%m-%d').weekday())
+            day_in_week = np.tile(dayofweek, [1, num_nodes, 1]).transpose((2, 1, 0))
+            data_list.append(day_in_week)
+        # 外部数据集
+        if ext_data is not None:
+            if not is_time_nan:
+                indexs = []
+                for ts in self.timesolts:
+                    ts_index = self.idx_of_ext_timesolts[ts]
+                    indexs.append(ts_index)
+                select_data = ext_data[indexs]  # T * ext_dim 选出所需要的时间步的数据
+                for i in range(select_data.shape[1]):
+                    data_ind = select_data[:, i]
+                    data_ind = np.tile(data_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+                    data_list.append(data_ind)
+            else:  # 没有给出具体的时间戳，只有外部数据跟原数据等长才能默认对接到一起
+                if ext_data.shape[0] == df.shape[0]:
+                    select_data = ext_data  # T * ext_dim
+                    for i in range(select_data.shape[1]):
+                        data_ind = select_data[:, i]
+                        data_ind = np.tile(data_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+                        data_list.append(data_ind)
+        data = np.concatenate(data_list, axis=-1)
+        return data
 
     def loadGraph(self, data):
         """
@@ -136,42 +183,6 @@ class STWaveDataset(TrafficStatePointDataset):
 
         return localadj, spawave, temwave
 
-    def _generate_split_te(self, num_step):
-        """
-        generate TE
-
-        @return:
-        """
-
-        def seq2instance(data, P, Q):
-            num_step, nodes, dims = data.shape
-            num_sample = num_step - P - Q + 1
-            x = np.zeros(shape=(num_sample, P, nodes, dims))
-            y = np.zeros(shape=(num_sample, Q, nodes, dims))
-            for i in range(num_sample):
-                x[i] = data[i: i + P]
-                y[i] = data[i + P: i + P + Q]
-            return x, y
-
-        TE = np.zeros([num_step, 2])
-        TE[:, 1] = np.array([i % self.vocab_size for i in range(num_step)])
-        TE[:, 0] = np.array([(i // self.vocab_size) % 7 for i in range(num_step)])
-        TE_tile = np.repeat(np.expand_dims(TE, 1), self.num_nodes, 1)
-        test_ratio = 1 - self.train_rate - self.eval_rate
-        train_steps = round(self.train_rate * num_step)
-        test_steps = round(test_ratio * num_step)
-        val_steps = num_step - train_steps - test_steps
-        trainTE = TE_tile[: train_steps]
-        valTE = TE_tile[train_steps: train_steps + val_steps]
-        testTE = TE_tile[-test_steps:]
-        trainXTE, trainYTE = seq2instance(trainTE, self.input_window, self.output_window)
-        valXTE, valYTE = seq2instance(valTE, self.input_window, self.output_window)
-        testXTE, testYTE = seq2instance(testTE, self.input_window, self.output_window)
-        trainTE = np.concatenate([trainXTE, trainYTE], axis=1)
-        valTE = np.concatenate([valXTE, valYTE], axis=1)
-        testTE = np.concatenate([testXTE, testYTE], axis=1)
-        return trainTE, valTE, testTE
-
     def _generate_data(self):
         """
         加载数据文件(.dyna/.grid/.od/.gridod)和外部数据(.ext)，且将二者融合，以X，y的形式返回
@@ -232,7 +243,6 @@ class STWaveDataset(TrafficStatePointDataset):
         num_test = round(num_samples * test_rate)
         num_train = round(num_samples * self.train_rate)
         num_val = num_samples - num_test - num_train
-
         # train
         x_train, y_train = x[:num_train], y[:num_train]
         # val
@@ -248,8 +258,6 @@ class STWaveDataset(TrafficStatePointDataset):
         x, y, df = self._generate_data()
         num_samples = x.shape[0]
         x_train, y_train, x_val, y_val, x_test, y_test = self._split_train_val_test(x, y)
-        # generate te
-        trainTE, valTE, testTE = self._generate_split_te(num_samples)
         # train data
         num_train = round(num_samples * self.train_rate)
         train_data = df[:num_train]
@@ -264,15 +272,12 @@ class STWaveDataset(TrafficStatePointDataset):
                 y_test=y_test,
                 x_val=x_val,
                 y_val=y_val,
-                trainTE=trainTE,
-                valTE=valTE,
-                testTE=testTE,
                 localadj=self.localadj,
                 spawave=self.spawave,
                 temwave=self.temwave,
             )
             self._logger.info('Saved at ' + self.cache_file_name)
-        return x_train, y_train, x_val, y_val, x_test, y_test, trainTE, valTE, testTE
+        return x_train, y_train, x_val, y_val, x_test, y_test
 
     def _load_cache_train_val_test(self):
         """
@@ -295,70 +300,13 @@ class STWaveDataset(TrafficStatePointDataset):
         y_test = cat_data['y_test']
         x_val = cat_data['x_val']
         y_val = cat_data['y_val']
-        trainTE = cat_data['trainTE']
-        valTE = cat_data['valTE']
-        testTE = cat_data['testTE']
         self.localadj = cat_data['localadj']
         self.spawave = cat_data['spawave']
         self.temwave = cat_data['temwave']
         self._logger.info("train\t" + "x: " + str(x_train.shape) + ", y: " + str(y_train.shape))
         self._logger.info("eval\t" + "x: " + str(x_val.shape) + ", y: " + str(y_val.shape))
         self._logger.info("test\t" + "x: " + str(x_test.shape) + ", y: " + str(y_test.shape))
-        return x_train, y_train, x_val, y_val, x_test, y_test, trainTE, valTE, testTE
-
-    def get_data(self):
-        """
-        返回数据的DataLoader，包括训练数据、测试数据、验证数据
-
-        Returns:
-            tuple: tuple contains:
-                train_dataloader: Dataloader composed of Batch (class) \n
-                eval_dataloader: Dataloader composed of Batch (class) \n
-                test_dataloader: Dataloader composed of Batch (class)
-        """
-        # 加载数据集
-        x_train, y_train, x_val, y_val, x_test, y_test, trainTE, valTE, testTE = [], [], [], [], [], [], [], [], []
-        if self.data is None:
-            self.data = {}
-            if self.cache_dataset and os.path.exists(self.cache_file_name):
-                x_train, y_train, x_val, y_val, x_test, y_test, trainTE, valTE, testTE = self._load_cache_train_val_test()
-            else:
-                x_train, y_train, x_val, y_val, x_test, y_test, trainTE, valTE, testTE = self._generate_train_val_test()
-        # 在测试集上添加随机扰动
-        if self.robustness_test:
-            x_test = self._add_noise(x_test)
-        # 数据归一化
-        self.feature_dim = x_train.shape[-1]
-        self.ext_dim = self.feature_dim - self.output_dim
-        self.scaler = self._get_scalar(self.scaler_type,
-                                       x_train[..., :self.output_dim], y_train[..., :self.output_dim])
-        self.ext_scaler = self._get_scalar(self.ext_scaler_type,
-                                           x_train[..., self.output_dim:], y_train[..., self.output_dim:])
-        x_train[..., :self.output_dim] = self.scaler.transform(x_train[..., :self.output_dim])
-        y_train[..., :self.output_dim] = self.scaler.transform(y_train[..., :self.output_dim])
-        x_val[..., :self.output_dim] = self.scaler.transform(x_val[..., :self.output_dim])
-        y_val[..., :self.output_dim] = self.scaler.transform(y_val[..., :self.output_dim])
-        x_test[..., :self.output_dim] = self.scaler.transform(x_test[..., :self.output_dim])
-        y_test[..., :self.output_dim] = self.scaler.transform(y_test[..., :self.output_dim])
-        if self.normal_external:
-            x_train[..., self.output_dim:] = self.ext_scaler.transform(x_train[..., self.output_dim:])
-            y_train[..., self.output_dim:] = self.ext_scaler.transform(y_train[..., self.output_dim:])
-            x_val[..., self.output_dim:] = self.ext_scaler.transform(x_val[..., self.output_dim:])
-            y_val[..., self.output_dim:] = self.ext_scaler.transform(y_val[..., self.output_dim:])
-            x_test[..., self.output_dim:] = self.ext_scaler.transform(x_test[..., self.output_dim:])
-            y_test[..., self.output_dim:] = self.ext_scaler.transform(y_test[..., self.output_dim:])
-        # 把训练集的X和y聚合在一起成为list，测试集验证集同理
-        # x_train/y_train: (num_samples, input_length, ..., feature_dim)
-        # train_data(list): train_data[i]是一个元组，由x_train[i]和y_train[i]组成
-        train_data = list(zip(x_train, y_train, trainTE))
-        eval_data = list(zip(x_val, y_val, valTE))
-        test_data = list(zip(x_test, y_test, testTE))
-        # 转Dataloader
-        self.train_dataloader, self.eval_dataloader, self.test_dataloader = \
-            generate_dataloader(train_data, eval_data, test_data, self.feature_name,
-                                self.batch_size, self.num_workers, pad_with_last_sample=self.pad_with_last_sample)
-        self.num_batches = len(self.train_dataloader)
-        return self.train_dataloader, self.eval_dataloader, self.test_dataloader
+        return x_train, y_train, x_val, y_val, x_test, y_test
 
     def get_data_feature(self):
         """
