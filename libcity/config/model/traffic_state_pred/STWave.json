@@ -1,0 +1,23 @@
+{
+  "max_epoch": 200,
+
+  "learner": "adam",
+  "learning_rate": 0.001,
+
+  "lr_decay": true,
+  "lr_scheduler": "ReduceLROnPlateau",
+  "lr_decay_ratio": 0.1,
+  "lr_patience": 20,
+  "lr_threshold": 0.001,
+
+  "clip_grad_norm": true,
+  "max_grad_norm": 5,
+  "use_early_stop": false,
+
+  "heads": 8,
+  "dims": 16,
+  "layers": 2,
+  "samples": 1,
+  "wave": "coif1",
+  "level": 1
+}
