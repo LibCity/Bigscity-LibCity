@@ -1,0 +1,16 @@
+{
+  "output_attention": false,
+  "d_model": 32,
+  "embed": "timeF",
+  "freq": "m",
+  "dropout": 0.0,
+  "enc_attn": "full",
+  "factor": 50,
+  "n_heads": 4,
+  "d_ff": 256,
+  "activation": "gelu",
+  "e_layers": 2,
+  "distil": false,
+  "mix": true,
+  "d_layers": 1
+}
