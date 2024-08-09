@@ -33,6 +33,7 @@ from libcity.model.traffic_flow_prediction.SimST import SimST
 from libcity.model.traffic_flow_prediction.TimeMixer import TimeMixer
 from libcity.model.traffic_flow_prediction.STSSL import STSSL
 from libcity.model.traffic_flow_prediction.STWave import STWave
+from libcity.model.traffic_flow_prediction.PDFormer import PDFormer
 
 
 __all__ = [
@@ -70,5 +71,6 @@ __all__ = [
     "SimST",
     "TimeMixer",
     "STSSL",
-    "STWave"
+    "STWave",
+    "PDFormer",
 ]
