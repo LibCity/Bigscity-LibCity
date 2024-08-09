@@ -7,7 +7,6 @@ from logging import getLogger
 from ray import tune
 from libcity.executor.traffic_state_executor import TrafficStateExecutor
 import scipy.sparse as sp
-from libcity.utils import reduce_array
 from tqdm import tqdm
 
 class Scheduler:
@@ -196,7 +195,7 @@ class PDFormerExecutor(TrafficStateExecutor):
         self.lr_warmup_epoch = config.get("lr_warmup_epoch", 5)
         self.lr_warmup_init = config.get("lr_warmup_init", 1e-6)
         self.lape_dim = config.get('lape_dim', 200)
-        self.adj_mx = model.get_data_feature().get('adj_mx')
+        self.adj_mx = data_feature.get('adj_mx')
         super().__init__(config, model, data_feature)
         self.lap_mx = self._cal_lape(self.adj_mx).to(self.device)
         self.random_flip = config.get('random_flip', True)
@@ -335,8 +334,6 @@ class PDFormerExecutor(TrafficStateExecutor):
             t1 = time.time()
             train_time.append(t1 - start_time)
             train_loss = np.mean(losses)
-            if self.distributed:
-                train_loss = reduce_array(train_loss, self.world_size, self.device)
             self._writer.add_scalar('training loss', train_loss, batches_seen)
             self._logger.info("epoch complete!")
 
@@ -347,8 +344,6 @@ class PDFormerExecutor(TrafficStateExecutor):
             eval_time.append(end_time - t2)
 
             epoch_time = end_time - start_time
-            if self.distributed:
-                epoch_time = reduce_array(np.array(epoch_time), self.world_size, self.device)
 
             if self.lr_scheduler is not None:
                 if self.lr_scheduler_type.lower() == 'reducelronplateau':
@@ -386,9 +381,6 @@ class PDFormerExecutor(TrafficStateExecutor):
         if len(train_time) > 0:
             average_train_time = sum(train_time) / len(train_time)
             average_eval_time = sum(eval_time) / len(eval_time)
-            if self.distributed:
-                average_train_time = reduce_array(average_train_time, self.world_size, self.device)
-                average_eval_time = reduce_array(average_eval_time, self.world_size, self.device)
             self._logger.info('Trained totally {} epochs, average train time is {:.3f}s, '
                               'average eval time is {:.3f}s'.
                               format(len(train_time), average_train_time, average_eval_time))
@@ -399,10 +391,7 @@ class PDFormerExecutor(TrafficStateExecutor):
     def _train_epoch(self, train_dataloader, epoch_idx, batches_seen=None, loss_func=None):
         self.model.train()
         if loss_func is None:
-            if self.distributed:
-                loss_func = self.model.module.calculate_loss_without_predict
-            else:
-                loss_func = self.model.calculate_loss_without_predict
+            loss_func = self.model.calculate_loss_without_predict
         losses = []
         for batch in train_dataloader:
             batch.to_tensor(self.device)
@@ -434,10 +423,7 @@ class PDFormerExecutor(TrafficStateExecutor):
         with torch.no_grad():
             self.model.eval()
             if loss_func is None:
-                if self.distributed:
-                    loss_func = self.model.module.calculate_loss_without_predict
-                else:
-                    loss_func = self.model.calculate_loss_without_predict
+                loss_func = self.model.calculate_loss_without_predict
             losses = []
             for batch in eval_dataloader:
                 batch.to_tensor(self.device)
@@ -447,8 +433,6 @@ class PDFormerExecutor(TrafficStateExecutor):
                 self._logger.debug(loss.item())
                 losses.append(loss.item())
             mean_loss = np.mean(losses)
-            if self.distributed:
-                mean_loss = reduce_array(mean_loss, self.world_size, self.device)
             self._writer.add_scalar('eval loss', mean_loss, batches_seen)
             return mean_loss
 
