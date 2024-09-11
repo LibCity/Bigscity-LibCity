@@ -19,6 +19,7 @@ from libcity.executor.timemixer_executor import TimeMixerExecutor
 from libcity.executor.STSSL_executor import STSSLExecutor
 from libcity.executor.megacrn_executor import MegaCRNExecutor
 from libcity.executor.trafformer_executor import TrafformerExecutor
+from libcity.executor.pdformer_executor import PDFormerExecutor
 
 __all__ = [
     "TrajLocPredExecutor",
@@ -42,4 +43,5 @@ __all__ = [
     "STSSLExecutor",
     "MegaCRNExecutor",
     "TrafformerExecutor",
+    "PDFormerExecutor",
 ]
