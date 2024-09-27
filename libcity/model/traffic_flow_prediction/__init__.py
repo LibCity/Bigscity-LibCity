@@ -24,16 +24,16 @@ from libcity.model.traffic_flow_prediction.STNorm import STNorm
 from libcity.model.traffic_flow_prediction.ESG import ESG
 from libcity.model.traffic_flow_prediction.SSTBAN import SSTBAN
 from libcity.model.traffic_flow_prediction.STTSNet import STTSNet
-# from libcity.model.traffic_flow_prediction.FOGS import FOGS
-# from libcity.model.traffic_flow_prediction.RGSL import RGSL
-# from libcity.model.traffic_flow_prediction.DSTAGNN import DSTAGNN
-# from libcity.model.traffic_flow_prediction.STPGCN import STPGCN
-# from libcity.model.traffic_flow_prediction.MultiSPANS import MultiSPANS
-# from libcity.model.traffic_flow_prediction.SimST import SimST
-# from libcity.model.traffic_flow_prediction.TimeMixer import TimeMixer
-# from libcity.model.traffic_flow_prediction.STSSL import STSSL
-# from libcity.model.traffic_flow_prediction.STWave import STWave
-# from libcity.model.traffic_flow_prediction.PDFormer import PDFormer
+from libcity.model.traffic_flow_prediction.FOGS import FOGS
+from libcity.model.traffic_flow_prediction.RGSL import RGSL
+from libcity.model.traffic_flow_prediction.DSTAGNN import DSTAGNN
+from libcity.model.traffic_flow_prediction.STPGCN import STPGCN
+from libcity.model.traffic_flow_prediction.MultiSPANS import MultiSPANS
+from libcity.model.traffic_flow_prediction.SimST import SimST
+from libcity.model.traffic_flow_prediction.TimeMixer import TimeMixer
+from libcity.model.traffic_flow_prediction.STSSL import STSSL
+from libcity.model.traffic_flow_prediction.STWave import STWave
+from libcity.model.traffic_flow_prediction.PDFormer import PDFormer
 from libcity.model.traffic_flow_prediction.ASTGNN import ASTGNN
 from libcity.model.traffic_flow_prediction.ASTGNNCommon import ASTGNNCommon
 
