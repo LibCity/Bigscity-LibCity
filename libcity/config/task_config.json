@@ -90,7 +90,7 @@
             "MultiSTGCnet", "STMGAT", "CRANN", "STTN", "CONVGCNCommon", "DSAN", "DKFN", "CCRNN", "MultiSTGCnetCommon",
             "GEML", "FNN", "GSNet", "CSTN", "D2STGNN", "STID","STGODE", "STNorm", "DMSTGCN", "ESG", "SSTBAN", "STTSNet",
             "FOGS", "RGSL", "DSTAGNN", "STPGCN", "HIEST", "STAEformer", "TESTAM", "MultiSPANS", "SimST", "TimeMixer",
-            "MegaCRN", "Trafformer", "STSSL", "STWave", "PDFormer", "STGNCDE"
+            "MegaCRN", "Trafformer", "STSSL", "STWave",  "PDFormer", "STGNCDE", "ASTGNN", "ASTGNNCommon"
         ],
         "allowed_dataset": [
             "METR_LA", "PEMS_BAY", "PEMSD3", "PEMSD4", "PEMSD7", "PEMSD8", "PEMSD7(M)",
@@ -102,6 +102,16 @@
             "NYCTAXI_OD", "NYCTAXI_GRID", "T_DRIVE_SMALL", "NYCBIKE", "AUSTINRIDE",
             "BIKEDC", "BIKECHI", "NYC_RISK", "CHICAGO_RISK", "NYCTAXI20140112_FLOW"
         ],
+        "ASTGNNCommon": {
+            "dataset_class": "TrafficStatePointDataset",
+            "executor": "ASTGNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
+        "ASTGNN": {
+            "dataset_class": "ASTGCNDataset",
+            "executor": "ASTGNNExecutor",
+            "evaluator": "TrafficStateEvaluator"
+        },
         "STGNCDE": {
             "dataset_class": "TrafficStatePointDataset",
             "executor": "TrafficStateExecutor",
