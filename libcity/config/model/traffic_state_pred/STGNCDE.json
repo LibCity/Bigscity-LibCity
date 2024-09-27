@@ -1,0 +1,29 @@
+{
+    "max_epoch": 200,
+
+    "learner": "adam",
+    "learning_rate": 0.001,
+    "lr_epsilon": 1e-8,
+    "weight_decay": 1e-3,
+    "scaler": "standard",
+    "batch_size": 64,
+
+    "lr_decay": true,
+    "lr_scheduler": "steplr",
+    "step_size": 50,
+    "lr_decay_ratio": 0.3,
+    "clip_grad_norm": true,
+    "max_grad_norm": 5,
+    "use_early_stop": true,
+    "patience": 20,
+    "evaluator_mode": "average",
+
+    "hidden_dim": 64,
+    "hid_hid_dim": 64,
+    "horizon": 12,
+    "num_layers": 2,
+    "default_graph": true,
+    "embed_dim": 10,
+    "g_type": "agc",
+    "cheb_k": 2
+}

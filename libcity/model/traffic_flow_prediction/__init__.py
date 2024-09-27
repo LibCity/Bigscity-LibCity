@@ -34,6 +34,7 @@ from libcity.model.traffic_flow_prediction.TimeMixer import TimeMixer
 from libcity.model.traffic_flow_prediction.STSSL import STSSL
 from libcity.model.traffic_flow_prediction.STWave import STWave
 from libcity.model.traffic_flow_prediction.PDFormer import PDFormer
+from libcity.model.traffic_flow_prediction.STGNCDE import STGNCDE
 from libcity.model.traffic_flow_prediction.ASTGNN import ASTGNN
 from libcity.model.traffic_flow_prediction.ASTGNNCommon import ASTGNNCommon
 
@@ -75,6 +76,7 @@ __all__ = [
     "STSSL",
     "STWave",
     "PDFormer",
+    "STGNCDE",
     "ASTGNN",
     "ASTGNNCommon",
 ]
