@@ -647,7 +647,6 @@ class ASTGNNCommon(AbstractTrafficStateModel):
         self.output_dim = self.data_feature.get('output_dim', 1)
         self.num_nodes = self.data_feature.get('num_nodes', 1)
         self.adj_mx = self.data_feature.get('adj_mx')
-        
         self.device = config.get('device', torch.device('cpu'))
         self._logger = getLogger()
         self._scaler = self.data_feature.get('scaler')
