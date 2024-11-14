@@ -2,7 +2,7 @@
 
 The model reproduction work in the library has been assisted by several developers. The specific contribution list is shown below.
 
-For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libcity-docs.readthedocs.io/en/latest/user_guide/model.html), where you can see the abbreviation of the model and the corresponding papers and citations.
+For a list of all models reproduced in LibCity, see [Docs](https://libcity.ai/Bigscity-LibCity-Docs/user_guide/model.html#), where you can see the abbreviation of the model and the corresponding papers and citations.
 
 | Task | Model  | Contributor                                                  |
 | ------ | ------------------------------------------------------------ | ------ |
@@ -19,10 +19,28 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 ||AGCRN|[aptx1231](https://github.com/aptx1231)|
 ||ASTGCN|[aptx1231](https://github.com/aptx1231)|
 ||ASTGCNCommon|[aptx1231](https://github.com/aptx1231)|
+||ASTGNN|[luiluizi](https://github.com/luiluizi)|
+||ASTGNNCommon|[luiluizi](https://github.com/luiluizi)|
+||DSTAGNN|[hczs](https://github.com/hczs)|
+||ESG|[Kazeya27](https://github.com/Kazeya27)|
+||FOGS|[hczs](https://github.com/hczs)|
 ||MSTGCN|[aptx1231](https://github.com/aptx1231)|
 ||MSTGCNCommon|[aptx1231](https://github.com/aptx1231)|
+||MultiSPANS|[Kazeya27](https://github.com/Kazeya27)|
+||PDFormer|[Kazeya27](https://github.com/Kazeya27)|
+||RGSL|[hczs](https://github.com/hczs)|
+||SSTBAN|[hczs](https://github.com/hczs)|
+||STGNCDE|[luiluizi](https://github.com/luiluizi)|
+||STGODE|[Kazeya27](https://github.com/Kazeya27)|
+||STNorm| [luiluizi](https://github.com/luiluizi)                      |
+|                                      | STPGCN               |[hczs](https://github.com/hczs)|
 ||STResNet|[aptx1231](https://github.com/aptx1231)|
-||STResNetCommon|[aptx1231](https://github.com/aptx1231)|
+||STPGCNSTResNetCommon|[aptx1231](https://github.com/aptx1231)|
+||STSSL|[Lucas-lyh](https://github.com/Lucas-lyh)|
+||ST-TSNet|[hczs](https://github.com/hczs)|
+||STWave|[hczs](https://github.com/hczs)|
+||SimST|[hczs](https://github.com/hczs)|
+||TimeMixer|[hczs](https://github.com/hczs)|
 ||DGCN|[aptx1231](https://github.com/aptx1231)|
 ||DSAN|[XBR-1111](https://github.com/XBR-1111)|
 ||CRANN|[aptx1231](https://github.com/aptx1231)|
@@ -36,6 +54,12 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 ||MultiSTGCnetCommon|[XBR-1111](https://github.com/XBR-1111)|
 ||STNN|[mjh12138](https://github.com/mjh12138), [01010122](https://github.com/01010122)|
 |Traffic Speed Prediction| DCRNN          | [aptx1231](https://github.com/aptx1231)                      |
+|| D2STGNN | [NickHan-cs](https://github.com/NickHan-cs) |
+|| DMSTGCN | [Kazeya27](https://github.com/Kazeya27) |
+|| HIEST | [Kazeya27](https://github.com/Kazeya27) |
+|| MegaCRN | [hczs](https://github.com/hczs) |
+|| STAFormer | [hczs](https://github.com/hczs) |
+|| STID | [smilehan](https://github.com/2448845600) |
 |                                     | STGCN          | [aptx1231](https://github.com/aptx1231)                      |
 |                                     | GWNET          | [aptx1231](https://github.com/aptx1231)                      |
 |                                     | MTGNN          | [aptx1231](https://github.com/aptx1231)                      |
@@ -49,6 +73,8 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 |                                     | STAGGCN        | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231) |
 | | DKFN | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231), [NickHan-cs](https://github.com/NickHan-cs) |
 | | STTN | [NickHan-cs](https://github.com/NickHan-cs) |
+| | TESTAM | [hczs](https://github.com/hczs) |
+| | Trafformer | [hczs](https://github.com/hczs) |
 |On-Demand Service Prediction|CCRNN|[aptx1231](https://github.com/aptx1231)|
 |                                     |STG2Seq|[aptx1231](https://github.com/aptx1231), [Stevezzy](https://github.com/Stevezzy)|
 ||DMVSTNet|[l782993610](https://github.com/l782993610), [WANDY666](https://github.com/WANDY666)|
@@ -77,6 +103,8 @@ For a list of all models reproduced in LibCity, see [Docs](https://bigscity-libc
 ||LINE|[l782993610](https://github.com/l782993610)|
 ||GAT|[Qwtdgh](https://github.com/Qwtdgh)|
 ||GeomGCN|[Aressfull](https://github.com/Aressfull)|
+
+
 
 
 
