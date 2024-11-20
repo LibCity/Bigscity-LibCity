@@ -15,8 +15,7 @@
   "learner": "adam",
   "learning_rate": 0.0001,
   "lr_decay": false,
-  "clip_grad_norm": true,
-  "max_grad_norm": 5,
+  "clip_grad_norm": false,
   "use_early_stop": true,
   "patience": 20
 }
