@@ -53,6 +53,7 @@ For a list of all models reproduced in LibCity, see [Docs](https://libcity.ai/Bi
 ||MultiSTGCnet|[wyooyw](https://github.com/wyooyw)|
 ||MultiSTGCnetCommon|[XBR-1111](https://github.com/XBR-1111)|
 ||STNN|[mjh12138](https://github.com/mjh12138), [01010122](https://github.com/01010122)|
+||FreTS|[Kazeya27](https://github.com/Kazeya27)|
 |Traffic Speed Prediction| DCRNN          | [aptx1231](https://github.com/aptx1231)                      |
 || D2STGNN | [NickHan-cs](https://github.com/NickHan-cs) |
 || DMSTGCN | [Kazeya27](https://github.com/Kazeya27) |
@@ -68,7 +69,7 @@ For a list of all models reproduced in LibCity, see [Docs](https://libcity.ai/Bi
 |                                     | TGCLSTM        | [NickHan-cs](https://github.com/NickHan-cs), [aptx1231](https://github.com/aptx1231) |
 |                                     | GTS            | [aptx1231](https://github.com/aptx1231), [buaacjw](https://github.com/buaacjw), [t123yh](https://github.com/t123yh), [h9tyf](https://github.com/h9tyf) |
 |                                     | GMAN           | [huangjiawei128](https://github.com/huangjiawei128), [fry412](https://github.com/fry412) |
-|                                     | ATDM           | [zhangjiahui-buaa](https://github.com/zhangjiahui-buaa)      |
+|                              `       | ATDM           | [zhangjiahui-buaa](https://github.com/zhangjiahui-buaa)      |
 |                                     | HGCN           | [XBR-1111](https://github.com/XBR-1111), [Matty-blu](https://github.com/Matty-blu), [nan0054](https://github.com/nan0054), [PotassiumWings](https://github.com/PotassiumWings) |
 |                                     | STAGGCN        | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231) |
 | | DKFN | [a-l-r](https://github.com/a-l-r1), [aptx1231](https://github.com/aptx1231), [NickHan-cs](https://github.com/NickHan-cs) |
