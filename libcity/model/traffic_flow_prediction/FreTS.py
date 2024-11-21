@@ -121,5 +121,5 @@ class FreTS(AbstractTrafficStateModel):
         # [B, N, T, D]
         x = self.MLP_temporal(x, B, N, T)
         x = x + bias
-        x = self.fc(x.reshape(B, N, -1)).permute(0, 2, 1).reshape(B, T, N, -1)
+        x = self.fc(x.reshape(B, N, -1)).permute(0, 2, 1).reshape(B, self.pre_length, N, -1)
         return x
