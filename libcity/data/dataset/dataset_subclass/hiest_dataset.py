@@ -39,6 +39,56 @@ class Graph:
                rooted with current vertex
     st -- >> To store visited edges'''
 
+    def BCCUtilLoop(self, u, parent, low, disc, st):
+        stack = [(u, self.graph[u], 0, False, -1)]
+
+        while stack:
+            # u, self.graph[u], children, 标记是否在if disc[v] == -1分支中断了，v
+            u, g, children, flag, v = stack.pop(-1)
+            if flag:
+                # 继续把break后没走完的路走完
+                # Check if the subtree rooted with v has a connection to
+                # one of the ancestors of u
+                # Case 1 -- per Strongly Connected Components Article
+                low[u] = min(low[u], low[v])
+
+                # If u is an articulation point, pop
+                # all edges from stack till (u, v)
+                if parent[u] == -1 and children > 1 or parent[u] != -1 and low[v] >= disc[u]:
+                    self.count += 1  # increment count
+                    w = -1
+                    tmp = []
+                    while w != (u, v):
+                        w = st.pop()
+                        tmp.append(w)
+                    self.res.append(tmp)
+            disc[u] = self.Time
+            low[u] = self.Time
+            self.Time += 1
+            while g:
+                v = g.pop(-1)
+                # If v is not visited yet, then make it a child of u
+                # in DFS tree and recur for it
+                if disc[v] == -1:
+                    parent[v] = u
+                    children += 1
+                    st.append((u, v))  # store the edge in stack
+                    # 把没遍历完的点入栈，下次继续遍历
+                    stack.append((u, g, children, True, v))
+                    # 把子节点入栈，继续向下搜索
+                    stack.append((v, self.graph[v], 0, False, -1))
+                    break
+
+                elif v != parent[u] and low[u] > disc[v]:
+                    '''Update low value of 'u' only of 'v' is still in stack
+                    (i.e. it's a back edge, not cross edge).
+                    Case 2
+                    -- per Strongly Connected Components Article'''
+
+                    low[u] = min(low[u], disc[v])
+
+                    st.append((u, v))
+
     def BCCUtil(self, u, parent, low, disc, st):
 
         # Count of children in current node
@@ -103,12 +153,12 @@ class Graph:
         # in DFS tree rooted with vertex 'i'
         for i in range(self.V):
             if disc[i] == -1:
-                self.BCCUtil(i, parent, low, disc, st)
+                self.BCCUtilLoop(i, parent, low, disc, st)
 
             # If stack is not empty, pop all edges from stack
             if st:
                 self.count = self.count + 1
-                tmp=[]
+                tmp = []
                 while st:
                     w = st.pop()
                     tmp.append(w)
@@ -172,6 +222,6 @@ class HIESTDataset(TrafficStatePointDataset):
         Returns:
             dict: 包含数据集的相关特征的字典
         """
-        return {"scaler": self.scaler, "adj_mx": self.adj_mx ,"ext_dim": self.ext_dim,
-                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim,"regional_nodes": self.regional_nodes,
-                "Mor_mx": self.Mor_mx,"output_dim": self.output_dim, "num_batches": self.num_batches}
+        return {"scaler": self.scaler, "adj_mx": self.adj_mx, "ext_dim": self.ext_dim,
+                "num_nodes": self.num_nodes, "feature_dim": self.feature_dim, "regional_nodes": self.regional_nodes,
+                "Mor_mx": self.Mor_mx, "output_dim": self.output_dim, "num_batches": self.num_batches}
