@@ -15,7 +15,7 @@ def seq2instance_plus(data, num_his, num_pred):
     y = []
     for i in range(num_sample):
         x.append(data[i: i + num_his])
-        y.append(data[i + num_his: i + num_his + num_pred, :, :1])
+        y.append(data[i + num_his: i + num_his + num_pred])
     x = np.array(x)
     y = np.array(y)
     return x, y
@@ -73,7 +73,7 @@ class SSTBANDataset(TrafficStatePointDataset):
         te = {}
         for set_name in data_sets.keys():
             data_set = data_sets[set_name]
-            x, y = seq2instance_plus(data_set[..., :1].astype("float64"), self.input_window, self.output_window)
+            x, y = seq2instance_plus(data_set[..., :self.output_dim].astype("float64"), self.input_window, self.output_window)
             xy[set_name] = [x, y]
             # handle te
             te_set = te_sets[set_name]
