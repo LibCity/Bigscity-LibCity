@@ -85,16 +85,25 @@ def top_k(loc_pred, loc_true, topk):
             dcg += 1.0 / np.log2(rank_index + 2)
     return hit, rank, dcg
 
+def _match_topk_accident_grids(pred, accident_grids, topk):
+    flat_pred = pred.flatten()
+    if not 1 <= topk <= flat_pred.numel():
+        # Keep the legacy cutoff behavior outside the valid range.
+        threshold = torch.sort(flat_pred, descending=True).values[topk - 1]
+        return (pred >= threshold) & accident_grids
+
+    scores, indices = torch.topk(flat_pred, topk)
+    # Keep NaNs from passing the cutoff, including when the Kth score is NaN.
+    return accident_grids.flatten()[indices] & (scores >= scores[-1])
+
+
 def Precision_torch(preds, labels, topk):
     precision = []
     for i in range(preds.shape[0]):
         label = labels[i]
         pred = preds[i]
         accident_grids = label > 0
-        sorted, _ = torch.sort(pred.flatten(), descending=True)
-        threshold = sorted[topk - 1]
-        pred_grids = pred >= threshold
-        matched = pred_grids & accident_grids
+        matched = _match_topk_accident_grids(pred, accident_grids, topk)
         precision.append(torch.sum(matched.flatten()).item() / topk)
     return sum(precision) / len(precision)
 
@@ -104,10 +113,7 @@ def Recall_torch(preds, labels, topk):
         label = labels[i]
         pred = preds[i]
         accident_grids = label > 0
-        sorted, _ = torch.sort(pred.flatten(), descending=True)
-        threshold = sorted[topk - 1]
-        pred_grids = pred >= threshold
-        matched = pred_grids & accident_grids
+        matched = _match_topk_accident_grids(pred, accident_grids, topk)
         if torch.sum(accident_grids).item() != 0:
             recall.append(torch.sum(matched.flatten()).item() / torch.sum(accident_grids.flatten()).item())
     return sum(recall) / len(recall)
